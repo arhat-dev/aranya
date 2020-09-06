@@ -1,0 +1,66 @@
+yaml-files:
+- "*.yaml"
+- "*.yml"
+
+ignore: |
+  vendor/
+  cicd/deploy/charts/**/templates/
+  cicd/deploy/charts/**/crds/
+  cicd/deploy/kube/
+
+rules:
+  braces:
+    level: warning
+    min-spaces-inside: 0
+    max-spaces-inside: 0
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+  brackets:
+    level: warning
+    min-spaces-inside: 0
+    max-spaces-inside: 0
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+  colons:
+    level: warning
+    max-spaces-before: 0
+    max-spaces-after: 1
+  commas:
+    level: warning
+    max-spaces-before: 0
+    min-spaces-after: 1
+    max-spaces-after: 1
+  comments: disable
+  comments-indentation: disable
+  document-end: disable
+  document-start:
+    level: warning
+    present: false
+  empty-lines:
+    level: warning
+    max: 2
+    max-start: 0
+    max-end: 0
+  hyphens:
+    level: warning
+    max-spaces-after: 1
+  indentation:
+    level: warning
+    indent-sequences: false
+    spaces: 2
+    check-multi-line-strings: false
+  quoted-strings:
+    quote-type: double
+    required: only-when-needed
+  key-duplicates: enable
+  line-length:
+    level: warning
+    max: 120
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+  new-line-at-end-of-file: disable
+  new-lines:
+    type: unix
+  trailing-spaces: disable
+  truthy:
+    level: warning

@@ -1,0 +1,34 @@
+docs:
+- any:
+  - docs/**
+  - README.md
+
+apis:
+- any:
+  - pkg/apis/**
+
+controller:
+- any:
+  - pkg/controller/**
+  - cmd/**
+
+ci:
+- any:
+  - .github/**
+  - cicd/gitlab/**
+  - .gitlab-ci.yml
+
+cd:
+- any:
+  - cicd/deploy/**
+  - cicd/docker/**
+
+e2e:
+- any:
+  - e2e/**
+
+dependency:
+- any:
+  - go.mod
+  - go.sum
+  - vendor/**

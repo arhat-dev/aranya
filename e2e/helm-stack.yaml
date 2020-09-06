@@ -1,0 +1,54 @@
+app:
+  chartsDir: build/e2e/charts
+  environmentsDir: build/e2e/clusters
+
+repos:
+- name: bitnami
+  url: https://charts.bitnami.com/bitnami
+
+charts:
+- name: bitnami/prometheus-operator@0.22.3
+- name: emqx@v4.1.1
+  git:
+    url: https://github.com/emqx/emqx-rel
+    path: deploy/charts/emqx
+
+- name: template-kubernetes-controller@master
+  local: {}
+  namespaceInTemplate: true
+
+environments:
+- name: v1-16
+  kubeContext: kind-v1-16
+  deployments:
+  - name: emqx/emqx
+    chart: emqx@v4.1.1
+  - name: monitoring/promop
+    chart: bitnami/prometheus-operator@0.22.3
+
+  - name: default/template-kubernetes-controller
+    chart: template-kubernetes-controller@master
+
+- name: v1-17
+  kubeContext: kind-v1-17
+
+  deployments:
+  - name: emqx/emqx
+    chart: emqx@v4.1.1
+  - name: monitoring/promop
+    chart: bitnami/prometheus-operator@0.22.3
+
+  - name: default/template-kubernetes-controller
+    chart: template-kubernetes-controller@master
+
+- name: v1-18
+  kubeContext: kind-v1-18
+
+  deployments:
+  - name: emqx/emqx
+    chart: emqx@v4.1.1
+  - name: monitoring/promop
+    chart: bitnami/prometheus-operator@0.22.3
+
+  - name: default/template-kubernetes-controller
+    chart: template-kubernetes-controller@master

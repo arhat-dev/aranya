@@ -1,0 +1,18 @@
+.test:unit:
+  stage: unit-tests
+  image: arhatdev/base-go:debian
+  script:
+  - make test.pkg
+  - make test.cmd
+  dependencies:
+  - stylecheck
+
+test:unit:linux:template-kubernetes-controller:
+  extends: .test:unit
+  tags:
+  - linux
+
+# test:unit:windows:template-kubernetes-controller:
+#   extends: .test:unit
+#   tags:
+#   - windows

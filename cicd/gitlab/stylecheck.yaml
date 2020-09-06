@@ -1,0 +1,8 @@
+stylecheck:
+  image: docker:stable
+  services:
+  - docker:stable-dind
+  before_script:
+  - apk add --update make bash git
+  script:
+  - make lint.all

@@ -1,0 +1,27 @@
+build:image:linux:template-kubernetes-controller:
+  stage: build-images
+  image: docker:stable
+  services:
+  - docker:stable-dind
+  before_script:
+  - docker login "${CI_REGISTRY}" -u "${CI_REGISTRY_USER}" -p "${CI_REGISTRY_PASSWORD}"
+  - apk add --update make bash git
+  - |
+    [ -f $(git rev-parse --git-dir)/shallow ] && git fetch --unshallow || true
+  script:
+  - make image.build.linux.all
+  - make image.push.linux.all
+  tags:
+  - linux
+  dependencies:
+  - test:unit:linux:template-kubernetes-controller
+
+# TODO: build windows containers
+# build:image:windows:template-kubernetes-controller:
+#   script:
+#   - make image.build.windows.all
+#   - make image.push.windows.all
+#   tags:
+#   - windows
+#   dependencies:
+#   - test:unit:windows:template-kubernetes-controller

@@ -1,0 +1,21 @@
+variables:
+  CI_DEBUG_TRACE: "false"
+
+  IMAGE_REPOS: ${CI_REGISTRY_IMAGE}
+
+  DOCKER_CLI_EXPERIMENTAL: enabled # required to enable `docker manifests`
+  DOCKER_HOST: tcp://localhost:2375
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""  # https://gitlab.com/gitlab-org/gitlab-runner/issues/4501
+
+stages:
+- stylecheck
+- unit-tests
+- build-images
+- e2e-tests
+
+include:
+- local: cicd/gitlab/stylecheck.yaml
+- local: cicd/gitlab/unit-tests.yaml
+- local: cicd/gitlab/build-images.yaml
+- local: cicd/gitlab/e2e-test.yaml
