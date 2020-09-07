@@ -777,7 +777,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: aranya
-  namespace: edge
+  namespace: default
   labels:
     helm.sh/chart: aranya-0.1.0
     app.kubernetes.io/name: aranya
@@ -790,7 +790,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: aranya
-  namespace: edge
+  namespace: default
   labels:
     helm.sh/chart: aranya-0.1.0
     app.kubernetes.io/name: aranya
@@ -889,7 +889,7 @@ data:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: aranya:edge
+  name: aranya:default
 rules:
 - apiGroups: [""]
   resources:
@@ -944,21 +944,21 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: aranya:edge
+  name: aranya:default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: aranya:edge
+  name: aranya:default
 subjects:
 - kind: ServiceAccount
   name: aranya
-  namespace: edge
+  namespace: default
 ---
 # Source: aranya/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: aranya:edge:discovery
+  name: aranya:default:discovery
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -966,14 +966,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: aranya
-  namespace: edge
+  namespace: default
 ---
 # Source: aranya/templates/rbac-same-watch-namespace.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: aranya:controller
-  namespace: edge
+  namespace: default
 rules:
 - apiGroups: [""]
   resources:
@@ -1004,7 +1004,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: aranya:virtualnode
-  namespace: edge
+  namespace: default
 rules:
 - apiGroups: [""]
   resources:
@@ -1087,7 +1087,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: aranya:controller
-  namespace: edge
+  namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -1095,14 +1095,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: aranya
-  namespace: edge
+  namespace: default
 ---
 # Source: aranya/templates/rbac-same-watch-namespace.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: aranya:virtualnode
-  namespace: edge
+  namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -1110,14 +1110,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: aranya
-  namespace: edge
+  namespace: default
 ---
 # Source: aranya/templates/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: aranya
-  namespace: edge
+  namespace: default
   labels:
     app.kubernetes.io/component: metrics
     helm.sh/chart: aranya-0.1.0
@@ -1142,7 +1142,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: aranya
-  namespace: edge
+  namespace: default
   labels:
     helm.sh/chart: aranya-0.1.0
     app.kubernetes.io/name: aranya
@@ -1187,7 +1187,7 @@ spec:
         - name: aranya
           securityContext:
             privileged: true
-          image: "docker.io/arhatdev/aranya:amd64"
+          image: "docker.io/arhatdev/aranya:latest"
           imagePullPolicy: Always
           command:
           - /aranya

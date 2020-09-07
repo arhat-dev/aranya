@@ -22,3 +22,9 @@ gen.code.edgedevice.v1alpha1:
 
 gen.code.all: \
 	gen.code.edgedevice.v1alpha1
+
+gen.file.ssh-host-key:
+	ssh-keygen -t ed25519 \
+		-N "" \
+		-C aranya-e2e-test-ssh-host-key \
+		-f e2e/testdata/ssh-host-key.pem
