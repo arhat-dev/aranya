@@ -1,8 +1,8 @@
 # aranya `阿兰若`
 
 [![Build](https://github.com/arhat-dev/aranya/workflows/CI/badge.svg)](https://github.com/arhat-dev/aranya/actions?workflow=CI)
-[![GoDoc](https://godoc.org/arhat.dev/aranya?status.svg)](https://pkg.go.dev/arhat.dev/aranya)
-[![GoReportCard](https://goreportcard.com/badge/github.com/arhat-dev/aranya)](https://goreportcard.com/report/arhat.dev/aranya)
+[![PkgGoDev](https://pkg.go.dev/badge/arhat.dev/aranya)](https://pkg.go.dev/arhat.dev/aranya)
+[![GoReportCard](https://goreportcard.com/badge/arhat.dev/aranya)](https://goreportcard.com/report/arhat.dev/aranya)
 [![codecov](https://codecov.io/gh/arhat-dev/aranya/branch/master/graph/badge.svg)](https://codecov.io/gh/arhat-dev/aranya)
 
 Manages all your devices in your existing `Kubernetes` clusters.
