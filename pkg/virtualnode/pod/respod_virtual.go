@@ -177,7 +177,8 @@ func (m *Manager) handleContainerAsHostExec(opts *gopb.CreateOptions) (*gopb.Pod
 				s.Split(bufio.ScanLines)
 
 				for s.Scan() {
-					_, _ = logFile.WriteString(time.Now().UTC().Format(time.RFC3339Nano) + " stdout F " + s.Text() + "\n")
+					_, _ = logFile.WriteString(
+						time.Now().UTC().Format(time.RFC3339Nano) + " stdout F " + s.Text() + "\n")
 				}
 			}()
 
@@ -190,7 +191,8 @@ func (m *Manager) handleContainerAsHostExec(opts *gopb.CreateOptions) (*gopb.Pod
 				s.Split(bufio.ScanLines)
 				for s.Scan() {
 					// TODO: investigate whether stderr logging is not working
-					_, _ = logFile.WriteString(time.Now().UTC().Format(time.RFC3339Nano) + " stderr F " + s.Text() + "\n")
+					_, _ = logFile.WriteString(
+						time.Now().UTC().Format(time.RFC3339Nano) + " stderr F " + s.Text() + "\n")
 				}
 			}()
 

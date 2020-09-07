@@ -61,6 +61,7 @@ type Manager struct {
 
 func (m *Manager) Start() error {
 	return m.OnStart(func() error {
+		// nolint:gosimple
 		select {
 		case <-m.Context().Done():
 		}
@@ -92,10 +93,11 @@ func (m *Manager) SetPodCIDRs(ipv4, ipv6 string) {
 		updated = true
 	}
 
-	if updated {
-		// offer will fail only because work duplicated
-		//_ = m.networkJobQ.Offer(queue.Job{Action: queue.ActionUpdate, Key: "TBD"})
-	}
+	_ = updated
+	// if updated {
+	// 	// offer will fail only because work duplicated
+	// 	//_ = m.networkJobQ.Offer(queue.Job{Action: queue.ActionUpdate, Key: "TBD"})
+	// }
 }
 
 func (m *Manager) GetPodCIDR(ipv6 bool) string {
@@ -105,6 +107,7 @@ func (m *Manager) GetPodCIDR(ipv6 bool) string {
 	return m.podIPv4CIDRStore.Load().(string)
 }
 
+// nolint:unused
 func (m *Manager) hasPodCIDR() bool {
 	return m.GetPodCIDR(false) != "" || m.GetPodCIDR(true) != ""
 }

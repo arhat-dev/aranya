@@ -30,8 +30,8 @@ import (
 	"google.golang.org/grpc"
 
 	"arhat.dev/aranya-proto/gopb"
-	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya-proto/gopb/protoconst"
+	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 )
 
 var (

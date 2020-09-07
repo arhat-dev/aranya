@@ -171,9 +171,9 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 			vn.log.E("failed to schedule force node sync", log.Error(err))
 			vn.opt.ConnectivityManager.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "force pod sync schedule failure")
 			return false
-		} else {
-			vn.log.V("scheduled force node sync")
 		}
+
+		vn.log.V("scheduled force node sync")
 	} else {
 		vn.log.I("no node force sync scheduled")
 	}
@@ -185,9 +185,9 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 			vn.log.E("failed to schedule force pod sync", log.Error(err))
 			vn.opt.ConnectivityManager.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "force pod sync schedule failure")
 			return false
-		} else {
-			vn.log.V("scheduled force pod sync")
 		}
+
+		vn.log.V("scheduled force pod sync")
 	} else {
 		vn.log.I("no pod force sync scheduled")
 	}
@@ -198,26 +198,28 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 
 		// using node lease, update lease object periodically
 		vn.log.D("scheduling lease update", log.Duration("interval", m.leaseUpdateInterval))
-		if err := m.leaseUpdateQ.OfferWithDelay(vn.name, m.leaseUpdateInterval, wait.Jitter(m.leaseUpdateInterval, .2)); err != nil {
+		err := m.leaseUpdateQ.OfferWithDelay(vn.name, m.leaseUpdateInterval, wait.Jitter(m.leaseUpdateInterval, .2))
+		if err != nil {
 			vn.log.E("failed to schedule node lease update", log.Error(err))
 			vn.opt.ConnectivityManager.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "lease update failure")
 			return false
-		} else {
-			vn.log.V("scheduled node lease update")
 		}
+
+		vn.log.V("scheduled node lease update")
 	} else {
 		m.leaseUpdateQ.Forbid(vn.name)
 		m.leaseUpdateQ.Remove(vn.name)
 
 		// not using node lease, we need to update node status periodically
 		vn.log.D("scheduling mirror node update", log.Duration("interval", m.nodeUpdateInterval))
-		if err := m.mirrorUpdateQ.OfferWithDelay(vn.name, m.nodeUpdateInterval, wait.Jitter(m.nodeUpdateInterval, .2)); err != nil {
+		err := m.mirrorUpdateQ.OfferWithDelay(vn.name, m.nodeUpdateInterval, wait.Jitter(m.nodeUpdateInterval, .2))
+		if err != nil {
 			vn.log.E("failed to schedule mirror node update", log.Error(err))
 			vn.opt.ConnectivityManager.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "mirror node sync failure")
 			return false
-		} else {
-			vn.log.V("scheduled mirror node update")
 		}
+
+		vn.log.V("scheduled mirror node update")
 	}
 
 	if vn.storageManager != nil {
@@ -332,19 +334,19 @@ func (m *Manager) getVirtualNodeFromKey(key interface{}) (*VirtualNode, bool) {
 }
 
 func (m *Manager) consumeForceNodeSync() {
-	logger := m.log.WithName("force-node-sync")
-	logger.I("provisioned")
-	defer logger.I("exited")
+	syncLogger := m.log.WithName("force-node-sync")
+	syncLogger.I("provisioned")
+	defer syncLogger.I("exited")
 
 	ch := m.nodeForceSyncQ.TakeCh()
 	for t := range ch {
 		vn, ok := m.getVirtualNodeFromKey(t.Key)
 		if !ok {
-			logger.I("virtualnode not found", log.Any("key", t.Key))
+			syncLogger.I("virtualnode not found", log.Any("key", t.Key))
 			continue
 		}
 
-		logger := logger.WithFields(log.String("node", vn.name))
+		logger := syncLogger.WithFields(log.String("node", vn.name))
 
 		select {
 		case <-vn.opt.ConnectivityManager.Connected():
@@ -374,19 +376,19 @@ func (m *Manager) consumeForceNodeSync() {
 }
 
 func (m *Manager) consumeForcePodSync() {
-	logger := m.log.WithName("force-pod-sync")
-	logger.I("provisioned")
-	defer logger.I("exited")
+	syncLogger := m.log.WithName("force-pod-sync")
+	syncLogger.I("provisioned")
+	defer syncLogger.I("exited")
 
 	ch := m.podForceSyncQ.TakeCh()
 	for t := range ch {
 		vn, ok := m.getVirtualNodeFromKey(t.Key)
 		if !ok {
-			logger.I("virtualnode not found", log.Any("key", t.Key))
+			syncLogger.I("virtualnode not found", log.Any("key", t.Key))
 			continue
 		}
 
-		logger := logger.WithFields(log.String("node", vn.name))
+		logger := syncLogger.WithFields(log.String("node", vn.name))
 
 		select {
 		case <-vn.opt.ConnectivityManager.Connected():
@@ -416,19 +418,19 @@ func (m *Manager) consumeForcePodSync() {
 }
 
 func (m *Manager) consumeMirrorNodeSync() {
-	logger := m.log.WithName("mirror-node-sync")
-	logger.I("provisioned")
-	defer logger.I("exited")
+	syncLogger := m.log.WithName("mirror-node-sync")
+	syncLogger.I("provisioned")
+	defer syncLogger.I("exited")
 
 	ch := m.mirrorUpdateQ.TakeCh()
 	for t := range ch {
 		vn, ok := m.getVirtualNodeFromKey(t.Key)
 		if !ok {
-			logger.I("virtualnode not found", log.Any("key", t.Key))
+			syncLogger.I("virtualnode not found", log.Any("key", t.Key))
 			continue
 		}
 
-		logger := logger.WithFields(log.String("node", vn.name))
+		logger := syncLogger.WithFields(log.String("node", vn.name))
 
 		select {
 		case <-vn.opt.ConnectivityManager.Connected():
@@ -459,19 +461,19 @@ func (m *Manager) consumeMirrorNodeSync() {
 }
 
 func (m *Manager) consumeLeaseUpdate() {
-	logger := m.log.WithName("node-lease-update")
-	logger.I("provisioned")
-	defer logger.I("exited")
+	syncLogger := m.log.WithName("node-lease-update")
+	syncLogger.I("provisioned")
+	defer syncLogger.I("exited")
 
 	ch := m.leaseUpdateQ.TakeCh()
 	for t := range ch {
 		vn, ok := m.getVirtualNodeFromKey(t.Key)
 		if !ok {
-			logger.I("virtualnode not found", log.Any("key", t.Key))
+			syncLogger.I("virtualnode not found", log.Any("key", t.Key))
 			continue
 		}
 
-		logger := logger.WithFields(log.String("node", vn.name))
+		logger := syncLogger.WithFields(log.String("node", vn.name))
 
 		select {
 		case <-vn.opt.ConnectivityManager.Connected():

@@ -130,6 +130,7 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 			if duration < minDuration {
 				duration = minDuration
 			}
+			_ = duration
 			// TODO: finish sync loop health check
 			//enterLoopTime := s.host.LatestLoopEntryTime()
 			//if !enterLoopTime.IsZero() && time.Now().After(enterLoopTime.Add(duration)) {
@@ -139,21 +140,31 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 		}),
 	)
 	// host logs
-	m.HandleFunc("/logs/.*", podManager.HandleHostLog).Methods(http.MethodGet)
+	m.HandleFunc("/logs/.*",
+		podManager.HandleHostLog).Methods(http.MethodGet)
 	// containerLogs (kubectl logs)
-	m.HandleFunc("/containerLogs/{namespace}/{name}/{container}", podManager.HandlePodLog).Methods(http.MethodGet)
+	m.HandleFunc("/containerLogs/{namespace}/{name}/{container}",
+		podManager.HandlePodLog).Methods(http.MethodGet)
 	// exec (kubectl exec/cp)
-	m.HandleFunc("/exec/{namespace}/{name}/{container}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
-	m.HandleFunc("/exec/{namespace}/{name}/{uid}/{container}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/exec/{namespace}/{name}/{container}",
+		podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/exec/{namespace}/{name}/{uid}/{container}",
+		podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
 	// attach (kubectl attach)
-	m.HandleFunc("/attach/{namespace}/{name}/{container}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
-	m.HandleFunc("/attach/{namespace}/{name}/{uid}/{container}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/attach/{namespace}/{name}/{container}",
+		podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/attach/{namespace}/{name}/{uid}/{container}",
+		podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
 	// run
-	m.HandleFunc("/run/{namespace}/{name}/{container}", podManager.HandlePodExec).Methods(http.MethodPost)
-	m.HandleFunc("/run/{namespace}/{name}/{uid}/{container}", podManager.HandlePodExec).Methods(http.MethodPost)
+	m.HandleFunc("/run/{namespace}/{name}/{container}",
+		podManager.HandlePodExec).Methods(http.MethodPost)
+	m.HandleFunc("/run/{namespace}/{name}/{uid}/{container}",
+		podManager.HandlePodExec).Methods(http.MethodPost)
 	// portForward (kubectl proxy)
-	m.HandleFunc("/portForward/{namespace}/{name}", podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
-	m.HandleFunc("/portForward/{namespace}/{name}/{uid}", podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/portForward/{namespace}/{name}",
+		podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/portForward/{namespace}/{name}/{uid}",
+		podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
 	m.HandleFunc("/pods", podManager.HandleGetPods).Methods(http.MethodGet)
 	m.HandleFunc("/runningpods", podManager.HandleGetRunningPods).Methods(http.MethodGet)
 	//
@@ -167,9 +178,12 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 	// stats
 	m.HandleFunc("/stats", metricsManager.HandleStats).Methods(http.MethodGet, http.MethodPost)
 	m.HandleFunc("/stats/summary", metricsManager.HandleStatsSummary).Methods(http.MethodGet, http.MethodPost)
-	m.HandleFunc("/stats/container", metricsManager.HandleStatsSystemContainer).Methods(http.MethodGet, http.MethodPost)
-	m.HandleFunc("/stats/{name}/{container}", metricsManager.HandleStatsContainer).Methods(http.MethodGet, http.MethodPost)
-	m.HandleFunc("/stats/{namespace}/{name}/{uid}/{container}", metricsManager.HandleStatsContainer).Methods(http.MethodGet, http.MethodPost)
+	m.HandleFunc("/stats/container",
+		metricsManager.HandleStatsSystemContainer).Methods(http.MethodGet, http.MethodPost)
+	m.HandleFunc("/stats/{name}/{container}",
+		metricsManager.HandleStatsContainer).Methods(http.MethodGet, http.MethodPost)
+	m.HandleFunc("/stats/{namespace}/{name}/{uid}/{container}",
+		metricsManager.HandleStatsContainer).Methods(http.MethodGet, http.MethodPost)
 	// stats spec
 	m.HandleFunc("/spec", metricsManager.HandleStatsSpec).Methods(http.MethodGet)
 	// pprof

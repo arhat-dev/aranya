@@ -33,11 +33,13 @@ type volumeNamePathPair struct {
 	path string
 }
 
-func (m *Manager) getUniqueVolumeNamesAndPaths(pod *corev1.Pod) (map[corev1.UniqueVolumeName]volumeNamePathPair, error) {
+func (m *Manager) getUniqueVolumeNamesAndPaths(
+	pod *corev1.Pod,
+) (map[corev1.UniqueVolumeName]volumeNamePathPair, error) {
 	volNamePathPairs := make(map[corev1.UniqueVolumeName]volumeNamePathPair)
 
 	mounts, devices := util.GetPodVolumeNames(pod)
-	for _, vol := range pod.Spec.Volumes {
+	for i, vol := range pod.Spec.Volumes {
 		if !mounts.Has(vol.Name) && !devices.Has(vol.Name) {
 			// volume/device not used
 			continue
@@ -45,7 +47,8 @@ func (m *Manager) getUniqueVolumeNamesAndPaths(pod *corev1.Pod) (map[corev1.Uniq
 
 		switch {
 		case vol.CSI != nil:
-			volName, err := m.csiPlugin.GetVolumeName(volume.NewSpecFromVolume(&vol))
+			volName, err := m.csiPlugin.GetVolumeName(
+				volume.NewSpecFromVolume(&pod.Spec.Volumes[i]))
 			if err != nil {
 				return nil, fmt.Errorf("failed to generate volume name with csi plugin: %w", err)
 			}
@@ -55,12 +58,14 @@ func (m *Manager) getUniqueVolumeNamesAndPaths(pod *corev1.Pod) (map[corev1.Uniq
 				path: "",
 			}
 		case vol.PersistentVolumeClaim != nil:
-			pvc, err := m.kubeClient.CoreV1().PersistentVolumeClaims(constant.WatchNS()).Get(m.Context(), vol.PersistentVolumeClaim.ClaimName, metav1.GetOptions{})
+			pvc, err := m.kubeClient.CoreV1().PersistentVolumeClaims(constant.WatchNS()).
+				Get(m.Context(), vol.PersistentVolumeClaim.ClaimName, metav1.GetOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("failed to get pvc spec: %w", err)
 			}
 
-			pv, err := m.kubeClient.CoreV1().PersistentVolumes().Get(m.Context(), pvc.Spec.VolumeName, metav1.GetOptions{})
+			pv, err := m.kubeClient.CoreV1().PersistentVolumes().
+				Get(m.Context(), pvc.Spec.VolumeName, metav1.GetOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("failed to get pv referenced in pvc spec: %w", err)
 			}
@@ -80,7 +85,11 @@ func (m *Manager) getUniqueVolumeNamesAndPaths(pod *corev1.Pod) (map[corev1.Uniq
 	return volNamePathPairs, nil
 }
 
-func (m *Manager) removeVolumeInUse(oldVolumeInUse []corev1.UniqueVolumeName, oldVolumeAttached []corev1.AttachedVolume, volNames map[corev1.UniqueVolumeName]volumeNamePathPair) ([]corev1.UniqueVolumeName, []corev1.AttachedVolume) {
+func (m *Manager) removeVolumeInUse(
+	oldVolumeInUse []corev1.UniqueVolumeName,
+	oldVolumeAttached []corev1.AttachedVolume,
+	volNames map[corev1.UniqueVolumeName]volumeNamePathPair,
+) ([]corev1.UniqueVolumeName, []corev1.AttachedVolume) {
 	var (
 		volInUse    []corev1.UniqueVolumeName
 		volAttached []corev1.AttachedVolume
@@ -97,7 +106,11 @@ func (m *Manager) removeVolumeInUse(oldVolumeInUse []corev1.UniqueVolumeName, ol
 	return volInUse, volAttached
 }
 
-func (m *Manager) addVolumesInUse(oldVolumeInUse []corev1.UniqueVolumeName, oldVolumeAttached []corev1.AttachedVolume, volNames map[corev1.UniqueVolumeName]volumeNamePathPair) ([]corev1.UniqueVolumeName, []corev1.AttachedVolume) {
+func (m *Manager) addVolumesInUse(
+	oldVolumeInUse []corev1.UniqueVolumeName,
+	oldVolumeAttached []corev1.AttachedVolume,
+	volNames map[corev1.UniqueVolumeName]volumeNamePathPair,
+) ([]corev1.UniqueVolumeName, []corev1.AttachedVolume) {
 	var (
 		volumesInUse    []corev1.UniqueVolumeName
 		volumesAttached []corev1.AttachedVolume

@@ -180,10 +180,27 @@ func (c *gcpIoTCoreClient) Subscribe() error {
 		for {
 			select {
 			case <-tk.C:
-				_, err := c.checkDeviceStatus()
+				online, err := c.checkDeviceStatus()
 				if err != nil {
 					c.log.I("failed to check device status", log.Error(err))
+					break
 				}
+
+				var msg *gopb.Msg
+				if online {
+					msg = gopb.NewOnlineMsg(c.deviceID)
+				} else {
+					msg = gopb.NewOfflineMsg(c.deviceID)
+				}
+
+				data, _ := msg.Marshal()
+
+				c.handleRecv(c.ctx, &pubsub.Message{
+					Attributes: map[string]string{
+						"deviceId": c.deviceID,
+					},
+					Data: data,
+				})
 			case <-c.ctx.Done():
 				return
 			}
@@ -244,7 +261,7 @@ func (c *gcpIoTCoreClient) SubTopics() []string {
 	return []string{c.msgTopic.String(), c.stateTopic.String()}
 }
 
-func (c *gcpIoTCoreClient) checkDeviceStatus() (online bool, err error) {
+func (c *gcpIoTCoreClient) checkDeviceStatus() (online bool, _ error) {
 	defer func() {
 		if online {
 			c.onRecvMsg(c.onlineMsg)

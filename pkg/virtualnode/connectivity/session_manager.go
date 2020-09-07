@@ -60,6 +60,7 @@ func (s *session) deliverMsg(msg *gopb.Msg) bool {
 
 	var reallyCompleted bool
 	if s.seqQ == nil || msg.Kind != gopb.MSG_DATA {
+		// nolint:gosimple
 		select {
 		case s.msgCh <- msg:
 		}
@@ -69,12 +70,13 @@ func (s *session) deliverMsg(msg *gopb.Msg) bool {
 		_ = dataMsg.Unmarshal(msg.Body)
 
 		if msg.Completed {
-			reallyCompleted = s.seqQ.SetMaxSeq(dataMsg.Seq)
+			_ = s.seqQ.SetMaxSeq(dataMsg.Seq)
 		}
 
 		var out []interface{}
 		out, reallyCompleted = s.seqQ.Offer(dataMsg.Seq, dataMsg.Data)
 		for _, da := range out {
+			// nolint:gosimple
 			select {
 			case s.msgCh <- da.([]byte):
 			}

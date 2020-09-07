@@ -53,6 +53,7 @@ func (c *Controller) checkVirtualPodUpToDate(realPod, expectedPod *corev1.Pod) (
 	return true
 }
 
+// nolint:unparam
 func (c *Controller) addManagedPod(name string) (added bool) {
 	c.podsMu.Lock()
 	defer c.podsMu.Unlock()

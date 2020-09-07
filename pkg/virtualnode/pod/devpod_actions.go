@@ -57,9 +57,13 @@ func (m *Manager) UpdateMirrorPod(pod *corev1.Pod, devicePodStatus *gopb.PodStat
 
 	if devicePodStatus != nil {
 		if forInitContainers {
-			_, pod.Status.InitContainerStatuses = resolveContainerStatus(pod.Spec.InitContainers, devicePodStatus)
+			_, pod.Status.InitContainerStatuses = resolveContainerStatus(
+				pod.Spec.InitContainers, devicePodStatus,
+			)
 		} else {
-			pod.Status.Phase, pod.Status.ContainerStatuses = resolveContainerStatus(pod.Spec.Containers, devicePodStatus)
+			pod.Status.Phase, pod.Status.ContainerStatuses = resolveContainerStatus(
+				pod.Spec.Containers, devicePodStatus,
+			)
 		}
 
 		if devicePodStatus.PodIp != "" {
@@ -68,23 +72,24 @@ func (m *Manager) UpdateMirrorPod(pod *corev1.Pod, devicePodStatus *gopb.PodStat
 		logger.D("resolved device container status", log.String("podIP", pod.Status.PodIP))
 	}
 
-	pod, err := m.UpdatePodStatus(pod)
-	if err != nil {
-		logger.I("failed to update pod status", log.Error(err))
-		return err
+	_, err2 := m.UpdatePodStatus(pod)
+	if err2 != nil {
+		logger.I("failed to update pod status", log.Error(err2))
+		return err2
 	}
 	return nil
 }
 
 // CreateDevicePod handle both pod resource resolution and create pod in edge device
+// nolint:gocyclo
 func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 	if !m.hasPodCIDR() && !pod.Spec.HostNetwork {
 		return fmt.Errorf("pod cidr does not exists")
 	}
 
 	envs := make(map[string]map[string]string)
-	for _, ctr := range pod.Spec.Containers {
-		ctrEnv, err := m.resolveEnv(pod, &ctr)
+	for i, ctr := range pod.Spec.Containers {
+		ctrEnv, err := m.resolveEnv(pod, &pod.Spec.Containers[i])
 		if err != nil {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "FailedToResolveEnv", err.Error())
 			return err
@@ -124,7 +129,9 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 				return fmt.Errorf("failed to get node")
 			}
 
-			node.Status.VolumesInUse, node.Status.VolumesAttached = m.addVolumesInUse(node.Status.VolumesInUse, node.Status.VolumesAttached, volNames)
+			node.Status.VolumesInUse, node.Status.VolumesAttached = m.addVolumesInUse(
+				node.Status.VolumesInUse, node.Status.VolumesAttached, volNames,
+			)
 
 			node, err = m.nodeClient.UpdateStatus(m.Context(), node, metav1.UpdateOptions{})
 			if err != nil {
@@ -132,7 +139,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 			}
 
 			// mount required volumes
-			if err := m.PrepareStorage(keepPVCAndInlineCSIOnly(pod), node.Status.VolumesInUse); err != nil {
+			if err = m.PrepareStorage(keepPVCAndInlineCSIOnly(pod), node.Status.VolumesInUse); err != nil {
 				return fmt.Errorf("failed to setup storage: %w", err)
 			}
 		}
@@ -155,31 +162,34 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 
 	if initOpts == nil {
 		// mark pod status ContainerCreating just like what the kubelet will do
-		latestPod, err := m.getPod(pod.Name)
-		if err != nil {
-			return err
+		latestPod, err2 := m.getPod(pod.Name)
+		if err2 != nil {
+			return err2
 		}
 		pod = latestPod
 		pod.Status.Phase, pod.Status.ContainerStatuses = newContainerCreatingStatus(pod)
-		pod, err = m.UpdatePodStatus(pod)
-		if err != nil {
-			return err
+		pod, err2 = m.UpdatePodStatus(pod)
+		if err2 != nil {
+			return err2
 		}
 	}
 
 	// pull images if contains non virtual images
 	if len(imgOpts.ImagePull) > 0 {
 		podImageEnsureCmd := gopb.NewPodImageEnsureCmd(imgOpts)
-		msgCh, _, err := m.ConnectivityManager.PostCmd(0, podImageEnsureCmd)
-		if err != nil {
-			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "FailedToPostImageEnsureCmd", err.Error())
-			return err
+		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, podImageEnsureCmd)
+		if err2 != nil {
+			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
+				"FailedToPostImageEnsureCmd", err.Error())
+			return err2
 		}
-		m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "Pulling", "Pulling all images")
+		m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
+			"Pulling", "Pulling all images")
 
 		gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
 			if msgErr := msg.GetError(); msgErr != nil {
-				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "ImagePullError", msgErr.Description)
+				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
+					"ImagePullError", msgErr.Description)
 				err = msgErr
 				return true
 			}
@@ -190,7 +200,8 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 			}
 
 			if len(il.Images) != 0 {
-				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "Pulled", "Successfully pulled all images")
+				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
+					"Pulled", "Successfully pulled all images")
 			}
 			return false
 		}, nil, gopb.HandleUnknownMessage(m.Log))
@@ -203,33 +214,33 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 	// create init containers if any
 	if initOpts != nil {
 		// mark pod status PodInitializing just like what the kubelet will do
-		latestPod, err := m.getPod(pod.Name)
-		if err != nil {
-			return err
+		latestPod, err2 := m.getPod(pod.Name)
+		if err2 != nil {
+			return err2
 		}
 		pod = latestPod
 		pod.Status.Phase, pod.Status.InitContainerStatuses = newContainerInitializingStatus(pod)
-		pod, err = m.UpdatePodStatus(pod)
-		if err != nil {
-			return err
+		pod, err2 = m.UpdatePodStatus(pod)
+		if err2 != nil {
+			return err2
 		}
 
 		if initHostExec {
 			// init containers are host exec commands
-			podStatus, err := m.handleContainerAsHostExec(initOpts)
-			if err != nil {
+			podStatus, err3 := m.handleContainerAsHostExec(initOpts)
+			if err3 != nil {
 				// failed during creating log files, not actual command executed, retry!
-				return fmt.Errorf("failed to handle work container as host exec: %w", err)
+				return fmt.Errorf("failed to handle work container as host exec: %w", err3)
 			}
 
-			latestPod, err = m.getPod(pod.Name)
-			if err == nil {
+			latestPod, err3 = m.getPod(pod.Name)
+			if err3 == nil {
 				pod = latestPod
 			}
 
-			err = m.UpdateMirrorPod(pod, podStatus, false)
-			if err != nil {
-				m.Log.I("failed to update work container status for host exec", log.Error(err))
+			err3 = m.UpdateMirrorPod(pod, podStatus, false)
+			if err3 != nil {
+				m.Log.I("failed to update work container status for host exec", log.Error(err3))
 				// this is not real pod creation and we do not want to retry command execution
 				return nil
 			}
@@ -237,15 +248,17 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 			// normal init containers
 
 			initCreateCmd := gopb.NewPodCreateCmd(initOpts)
-			msgCh, _, err := m.ConnectivityManager.PostCmd(0, initCreateCmd)
-			if err != nil {
-				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "PostCreateInitCmdError", err.Error())
-				return err
+			msgCh, _, err3 := m.ConnectivityManager.PostCmd(0, initCreateCmd)
+			if err3 != nil {
+				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
+					"PostCreateInitCmdError", err3.Error())
+				return err3
 			}
 
 			gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
 				if msgErr := msg.GetError(); msgErr != nil {
-					m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "RunInitContainerError", msgErr.Description)
+					m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
+						"RunInitContainerError", msgErr.Description)
 					pod.Status.Phase, pod.Status.InitContainerStatuses = newContainerErrorStatus(pod)
 					_ = m.UpdateMirrorPod(pod, nil, false)
 					err = msgErr
@@ -257,7 +270,8 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 					return true
 				}
 
-				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "PodInitialized", "Init container(s) created and finished")
+				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
+					"PodInitialized", "Init container(s) created and finished")
 				_ = m.UpdateMirrorPod(pod, ps, true)
 				return false
 			}, nil, gopb.HandleUnknownMessage(m.Log))
@@ -282,38 +296,41 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 
 	if workHostExec {
 		// work containers are host exec commands
-		podStatus, err := m.handleContainerAsHostExec(workOpts)
-		if err != nil {
+		podStatus, err2 := m.handleContainerAsHostExec(workOpts)
+		if err2 != nil {
 			// failed during creating log files, not actual command executed, retry!
-			return fmt.Errorf("failed to handle work container as host exec: %w", err)
+			return fmt.Errorf("failed to handle work container as host exec: %w", err2)
 		}
 
-		latestPod, err = m.getPod(pod.Name)
-		if err == nil {
+		latestPod, err2 = m.getPod(pod.Name)
+		if err2 == nil {
 			pod = latestPod
 		}
 
-		err = m.UpdateMirrorPod(pod, podStatus, false)
-		if err != nil {
-			m.Log.I("failed to update work container status for host exec", log.Error(err))
+		err2 = m.UpdateMirrorPod(pod, podStatus, false)
+		if err2 != nil {
+			m.Log.I("failed to update work container status for host exec", log.Error(err2))
 			// this is not real pod creation and we do not want to retry command execution
 			return nil
 		}
 	} else {
 		// create work containers
 		workCreateCmd := gopb.NewPodCreateCmd(workOpts)
-		msgCh, _, err := m.ConnectivityManager.PostCmd(0, workCreateCmd)
-		if err != nil {
-			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "PostCreateWorkCmdError", err.Error())
-			return err
+		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, workCreateCmd)
+		if err2 != nil {
+			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
+				"PostCreateWorkCmdError", err2.Error())
+			return err2
 		}
 
 		gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
 			if msgErr := msg.GetError(); msgErr != nil {
 				if msgErr.Kind == gopb.ERR_ALREADY_EXISTS {
-					m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "Started", "Reused existing container(s)")
+					m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
+						"Started", "Reused existing container(s)")
 				} else {
-					m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "RunContainerError", msgErr.Description)
+					m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
+						"RunContainerError", msgErr.Description)
 
 					pod.Status.Phase, pod.Status.ContainerStatuses = newContainerErrorStatus(pod)
 					_ = m.UpdateMirrorPod(pod, nil, false)
@@ -359,14 +376,17 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 
 		// collect pre-stop hook spec
 		preStopHooks = make(map[string]*gopb.ActionMethod)
-		for _, ctr := range podToDelete.Spec.Containers {
+		for i, ctr := range podToDelete.Spec.Containers {
 			// ignore pods using virtual images, they do not actually create containers in device
 			if ctr.Image == constant.VirtualImageNameHostExec {
 				return nil
 			}
 
 			if ctr.Lifecycle != nil && ctr.Lifecycle.PreStop != nil {
-				preStopHooks[ctr.Name] = translateHandler(ctr.Lifecycle.PreStop, getNamedContainerPorts(&ctr))
+				preStopHooks[ctr.Name] = translateHandler(
+					ctr.Lifecycle.PreStop,
+					getNamedContainerPorts(&podToDelete.Spec.Containers[i]),
+				)
 			}
 		}
 	}
@@ -395,7 +415,8 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 				}
 			default:
 				if hasPodObj {
-					m.options.EventRecorder.Event(podToDelete, corev1.EventTypeNormal, "DeletePodError", msgErr.Description)
+					m.options.EventRecorder.Event(podToDelete, corev1.EventTypeNormal,
+						"DeletePodError", msgErr.Description)
 				}
 				err = errors.New(msgErr.Description)
 			}

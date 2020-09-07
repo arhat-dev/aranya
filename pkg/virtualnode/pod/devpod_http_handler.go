@@ -34,19 +34,59 @@ import (
 	"arhat.dev/aranya/pkg/util/logutil"
 )
 
-type containerExecutor func(name string, uid types.UID, container string, cmd []string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error
+type containerExecutor func(
+	name string,
+	uid types.UID,
+	container string,
+	cmd []string,
+	stdin io.Reader,
+	stdout, stderr io.WriteCloser,
+	tty bool,
+	resize <-chan remotecommand.TerminalSize,
+	timeout time.Duration,
+) error
 
-func (doExec containerExecutor) ExecInContainer(name string, uid types.UID, container string, cmd []string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+func (doExec containerExecutor) ExecInContainer(
+	name string,
+	uid types.UID,
+	container string,
+	cmd []string,
+	stdin io.Reader,
+	stdout, stderr io.WriteCloser,
+	tty bool,
+	resize <-chan remotecommand.TerminalSize,
+	timeout time.Duration,
+) error {
 	return doExec(name, uid, container, cmd, stdin, stdout, stderr, tty, resize, timeout)
 }
 
-type containerAttacher func(name string, uid types.UID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize) error
+type containerAttacher func(
+	name string,
+	uid types.UID,
+	container string,
+	stdin io.Reader,
+	stdout, stderr io.WriteCloser,
+	tty bool,
+	resize <-chan remotecommand.TerminalSize,
+) error
 
-func (doAttach containerAttacher) AttachContainer(name string, uid types.UID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize) error {
+func (doAttach containerAttacher) AttachContainer(
+	name string,
+	uid types.UID,
+	container string,
+	stdin io.Reader,
+	stdout, stderr io.WriteCloser,
+	tty bool,
+	resize <-chan remotecommand.TerminalSize,
+) error {
 	return doAttach(name, uid, container, stdin, stdout, stderr, tty, resize)
 }
 
-func (m *Manager) doGetContainerLogs(uid types.UID, podName, logPath string, options *corev1.PodLogOptions) (uint64, io.ReadCloser, error) {
+func (m *Manager) doGetContainerLogs(
+	uid types.UID,
+	podName, logPath string,
+	options *corev1.PodLogOptions,
+) (uint64, io.ReadCloser, error) {
 	var (
 		since      time.Time
 		tailLines  int64 = -1
@@ -56,7 +96,8 @@ func (m *Manager) doGetContainerLogs(uid types.UID, podName, logPath string, opt
 		logger     = m.Log.WithFields(log.String("type", "logs"))
 	)
 
-	if options != nil {
+	switch {
+	case options != nil:
 		if options.SinceTime != nil {
 			since = options.SinceTime.Time
 		} else if options.SinceSeconds != nil {
@@ -71,17 +112,34 @@ func (m *Manager) doGetContainerLogs(uid types.UID, podName, logPath string, opt
 			bytesLimit = *options.LimitBytes
 		}
 
-		cmd = gopb.NewPodLogCmd(string(uid), options.Container, options.Follow, options.Timestamps, options.Previous, since, tailLines, bytesLimit)
+		cmd = gopb.NewPodLogCmd(
+			string(uid),
+			options.Container,
+			options.Follow,
+			options.Timestamps,
+			options.Previous,
+			since,
+			tailLines,
+			bytesLimit,
+		)
 
 		// try local file for virtual pod host exec containers
-		podLog = containerLogFile(podLogDir(m.options.Config.LogDir, constant.WatchNS(), podName, string(uid)), options.Container)
+		podLog = containerLogFile(
+			podLogDir(
+				m.options.Config.LogDir,
+				constant.WatchNS(),
+				podName,
+				string(uid),
+			),
+			options.Container,
+		)
 		f, err := os.Lstat(podLog)
 		if err != nil || f.IsDir() {
 			podLog = ""
 		}
-	} else if logPath != "" {
+	case logPath != "":
 		cmd = gopb.NewHostLogCmd(logPath)
-	} else {
+	default:
 		return 0, nil, fmt.Errorf("bad log options")
 	}
 
@@ -118,8 +176,7 @@ func (m *Manager) doGetContainerLogs(uid types.UID, podName, logPath string, opt
 
 			return true
 		}, func(dataMsg *gopb.Data) (exit bool) {
-			switch dataMsg.Kind {
-			case gopb.DATA_ERROR:
+			if dataMsg.Kind == gopb.DATA_ERROR {
 				msgErr := new(gopb.Error)
 				_ = msgErr.Unmarshal(dataMsg.Data)
 				logger.I("error happened in pod logs", log.Error(msgErr))
@@ -139,7 +196,17 @@ func (m *Manager) doGetContainerLogs(uid types.UID, podName, logPath string, opt
 }
 
 func (m *Manager) doHandleExecInContainer() kubeletrc.Executor {
-	return containerExecutor(func(name string, uid types.UID, container string, cmd []string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	return containerExecutor(func(
+		name string,
+		uid types.UID,
+		container string,
+		cmd []string,
+		stdin io.Reader,
+		stdout, stderr io.WriteCloser,
+		tty bool,
+		resize <-chan remotecommand.TerminalSize,
+		timeout time.Duration,
+	) error {
 		defer func() {
 			_ = stdout.Close()
 			if stderr != nil {
@@ -159,7 +226,15 @@ func (m *Manager) doHandleExecInContainer() kubeletrc.Executor {
 }
 
 func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
-	return containerAttacher(func(name string, uid types.UID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize) error {
+	return containerAttacher(func(
+		name string,
+		uid types.UID,
+		container string,
+		stdin io.Reader,
+		stdout, stderr io.WriteCloser,
+		tty bool,
+		resize <-chan remotecommand.TerminalSize,
+	) error {
 		defer func() {
 			_ = stdout.Close()
 			if stderr != nil {
@@ -198,9 +273,9 @@ func (m *Manager) doServeTerminalStream(
 
 	defer func() {
 		// best effort
-		_, _, err := m.ConnectivityManager.PostCmd(sid, gopb.NewSessionCloseCmd(sid))
-		if err != nil {
-			logger.I("failed to post session close cmd", log.Error(err))
+		_, _, err2 := m.ConnectivityManager.PostCmd(sid, gopb.NewSessionCloseCmd(sid))
+		if err2 != nil {
+			logger.I("failed to post session close cmd", log.Error(err2))
 		}
 	}()
 
@@ -208,8 +283,8 @@ func (m *Manager) doServeTerminalStream(
 		go func() {
 			for size := range resizeCh {
 				resizeCmd := gopb.NewPodResizeCmd(size.Width, size.Height)
-				if _, _, err := m.ConnectivityManager.PostCmd(sid, resizeCmd); err != nil {
-					logger.I("failed to post resize cmd", log.Error(err))
+				if _, _, err2 := m.ConnectivityManager.PostCmd(sid, resizeCmd); err2 != nil {
+					logger.I("failed to post resize cmd", log.Error(err2))
 				}
 			}
 		}()
@@ -226,7 +301,7 @@ func (m *Manager) doServeTerminalStream(
 
 		timer := time.NewTimer(0)
 		if !timer.Stop() {
-			_ = <-timer.C
+			<-timer.C
 		}
 
 		closeSig := make(chan struct{})
@@ -234,7 +309,7 @@ func (m *Manager) doServeTerminalStream(
 			close(closeSig)
 			if !timer.Stop() {
 				select {
-				case _ = <-timer.C:
+				case <-timer.C:
 				default:
 				}
 			}
@@ -243,9 +318,9 @@ func (m *Manager) doServeTerminalStream(
 		go func() {
 			defer func() {
 				logger.V("closing remote read")
-				_, _, err := m.ConnectivityManager.PostCmd(sid, gopb.NewPodInputCmd(true, nil))
-				if err != nil {
-					logger.I("failed to post input close cmd", log.Error(err))
+				_, _, err2 := m.ConnectivityManager.PostCmd(sid, gopb.NewPodInputCmd(true, nil))
+				if err2 != nil {
+					logger.I("failed to post input close cmd", log.Error(err2))
 				}
 
 				logger.D("finished terminal input")
@@ -255,12 +330,12 @@ func (m *Manager) doServeTerminalStream(
 				timer.Reset(readTimeout)
 				data, isTimeout := r.ReadUntilTimeout(timer.C)
 				if !isTimeout && !timer.Stop() {
-					_ = <-timer.C
+					<-timer.C
 				}
 
-				_, _, err := m.ConnectivityManager.PostCmd(sid, gopb.NewPodInputCmd(false, data))
-				if err != nil {
-					logger.I("failed to post user input", log.Error(err))
+				_, _, err2 := m.ConnectivityManager.PostCmd(sid, gopb.NewPodInputCmd(false, data))
+				if err2 != nil {
+					logger.I("failed to post user input", log.Error(err2))
 					return
 				}
 			}
@@ -287,7 +362,7 @@ func (m *Manager) doServeTerminalStream(
 			return true
 		}
 
-		_, err := targetOutput.Write(dataMsg.Data)
+		_, err = targetOutput.Write(dataMsg.Data)
 		if err != nil && err != io.EOF {
 			logger.I("failed to write output", log.Error(err))
 			return true

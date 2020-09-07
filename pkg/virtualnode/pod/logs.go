@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 )
 
-func podLogDir(logRootDir, namespace, podName, podUid string) string {
-	return filepath.Join(logRootDir, fmt.Sprintf("%s_%s_%s", namespace, podName, podUid))
+func podLogDir(logRootDir, namespace, podName, podUID string) string {
+	return filepath.Join(logRootDir, fmt.Sprintf("%s_%s_%s", namespace, podName, podUID))
 }
 
 func containerLogFile(podLogDir, containerName string) string {

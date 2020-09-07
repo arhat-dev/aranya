@@ -23,10 +23,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"arhat.dev/aranya-proto/gopb"
-	"arhat.dev/aranya-proto/gopb/protoconst"
 	"arhat.dev/pkg/log"
 	"github.com/goiiot/libmqtt"
+
+	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/gopb/protoconst"
 )
 
 var errAlreadySubscribing = fmt.Errorf("already subscribing")

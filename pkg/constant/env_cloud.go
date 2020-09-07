@@ -32,7 +32,6 @@ const (
 var (
 	podUID  string
 	watchNS string
-	jobNS   string
 )
 
 func init() {

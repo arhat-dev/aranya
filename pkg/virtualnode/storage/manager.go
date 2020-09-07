@@ -102,7 +102,11 @@ func NewManager(
 		podStatusProvider: podStatusProvider,
 		runtime:           runtime,
 
-		vh: newVolumeHost(nodeName, hostname, hostIP, podsDir, options.KubeletPluginsDir, kubeClient, options.CSIDriverLister, options.EventRecorder),
+		vh: newVolumeHost(
+			nodeName, hostname, hostIP, podsDir,
+			options.KubeletPluginsDir, kubeClient,
+			options.CSIDriverLister, options.EventRecorder,
+		),
 		mu: new(sync.RWMutex),
 	}
 }
@@ -111,7 +115,6 @@ type Manager struct {
 	log log.Interface
 	ctx context.Context
 
-	podsDir       string
 	kubeletRegDir string
 
 	podManager        kubeletpod.Manager
@@ -348,7 +351,9 @@ func (m *Manager) getUnmountedVolumes(podName voltypes.UniquePodName, expectedVo
 
 // verifyVolumesMountedFunc returns a method that returns true when all expected
 // volumes are mounted.
-func (m *Manager) verifyVolumesMountedFunc(podName voltypes.UniquePodName, expectedVolumes []string) wait.ConditionFunc {
+func (m *Manager) verifyVolumesMountedFunc(
+	podName voltypes.UniquePodName, expectedVolumes []string,
+) wait.ConditionFunc {
 	return func() (done bool, err error) {
 		if errs := m.dsw.PopPodErrors(podName); len(errs) > 0 {
 			return true, errors.New(strings.Join(errs, "; "))
@@ -358,7 +363,8 @@ func (m *Manager) verifyVolumesMountedFunc(podName voltypes.UniquePodName, expec
 }
 
 func (m *Manager) verifyVolumesUnmountedFunc(podName voltypes.UniquePodName, podUID types.UID) wait.ConditionFunc {
-	podCSIVolumesDir := m.vh.GetPodVolumeDir(podUID, utilstrings.EscapeQualifiedName(m.vh.csiPlugin.GetPluginName()), "")
+	podCSIVolumesDir := m.vh.GetPodVolumeDir(
+		podUID, utilstrings.EscapeQualifiedName(m.vh.csiPlugin.GetPluginName()), "")
 
 	return func() (done bool, err error) {
 		if errs := m.dsw.PopPodErrors(podName); len(errs) > 0 {

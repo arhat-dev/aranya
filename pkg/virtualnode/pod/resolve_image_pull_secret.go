@@ -37,6 +37,7 @@ func (m *Manager) resolveImagePullAuthConfig(pod *corev1.Pod) (map[string]*gopb.
 		creds, withCredentials := keyring.Lookup(repoToPull)
 		if !withCredentials {
 			// pull without credentials
+			continue
 		}
 
 		for _, currentCreds := range creds {

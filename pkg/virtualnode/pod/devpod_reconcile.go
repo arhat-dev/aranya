@@ -110,7 +110,9 @@ func (m *Manager) onRemotePodDeleted(obj interface{}) *reconcile.Result {
 			return &reconcile.Result{Err: fmt.Errorf("failed to get node")}
 		}
 
-		node.Status.VolumesInUse, node.Status.VolumesAttached = m.removeVolumeInUse(node.Status.VolumesInUse, node.Status.VolumesAttached, volNames)
+		node.Status.VolumesInUse, node.Status.VolumesAttached = m.removeVolumeInUse(
+			node.Status.VolumesInUse, node.Status.VolumesAttached, volNames,
+		)
 
 		_, err = m.nodeClient.UpdateStatus(m.Context(), node, metav1.UpdateOptions{})
 		if err != nil {

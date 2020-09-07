@@ -16,7 +16,11 @@ import (
 )
 
 // ResolveEnv resolves all required pod environment variables
-func (m *Manager) resolveEnv(pod *corev1.Pod, ctr *corev1.Container) (map[string]string, error) {
+// nolint:gocyclo
+func (m *Manager) resolveEnv(
+	pod *corev1.Pod,
+	ctr *corev1.Container,
+) (map[string]string, error) {
 	var (
 		result     = make(map[string]string)
 		configMaps = make(map[string]*corev1.ConfigMap)
@@ -105,7 +109,10 @@ func (m *Manager) resolveEnv(pod *corev1.Pod, ctr *corev1.Container) (map[string
 			}
 			if len(invalidKeys) > 0 {
 				sort.Strings(invalidKeys)
-				// kl.recorder.Eventf(pod, v1.EventTypeWarning, "InvalidEnvironmentVariableNames", "Keys [%s] from the EnvFrom secret %s/%s were skipped since they are considered invalid environment variable names.", strings.Join(invalidKeys, ", "), pod.Namespace, name)
+				// kl.recorder.Eventf(pod, v1.EventTypeWarning, "InvalidEnvironmentVariableNames",
+				// 		"Keys [%s] from the EnvFrom secret %s/%s were skipped since
+				// 		they are considered invalid environment variable names.",
+				// 		strings.Join(invalidKeys, ", "), pod.Namespace, name)
 			}
 		}
 	}
@@ -207,7 +214,11 @@ func (m *Manager) resolveEnv(pod *corev1.Pod, ctr *corev1.Container) (map[string
 }
 
 // containerResourceRuntimeValue returns the value of the provided container resource
-func containerResourceRuntimeValue(fs *corev1.ResourceFieldSelector, pod *corev1.Pod, container *corev1.Container) (string, error) {
+func containerResourceRuntimeValue(
+	fs *corev1.ResourceFieldSelector,
+	pod *corev1.Pod,
+	container *corev1.Container,
+) (string, error) {
 	containerName := fs.ContainerName
 	if len(containerName) == 0 {
 		return resource.ExtractContainerResourceValue(fs, container)

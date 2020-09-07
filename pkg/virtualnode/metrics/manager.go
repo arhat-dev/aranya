@@ -21,12 +21,13 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"arhat.dev/pkg/log"
+
 	"arhat.dev/aranya-proto/gopb"
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/util/cache"
 	"arhat.dev/aranya/pkg/util/manager"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
-	"arhat.dev/pkg/log"
 )
 
 type Options struct {
@@ -35,7 +36,12 @@ type Options struct {
 }
 
 // NewManager creates a new metrics manager for virtual node
-func NewManager(parentCtx context.Context, name string, connectivityManager connectivity.Manager, options *Options) *Manager {
+func NewManager(
+	parentCtx context.Context,
+	name string,
+	connectivityManager connectivity.Manager,
+	options *Options,
+) *Manager {
 	return &Manager{
 		BaseManager: manager.NewBaseManager(parentCtx, fmt.Sprintf("metrics.%s", name), connectivityManager),
 
@@ -151,8 +157,7 @@ func (m *Manager) configureDeviceMetricsCollection(cmd *gopb.MetricsCmd) {
 			return true
 		}
 
-		switch mc.Kind {
-		case gopb.METRICS_COLLECTION_CONFIGURED:
+		if mc.Kind == gopb.METRICS_COLLECTION_CONFIGURED {
 			switch cmd.Action {
 			case gopb.CONFIGURE_NODE_METRICS_COLLECTION:
 				m.Log.D("node metrics collection configured")

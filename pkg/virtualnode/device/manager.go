@@ -16,7 +16,12 @@ type Options struct {
 	Devices map[string]*gopb.Device
 }
 
-func NewManager(parentCtx context.Context, name string, connectivityManager connectivity.Manager, options *Options) *Manager {
+func NewManager(
+	parentCtx context.Context,
+	name string,
+	connectivityManager connectivity.Manager,
+	options *Options,
+) *Manager {
 	return &Manager{
 		BaseManager: manager.NewBaseManager(parentCtx, fmt.Sprintf("device.%s", name), connectivityManager),
 
@@ -174,11 +179,14 @@ func (m *Manager) removeDevices(deviceToRemove map[string]struct{}) (remains map
 	return deviceToRemove
 }
 
-func (m *Manager) ensureDevices(devices map[string]*gopb.Device) (ensuredDevices, failedDevices map[string]*gopb.Device) {
+func (m *Manager) ensureDevices(
+	devices map[string]*gopb.Device,
+) (ensuredDevices, failedDevices map[string]*gopb.Device) {
 	failedDevices = make(map[string]*gopb.Device)
 	ensuredDevices = make(map[string]*gopb.Device)
 
-	for _, d := range devices {
+	for _, dev := range devices {
+		d := dev
 		if _, ok := ensuredDevices[d.Id]; ok {
 			continue
 		}

@@ -208,7 +208,8 @@ func (m *Manager) HandlePodLog(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = logReader.Close() }()
 
 	if _, ok := w.(http.Flusher); !ok {
-		http.Error(w, fmt.Sprintf("unable to convert %v into http.Flusher, cannot show logs", reflect.TypeOf(w)), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("unable to convert %v into http.Flusher, cannot show logs",
+			reflect.TypeOf(w)), http.StatusInternalServerError)
 		return
 	}
 

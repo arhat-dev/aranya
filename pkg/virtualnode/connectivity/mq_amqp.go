@@ -24,11 +24,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"arhat.dev/aranya-proto/gopb"
-	"arhat.dev/aranya-proto/gopb/protoconst"
 	"arhat.dev/pkg/backoff"
 	"arhat.dev/pkg/log"
 	"github.com/streadway/amqp"
+
+	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/gopb/protoconst"
 )
 
 func newAMQPClient(parent *MessageQueueManager) (*amqpClient, error) {

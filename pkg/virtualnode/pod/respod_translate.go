@@ -72,7 +72,10 @@ func newContainerCreatingStatus(pod *corev1.Pod) (corev1.PodPhase, []corev1.Cont
 	return corev1.PodPending, status
 }
 
-func resolveContainerStatus(containers []corev1.Container, devicePodStatus *gopb.PodStatus) (corev1.PodPhase, []corev1.ContainerStatus) {
+func resolveContainerStatus(
+	containers []corev1.Container,
+	devicePodStatus *gopb.PodStatus,
+) (corev1.PodPhase, []corev1.ContainerStatus) {
 	ctrStatusMap := devicePodStatus.GetContainerStatuses()
 	if ctrStatusMap == nil {
 		// generalize to avoid panic
@@ -134,6 +137,7 @@ func resolveContainerStatus(containers []corev1.Container, devicePodStatus *gopb
 	return podPhase, statuses
 }
 
+// nolint:gocyclo
 func (m *Manager) translatePodCreateOptions(
 	pod *corev1.Pod,
 	ipv4PodCIDR, ipv6PodCIDR string,
@@ -217,7 +221,7 @@ func (m *Manager) translatePodCreateOptions(
 	hostExecImageFound := 0
 	for i, ctr := range pod.Spec.Containers {
 		var containerPorts map[string]*gopb.ContainerPort
-		containers[i], containerPorts = translateContainerSpec(pod, envs, &ctr)
+		containers[i], containerPorts = translateContainerSpec(pod, envs, &pod.Spec.Containers[i])
 
 		// check if is virtual image
 		if ctr.Image == constant.VirtualImageNameHostExec {
@@ -261,7 +265,7 @@ func (m *Manager) translatePodCreateOptions(
 
 		for i, ctr := range pod.Spec.InitContainers {
 			var containerPorts map[string]*gopb.ContainerPort
-			initContainers[i], containerPorts = translateContainerSpec(pod, envs, &ctr)
+			initContainers[i], containerPorts = translateContainerSpec(pod, envs, &pod.Spec.InitContainers[i])
 
 			if ctr.Image == constant.VirtualImageNameHostExec {
 				initHostExec = true
@@ -402,7 +406,11 @@ func getNamedContainerPorts(ctr *corev1.Container) map[string]int32 {
 	return ctrPorts
 }
 
-func translateContainerSpec(pod *corev1.Pod, envs map[string]map[string]string, ctr *corev1.Container) (*gopb.ContainerSpec, map[string]*gopb.ContainerPort) {
+func translateContainerSpec(
+	pod *corev1.Pod,
+	envs map[string]map[string]string,
+	ctr *corev1.Container,
+) (*gopb.ContainerSpec, map[string]*gopb.ContainerPort) {
 	var (
 		podPorts = make(map[string]*gopb.ContainerPort)
 		ctrPorts = make(map[string]int32)
@@ -578,7 +586,10 @@ func getPortValue(ports map[string]int32, port intstr.IntOrString) int32 {
 	return -1
 }
 
-func translateContainerSecOpts(podSecOpts *corev1.PodSecurityContext, ctrSecOpts *corev1.SecurityContext) *gopb.SecurityOptions {
+func translateContainerSecOpts(
+	podSecOpts *corev1.PodSecurityContext,
+	ctrSecOpts *corev1.SecurityContext,
+) *gopb.SecurityOptions {
 	result := resolveCommonSecOpts(podSecOpts, ctrSecOpts)
 	if result == nil || ctrSecOpts == nil {
 		return result
@@ -622,7 +633,10 @@ func translateContainerSecOpts(podSecOpts *corev1.PodSecurityContext, ctrSecOpts
 	return result
 }
 
-func resolveCommonSecOpts(podSecOpts *corev1.PodSecurityContext, ctrSecOpts *corev1.SecurityContext) *gopb.SecurityOptions {
+func resolveCommonSecOpts(
+	podSecOpts *corev1.PodSecurityContext,
+	ctrSecOpts *corev1.SecurityContext,
+) *gopb.SecurityOptions {
 	if podSecOpts == nil && ctrSecOpts != nil {
 		return nil
 	}
@@ -714,6 +728,7 @@ func getPodLabels(allLabels map[string]string) map[string]string {
 	return result
 }
 
+// nolint:unused,deadcode
 func getPodAnnotations(allAnnotations map[string]string) map[string]string {
 	result := make(map[string]string)
 	for k, v := range allAnnotations {

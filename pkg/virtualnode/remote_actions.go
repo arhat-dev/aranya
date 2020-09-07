@@ -181,14 +181,15 @@ func (vn *VirtualNode) handleGlobalMsg(msg *gopb.Msg) {
 func (vn *VirtualNode) updateNodeCache(msg *gopb.NodeStatus) {
 	if sysInfo := msg.GetSystemInfo(); sysInfo != nil {
 		vn.nodeStatusCache.UpdateSystemInfo(&corev1.NodeSystemInfo{
-			OperatingSystem:         sysInfo.GetOs(),
-			Architecture:            sysInfo.GetArch(),
-			OSImage:                 sysInfo.GetOsImage(),
-			KernelVersion:           sysInfo.GetKernelVersion(),
-			MachineID:               sysInfo.GetMachineId(),
-			SystemUUID:              sysInfo.GetSystemUuid(),
-			BootID:                  sysInfo.GetBootId(),
-			ContainerRuntimeVersion: fmt.Sprintf("%s://%s", sysInfo.GetRuntimeInfo().GetName(), sysInfo.GetRuntimeInfo().GetVersion()),
+			OperatingSystem: sysInfo.GetOs(),
+			Architecture:    sysInfo.GetArch(),
+			OSImage:         sysInfo.GetOsImage(),
+			KernelVersion:   sysInfo.GetKernelVersion(),
+			MachineID:       sysInfo.GetMachineId(),
+			SystemUUID:      sysInfo.GetSystemUuid(),
+			BootID:          sysInfo.GetBootId(),
+			ContainerRuntimeVersion: fmt.Sprintf("%s://%s",
+				sysInfo.GetRuntimeInfo().GetName(), sysInfo.GetRuntimeInfo().GetVersion()),
 			// TODO: how should we report kubelet and kube-proxy version?
 			//       be the same with host node?
 			KubeletVersion:   "",

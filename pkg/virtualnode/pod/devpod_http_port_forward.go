@@ -41,15 +41,28 @@ const (
 	v4Base64WebsocketProtocol = "v4." + wsstream.Base64ChannelWebSocketProtocol
 )
 
-func (m *Manager) serverPortForward(w http.ResponseWriter, r *http.Request, podUID string, opts *kubeletpf.V4Options, idleTimeout, streamCreationTimeout time.Duration, supportedProtocols []string) error {
+func (m *Manager) serverPortForward(
+	w http.ResponseWriter,
+	r *http.Request,
+	podUID string,
+	opts *kubeletpf.V4Options,
+	idleTimeout, streamCreationTimeout time.Duration,
+	supportedProtocols []string,
+) error {
 	if wsstream.IsWebSocketRequest(r) {
 		return m.handleWebSocketStreams(w, r, podUID, idleTimeout, opts)
-	} else {
-		return m.handleHttpStreams(w, r, podUID, idleTimeout, streamCreationTimeout, supportedProtocols)
 	}
+
+	return m.handleHTTPStreams(w, r, podUID, idleTimeout, streamCreationTimeout, supportedProtocols)
 }
 
-func (m *Manager) handleWebSocketStreams(w http.ResponseWriter, r *http.Request, podUID string, idleTimeout time.Duration, opts *kubeletpf.V4Options) error {
+func (m *Manager) handleWebSocketStreams(
+	w http.ResponseWriter,
+	r *http.Request,
+	podUID string,
+	idleTimeout time.Duration,
+	opts *kubeletpf.V4Options,
+) error {
 	channels := make([]wsstream.ChannelType, 0, len(opts.Ports)*2)
 	for i := 0; i < len(opts.Ports); i++ {
 		channels = append(channels, wsstream.ReadWriteChannel, wsstream.WriteChannel)
@@ -112,7 +125,13 @@ func (m *Manager) handleWebSocketStreams(w http.ResponseWriter, r *http.Request,
 	return nil
 }
 
-func (m *Manager) handleHttpStreams(w http.ResponseWriter, r *http.Request, podUID string, idleTimeout, streamCreationTimeout time.Duration, supportedProtocols []string) error {
+func (m *Manager) handleHTTPStreams(
+	w http.ResponseWriter,
+	r *http.Request,
+	podUID string,
+	idleTimeout, streamCreationTimeout time.Duration,
+	supportedProtocols []string,
+) error {
 	_, err := httpstream.Handshake(r, w, supportedProtocols)
 	// negotiated protocol isn't currently used server side, but could be in the future
 	if err != nil {
@@ -122,7 +141,7 @@ func (m *Manager) handleHttpStreams(w http.ResponseWriter, r *http.Request, podU
 	streamChan := make(chan httpstream.Stream, 1)
 
 	up := spdy.NewResponseUpgrader()
-	conn := up.UpgradeResponse(w, r, validateNewHttpStream(streamChan))
+	conn := up.UpgradeResponse(w, r, validateNewHTTPStream(streamChan))
 	if conn == nil {
 		return fmt.Errorf("failed to upgrade http stream connection")
 	}
@@ -168,7 +187,7 @@ func (m *Manager) handleHttpStreams(w http.ResponseWriter, r *http.Request, podU
 				streamPairs[reqID] = p
 			}
 
-			err := m.handleNewHttpStream(wg, p, s)
+			err := m.handleNewHTTPStream(wg, p, s)
 			if err != nil {
 				p.writeErr(err.Error())
 			}
@@ -176,7 +195,7 @@ func (m *Manager) handleHttpStreams(w http.ResponseWriter, r *http.Request, podU
 	}
 }
 
-func (m *Manager) handleNewHttpStream(wg *sync.WaitGroup, s *stream, hs httpstream.Stream) error {
+func (m *Manager) handleNewHTTPStream(wg *sync.WaitGroup, s *stream, hs httpstream.Stream) error {
 	switch hs.Headers().Get(api.StreamType) {
 	case api.StreamTypeData:
 		if s.data != nil {
@@ -225,13 +244,13 @@ func (m *Manager) doPortForward(s *stream) {
 	go func() {
 		timer := time.NewTimer(0)
 		if !timer.Stop() {
-			_ = <-timer.C
+			<-timer.C
 		}
 
 		defer func() {
 			if !timer.Stop() {
 				select {
-				case _ = <-timer.C:
+				case <-timer.C:
 				default:
 				}
 			}
@@ -249,7 +268,7 @@ func (m *Manager) doPortForward(s *stream) {
 			timer.Reset(constant.DefaultPortForwardStreamReadTimeout)
 			data, isTimeout := r.ReadUntilTimeout(timer.C)
 			if !isTimeout && !timer.Stop() {
-				_ = <-timer.C
+				<-timer.C
 			}
 
 			inputCmd := gopb.NewPodInputCmd(false, data)
@@ -269,8 +288,7 @@ func (m *Manager) doPortForward(s *stream) {
 
 		return false
 	}, func(dataMsg *gopb.Data) (exit bool) {
-		switch dataMsg.Kind {
-		case gopb.DATA_ERROR:
+		if dataMsg.Kind == gopb.DATA_ERROR {
 			msgErr := new(gopb.Error)
 			_ = msgErr.Unmarshal(dataMsg.Data)
 			s.writeErr(msgErr.Error())
@@ -317,11 +335,11 @@ func (s *stream) writeErr(err string) {
 	}
 }
 
-// validateNewHttpStream is the httpstream.NewStreamHandler for port
+// validateNewHTTPStream is the httpstream.NewStreamHandler for port
 // forward streams. It checks each stream's port and stream type headers,
 // rejecting any streams that with missing or invalid values. Each valid
 // stream is sent to the streams channel.
-func validateNewHttpStream(streams chan httpstream.Stream) func(httpstream.Stream, <-chan struct{}) error {
+func validateNewHTTPStream(streams chan httpstream.Stream) func(httpstream.Stream, <-chan struct{}) error {
 	return func(stream httpstream.Stream, replySent <-chan struct{}) error {
 		// make sure it has a valid port header
 		portString := stream.Headers().Get(api.PortHeader)

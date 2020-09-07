@@ -436,6 +436,7 @@ func waitLogs(ctx context.Context, w *fsnotify.Watcher) (bool, error) {
 		case <-ctx.Done():
 			return false, ctx.Err()
 		case e := <-w.Events:
+			// nolint:gocritic
 			switch e.Op {
 			case fsnotify.Write:
 				return true, nil

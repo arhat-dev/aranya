@@ -10,7 +10,8 @@ import (
 func (m *Manager) patch(oldPod, newPod *corev1.Pod) (*corev1.Pod, error) {
 	err := patchhelper.TwoWayMergePatch(oldPod, newPod, &corev1.Pod{}, func(patchData []byte) error {
 		var err error
-		newPod, err = m.podClient.Patch(m.Context(), oldPod.Name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{})
+		newPod, err = m.podClient.Patch(m.Context(), oldPod.Name,
+			types.StrategicMergePatchType, patchData, metav1.PatchOptions{})
 		return err
 	})
 

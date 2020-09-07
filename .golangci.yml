@@ -5,6 +5,7 @@ run:
   skip-dirs:
   - vendor
   - generated
+  - pkg/virtualnode/storage/csi
   build-tags: []
 
 output:
@@ -72,5 +73,11 @@ issues:
     - scopelint
 
   - path: pkg/apis
+    linters:
+    - lll
+  - path: pkg/virtualnode/pod/zz_dummy_kube_impl.go
+    linters:
+    - lll
+  - path: pkg/virtualnode/storage/volume_host.go
     linters:
     - lll

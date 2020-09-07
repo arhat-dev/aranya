@@ -75,29 +75,37 @@ func (m *Manager) admitPodCreation(pod *corev1.Pod) (handled bool, result *recon
 
 	if !pod.Spec.HostNetwork {
 		// cluster network pods require abbot deployment
-		result = &reconcile.Result{Err: fmt.Errorf("cluster network required, but abbot pod not running")}
+		result = &reconcile.Result{
+			Err: fmt.Errorf("cluster network required, but abbot pod not running"),
+		}
 
 		if !m.hasAbbotPod() {
-			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied, "Using cluster network, abbot pod required but not found")
+			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied,
+				"Using cluster network, abbot pod required but not found")
 			return true, result
 		}
 
 		abbotPod, ok := m.getAbbotPod()
 		if !ok {
-			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied, "abbot pod not found")
+			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied,
+				"abbot pod not found")
 			return true, result
 		}
 
 		if abbotPod.Status.Phase != corev1.PodRunning {
-			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied, "abbot pod not in running phase")
+			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied,
+				"abbot pod not in running phase")
 			return true, result
 		}
 
 		logger.V("ensuring cluster network finalizer for pod")
 		pod, err = m.ensureFinalizer(pod, constant.FinalizerClusterNetwork)
 		if err != nil {
-			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied, fmt.Sprintf("Failed to ensure cluster network finalizer: %v", err))
-			return true, &reconcile.Result{Err: fmt.Errorf("cluster network fianlizer not applied: %v", err)}
+			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied,
+				fmt.Sprintf("Failed to ensure cluster network finalizer: %v", err))
+			return true, &reconcile.Result{
+				Err: fmt.Errorf("cluster network fianlizer not applied: %v", err),
+			}
 		}
 
 		m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationAllowed, "Owner ref to abbot pod set")
@@ -122,15 +130,21 @@ func (m *Manager) admitPodCreation(pod *corev1.Pod) (handled bool, result *recon
 
 	if m.hasAbbotPod() {
 		// only one abbot pod allowed per node
-		m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied, "Already have abbot pod in this node")
-		return true, &reconcile.Result{Err: fmt.Errorf("only one abbot pod can be deployed per node")}
+		m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied,
+			"Already have abbot pod in this node")
+		return true, &reconcile.Result{
+			Err: fmt.Errorf("only one abbot pod can be deployed per node"),
+		}
 	}
 
 	// this is the abbot pod to be deployed
 	pod, err = m.ensureFinalizer(pod, constant.FinalizerClusterNetworkManager)
 	if err != nil {
-		m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied, "Failed to set cluster network manager finalizer to abbot pod")
-		return true, &reconcile.Result{Err: fmt.Errorf("failed to add cluster network manager finalizer for abbot pod: %w", err)}
+		m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podCreationDenied,
+			"Failed to set cluster network manager finalizer to abbot pod")
+		return true, &reconcile.Result{
+			Err: fmt.Errorf("failed to add cluster network manager finalizer for abbot pod: %w", err),
+		}
 	}
 
 	m.setAbbotPod(string(pod.UID))
@@ -149,15 +163,19 @@ func (m *Manager) admitPodDeletion(pod *corev1.Pod) (handled bool, _ *reconcile.
 	if !pod.Spec.HostNetwork {
 		// cluster network pods require abbot pod
 		if !m.hasAbbotPod() {
-			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podDeletionDenied, "Using cluster network, but abbot pod not found")
-			return true, &reconcile.Result{Err: fmt.Errorf("cannot delete cluster network pod without abbot pod")}
+			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podDeletionDenied,
+				"Using cluster network, but abbot pod not found")
+			return true, &reconcile.Result{
+				Err: fmt.Errorf("cannot delete cluster network pod without abbot pod"),
+			}
 		}
 
 		// has abbot pod
 
 		pod, err = m.removeFinalizer(pod, constant.FinalizerClusterNetwork)
 		if err != nil {
-			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podDeletionDenied, fmt.Sprintf("Failed to remove cluster network finalizer: %v", err))
+			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podDeletionDenied,
+				fmt.Sprintf("Failed to remove cluster network finalizer: %v", err))
 			return true, &reconcile.Result{Err: err}
 		}
 
@@ -175,14 +193,18 @@ func (m *Manager) admitPodDeletion(pod *corev1.Pod) (handled bool, _ *reconcile.
 	// abbot pod, check if cluster network pods exists
 	for _, p := range m.podCache.GetAll() {
 		if !p.Spec.HostNetwork {
-			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podDeletionDenied, "Cluster network pod(s) exists, abbot pod is not going to be deleted")
-			return true, &reconcile.Result{Err: fmt.Errorf("cannot delete abbot pod when cluster network pod deployed")}
+			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podDeletionDenied,
+				"Cluster network pod(s) exists, abbot pod is not going to be deleted")
+			return true, &reconcile.Result{
+				Err: fmt.Errorf("cannot delete abbot pod when cluster network pod deployed"),
+			}
 		}
 	}
 
 	pod, err = m.removeFinalizer(pod, constant.FinalizerClusterNetworkManager)
 	if err != nil {
-		m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podDeletionDenied, fmt.Sprintf("Failed to remove cluster network manager finalizer: %v", err))
+		m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podDeletionDenied,
+			fmt.Sprintf("Failed to remove cluster network manager finalizer: %v", err))
 		return true, &reconcile.Result{Err: err}
 	}
 

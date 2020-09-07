@@ -96,11 +96,12 @@ func (m *Manager) HandleStatsSummary(w http.ResponseWriter, r *http.Request) {
 		onlyCPUAndMemory = true
 	}
 
-	if onlyCPUAndMemory {
+	// if onlyCPUAndMemory {
 
-	} else {
+	// } else {
 
-	}
+	// }
+	_ = onlyCPUAndMemory
 
 	http.Error(w, "method not implemented", http.StatusNotImplemented)
 }
@@ -213,7 +214,10 @@ func (m *Manager) serveMetrics(cache *cache.MetricsCache, resp http.ResponseWrit
 
 	if lastErr != nil {
 		header.Del("Content-Encoding")
-		http.Error(resp, "An error has occurred while serving metrics:\n\n"+lastErr.Error(), http.StatusInternalServerError)
+		http.Error(resp,
+			"An error has occurred while serving metrics:\n\n"+lastErr.Error(),
+			http.StatusInternalServerError,
+		)
 	}
 }
 

@@ -120,7 +120,8 @@ func NewManager(
 
 			pod, ok := mgr.podCache.GetByID(podUID)
 			if ok {
-				mgr.options.EventRecorder.Eventf(pod, corev1.EventTypeNormal, "CrashLoopBackOff", "Backoff due to error: %w", err)
+				mgr.options.EventRecorder.Eventf(pod, corev1.EventTypeNormal,
+					"CrashLoopBackOff", "Backoff due to error: %w", err)
 			}
 		},
 	}.ResolveNil())
@@ -265,6 +266,7 @@ func (m *Manager) Close() {
 	m.OnClose(nil)
 }
 
+// nolint:unused
 func (m *Manager) updateDeviceNetwork() error {
 	cmd := gopb.NewPodNetworkUpdateCmd(m.netMgr.GetPodCIDR(false), m.netMgr.GetPodCIDR(true))
 	msgCh, _, err := m.ConnectivityManager.PostCmd(0, cmd)
