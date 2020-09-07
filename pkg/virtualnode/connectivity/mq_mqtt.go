@@ -23,11 +23,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/gopb/protoconst"
 	"arhat.dev/pkg/log"
 	"github.com/goiiot/libmqtt"
-
-	"arhat.dev/aranya-proto/gopb"
-	"arhat.dev/aranya/pkg/constant"
 )
 
 var errAlreadySubscribing = fmt.Errorf("already subscribing")
@@ -80,7 +79,7 @@ func newMQTTClient(parent *MessageQueueManager) (*mqttClient, error) {
 		return nil, err
 	}
 
-	pubTopic, subTopic, subWillTopic := constant.MQTTTopics(opts.Config.TopicNamespace)
+	pubTopic, subTopic, subWillTopic := protoconst.MQTTTopics(opts.Config.TopicNamespace)
 	return &mqttClient{
 		log:    parent.log,
 		broker: opts.Config.Broker,

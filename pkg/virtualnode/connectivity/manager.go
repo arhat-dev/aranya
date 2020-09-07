@@ -31,7 +31,7 @@ import (
 
 	"arhat.dev/aranya-proto/gopb"
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
-	"arhat.dev/aranya/pkg/constant"
+	"arhat.dev/aranya-proto/gopb/protoconst"
 )
 
 var (
@@ -171,15 +171,15 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) *ba
 	var maxDataSize int
 	switch {
 	case config.MQTTOpts != nil, config.AMQPOpts != nil:
-		maxDataSize = constant.MaxMQTTDataSize
+		maxDataSize = protoconst.MaxMQTTDataSize
 	case config.AzureIoTHubOpts != nil:
-		maxDataSize = constant.MaxAzureIoTHubC2DDataSize
+		maxDataSize = protoconst.MaxAzureIoTHubC2DDataSize
 	case config.GCPIoTCoreOpts != nil:
-		maxDataSize = constant.MaxGCPIoTCoreC2DDataSize
+		maxDataSize = protoconst.MaxGCPIoTCoreC2DDataSize
 	case config.GRPCOpts != nil:
 		fallthrough
 	default:
-		maxDataSize = constant.MaxGRPCDataSize
+		maxDataSize = protoconst.MaxGRPCDataSize
 	}
 
 	return &baseManager{

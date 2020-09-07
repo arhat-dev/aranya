@@ -54,37 +54,3 @@ const (
 	VirtualContainerIDHost   = "virtualcontainer://host"
 	VirtualContainerIDDevice = "virtualcontainer://device"
 )
-
-const (
-	VariantAzureIoTHub = "azure-iot-hub"
-	VariantGCPIoTCore  = "gcp-iot-core"
-	VariantAWSIoTCore  = "aws-iot-core"
-)
-
-const (
-	ConnectivityMethodGRPC = "grpc"
-	ConnectivityMethodMQTT = "mqtt"
-	ConnectivityMethodCoAP = "coap"
-)
-
-func PrevLogFile(name string) string {
-	return name + ".old"
-}
-
-func MQTTTopics(ns string) (cmdTopic, msgTopic, statusTopic string) {
-	join := func(s string) string {
-		return ns + "/" + s
-	}
-	return join("cmd"), join("msg"), join("status")
-}
-
-func CoAPTopics(ns string) (cmdPath, msgPath, statusPath string) {
-	return MQTTTopics(ns)
-}
-
-func AMQPTopics(ns string) (cmdTopic, msgTopic, statusTopic string) {
-	join := func(s string) string {
-		return ns + "." + s
-	}
-	return join("cmd"), join("msg"), join("status")
-}

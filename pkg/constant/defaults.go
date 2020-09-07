@@ -78,24 +78,3 @@ const (
 const (
 	DefaultExitCodeOnError = 128
 )
-
-const (
-	// max gRPC message size
-	// https://github.com/grpc/grpc.github.io/issues/371
-	MaxGRPCDataSize = 64 * 1024
-
-	// max MQTT message size (make it compatible with aws mqtt)
-	MaxMQTTDataSize = MaxAwsIoTCoreC2DDataSize
-	// https://docs.aws.amazon.com/general/latest/gr/aws_service_limits.html#protocol
-	MaxAwsIoTCoreD2CDataSize = 128 * 1024 // device to cloud
-	MaxAwsIoTCoreC2DDataSize = 128 * 1024 // cloud to device
-	// https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-quotas-throttling
-	MaxAzureIoTHubD2CDataSize = 256 * 1024 // device to cloud
-	MaxAzureIoTHubC2DDataSize = 64 * 1024  // cloud to device
-	// https://cloud.google.com/iot/quotas
-	MaxGCPIoTCoreD2CDataSize = 256 * 1024 // device to cloud
-	MaxGCPIoTCoreC2DDataSize = 256 * 1024 // cloud to device
-
-	// max CoAP message (will split into chunks)
-	MaxCoAPDataSize = 64 * 1024
-)

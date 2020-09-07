@@ -24,12 +24,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/gopb/protoconst"
 	"arhat.dev/pkg/backoff"
 	"arhat.dev/pkg/log"
 	"github.com/streadway/amqp"
-
-	"arhat.dev/aranya-proto/gopb"
-	"arhat.dev/aranya/pkg/constant"
 )
 
 func newAMQPClient(parent *MessageQueueManager) (*amqpClient, error) {
@@ -68,7 +67,7 @@ func newAMQPClient(parent *MessageQueueManager) (*amqpClient, error) {
 		subWillTopic string
 	)
 
-	pubTopic, subTopic, subWillTopic = constant.AMQPTopics(opts.Config.TopicNamespace)
+	pubTopic, subTopic, subWillTopic = protoconst.AMQPTopics(opts.Config.TopicNamespace)
 	return &amqpClient{
 		log:       parent.log,
 		url:       uri.String(),
