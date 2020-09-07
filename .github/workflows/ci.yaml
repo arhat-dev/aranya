@@ -27,8 +27,7 @@ jobs:
 
     - name: Ensure tidy gomod
       run: |
-        go mod download -x
-        go mod tidy
+        make vendor
         if ! git diff --exit-code
         then
           echo "go mod not tidy"
@@ -39,37 +38,41 @@ jobs:
       run: |
         make lint.all
 
-  unit-tests:
-    needs:
-    - stylecheck
-    strategy:
-      matrix:
-        go-version: [1.14.x]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go-version }}
-    - uses: actions/checkout@v2
-    - name: Test Packages
-      run: |
-        make test.pkg
+  # unit-tests:
+  #   needs:
+  #   - stylecheck
+  #   strategy:
+  #     matrix:
+  #       go-version:
+  #       - 1.14.x
+  #       # - 1.15.x
+  #       os: 
+  #       - ubuntu-latest
+  #       # - windows-latest
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #   - uses: actions/setup-go@v2
+  #     with:
+  #       go-version: ${{ matrix.go-version }}
+  #   - uses: actions/checkout@v2
+  #   - name: Test Packages
+  #     run: |
+  #       make test.pkg
 
-    - name: Test Commands
-      run: |
-        make test.cmd
+  #   - name: Test Commands
+  #     run: |
+  #       make test.cmd
 
-    - name: Report Test Coverage
-      uses: codecov/codecov-action@v1
-      # with:
-      #   token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-      #   fail_ci_if_error: true # optional (default = false)
+  #   - name: Report Test Coverage
+  #     uses: codecov/codecov-action@v1
+  #     # with:
+  #     #   token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+  #     #   fail_ci_if_error: true # optional (default = false)
 
   build-linux-images:
     needs:
     - stylecheck
-    - unit-tests
+    # - unit-tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
