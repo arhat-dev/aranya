@@ -1,9 +1,10 @@
 run:
-  deadline: 5m
+  deadline: 10m
   tests: true
   modules-download-mode: vendor
   skip-dirs:
   - vendor
+  - generated
   build-tags: []
 
 output:
@@ -50,7 +51,7 @@ linters-settings:
   gocyclo:
     min-complexity: 30
   goimports:
-    local-prefixes: arhat.dev/template-kubernetes-controller
+    local-prefixes: arhat.dev/aranya
   lll:
     line-length: 120
     # tab width in spaces. Default to 1.

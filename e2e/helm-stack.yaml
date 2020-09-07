@@ -13,7 +13,7 @@ charts:
     url: https://github.com/emqx/emqx-rel
     path: deploy/charts/emqx
 
-- name: template-kubernetes-controller@master
+- name: aranya@master
   local: {}
   namespaceInTemplate: true
 
@@ -26,8 +26,8 @@ environments:
   - name: monitoring/promop
     chart: bitnami/prometheus-operator@0.22.3
 
-  - name: default/template-kubernetes-controller
-    chart: template-kubernetes-controller@master
+  - name: default/aranya
+    chart: aranya@master
 
 - name: v1-17
   kubeContext: kind-v1-17
@@ -38,8 +38,8 @@ environments:
   - name: monitoring/promop
     chart: bitnami/prometheus-operator@0.22.3
 
-  - name: default/template-kubernetes-controller
-    chart: template-kubernetes-controller@master
+  - name: default/aranya
+    chart: aranya@master
 
 - name: v1-18
   kubeContext: kind-v1-18
@@ -50,5 +50,5 @@ environments:
   - name: monitoring/promop
     chart: bitnami/prometheus-operator@0.22.3
 
-  - name: default/template-kubernetes-controller
-    chart: template-kubernetes-controller@master
+  - name: default/aranya
+    chart: aranya@master

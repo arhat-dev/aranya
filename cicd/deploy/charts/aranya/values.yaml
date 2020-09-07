@@ -1,0 +1,210 @@
+# Default values for aranya.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: docker.io/arhatdev/aranya
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "amd64"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    # spread pods to different nodes
+    - weight: 100
+      podAffinityTerm:
+        topologyKey: kubernetes.io/hostname
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+rbac:
+  create: true
+
+serviceMonitor:
+  create: false
+
+# choose namespace to watch, default to the deployment namespace
+watchNamespace: ""
+
+config:
+  aranya:
+    log:
+    - level: verbose
+      format: console
+      file: stderr
+
+    metrics:
+      enabled: true
+      # metrics http server listen address and port (prometheus)
+      # set to :0 to listen on a dynamic port if you would like to deploy multiple
+      # instances on the same node, aranya will handle the service port
+      listen: :0
+      httpPath: /metrics
+
+    leaderElection:
+      # default to the pod name
+      #identity: ""
+
+      # lease options
+      lease:
+        expiration: 30s
+        renewDeadline: 29s
+        renewInterval: 5s
+        expiryToleration: 10s
+
+      # lock options
+      lock:
+        # default to aranya-leader-election
+        #name:
+        type: configmaps
+        # default to pod namespace
+        #namespace:
+
+    kubeClient:
+      # kubeconfig file path, will fallback to in cluster config if not specified
+      #kubeconfig: ""
+      rateLimit:
+        enabled: false
+        qps: 5
+        burst: 10
+
+    maxVirtualnodeCreatingInParallel: 0
+    managed:
+      connectivityService:
+        name: edgedevice-connectivity
+
+      sftpService:
+        name: edgedevice-sftp
+
+      nodeClusterRoles: {}
+        # <cluster-role-name>:
+        #   nodeVerbs: [get, list, watch]
+        #   statusVerbs: [get, list, watch]
+      podRoles: {}
+        # <pod-role-name>:
+        #   podVerbs:
+        #   statusVerbs:
+        #   allowExec: true
+        #   allowAttach: true
+        #   allowPortForward: true
+        #   allowLog: true
+      virtualPodRoles: {}
+        # <pod-role-name>:
+        #   podVerbs: [get, list, watch]
+        #   statusVerbs: [get, list, watch]
+        #   allowExec: true
+        #   allowAttach: true
+        #   allowPortForward: true
+        #   allowLog: true
+
+  virtualnode:
+    kubeClient:
+      # kubeconfig file path, will fallback to in cluster config if not specified
+      #kubeconfig: ""
+      rateLimit:
+        enabled: true
+        qps: 5
+        burst: 10
+    # connectivity defaults for EdgeDevice
+    connectivity:
+      # this is the virtual node behavior definition for all EdgeDevices
+      # EdgeDevice's spec can override some of these fields
+      timers:
+        # force close session in server after
+        unarySessionTimeout: 10m
+      backoff:
+        initialDelay: 1s
+        maxDelay: 1m
+        factor: 1.5
+
+    node:
+      recreateIfPatchFailed: false
+
+      cert:
+        autoApprove: true
+
+      lease:
+        enabled: false
+        duration: 40s
+        updateInterval: 10s
+
+      timers:
+        # should be consistent with your cluster config
+        mirrorSyncInterval: 10s
+        # force sync node status from edge device after
+        forceSyncInterval: 10m
+      storage:
+        # enable storage support for edge devices
+        enabled: true
+        # rootDir is the directory to host edge device pod volumes
+        rootDir: /var/lib/aranya
+        kubeletPluginsDir: /var/lib/kubelet/plugins
+        kubeletRegistrationDir: /var/lib/kubelet/plugins_registry
+        # sftp server
+        sftp:
+          enabled: true
+          hostKeyFile: /etc/ssh/ssh_host_ed25519_key
+
+      metrics:
+        # enable node metrics collection by default for all devices connected
+        enabled: true
+        collect:
+        - arp,bcache,bonding,conntrack,cpu,cpufreq,diskstats,edac,entropy,filefd
+        - filesystem,hwmon,infiniband,ipvs,loadavg,mdadm,meminfo,netclass,netdev
+        - netstat,nfs,nfsd,pressure,rapl,schedstat,sockstat,softnet,stat,zfs,ntp
+        - thermal_zone,time,timex,udp_queues,uname,vmstat,xfs,processes
+    pod:
+      allocatable: 10
+      timers:
+        # interval pod informer to resync cached pods
+        resyncInterval: 60s
+        # force sync pod status from edge device after
+        forceSyncInterval: 10m
+        # close stream when no traffic has been sent/recv for
+        # (kubelet default is 4h)
+        streamIdleTimeout: 30m
+        # cancel stream creation after
+        # (kubelet default is 30s)
+        streamCreationTimeout: 30s
+      dns:
+        servers:
+        - "1.1.1.1"
+        - "8.8.8.8"
+        searches:
+        - cluster.local
+        options:
+        - ndots:5

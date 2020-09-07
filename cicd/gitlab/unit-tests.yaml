@@ -7,12 +7,12 @@
   dependencies:
   - stylecheck
 
-test:unit:linux:template-kubernetes-controller:
+test:unit:linux:aranya:
   extends: .test:unit
   tags:
   - linux
 
-# test:unit:windows:template-kubernetes-controller:
+# test:unit:windows:aranya:
 #   extends: .test:unit
 #   tags:
 #   - windows

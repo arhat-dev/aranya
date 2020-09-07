@@ -5,18 +5,18 @@
   - make e2e.v1-17
   - make e2e.v1-18
 
-test:e2e:linux:template-kubernetes-controller:
+test:e2e:linux:aranya:
   extends: .test.e2e
   tags:
   - linux
   - baremetal
   dependencies:
-  - build:image:linux:template-kubernetes-controller
+  - build:image:linux:aranya
 
-# test:e2e:windows:template-kubernetes-controller:
+# test:e2e:windows:aranya:
 #   extends: .test.e2e
 #   tags:
 #   - windows
 #   - baremetal
 #   dependencies:
-#   - build:image:windows:template-kubernetes-controller
+#   - build:image:windows:aranya

@@ -1,0 +1,113 @@
+// +build !windows
+
+package iohelper
+
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"go.uber.org/multierr"
+)
+
+// WriteFile write data to target file
+func WriteFile(file string, data []byte, perm os.FileMode, overwrite bool) (undo func() error, _ error) {
+	file, err := filepath.Abs(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine absolute path of file: %w", err)
+	}
+
+	f, err := os.Stat(file)
+	if err == nil {
+		if f.IsDir() {
+			return nil, fmt.Errorf("target file is a directory")
+		}
+
+		if !overwrite {
+			return func() error { return nil }, nil
+		}
+
+		// need to overwrite old file content
+
+		var oldData []byte
+		oldData, err = ioutil.ReadFile(file)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read old file content for undo: %w", err)
+		}
+
+		err = ioutil.WriteFile(file, data, perm)
+		if err != nil {
+			return func() error { return nil }, fmt.Errorf("failed to overwrite old file content: %w", err)
+		}
+
+		return func() error {
+			undoErr := ioutil.WriteFile(file, oldData, f.Mode()&os.ModePerm)
+			if undoErr != nil {
+				return fmt.Errorf("failed to restore old file content: %w", undoErr)
+			}
+
+			return nil
+		}, nil
+	}
+
+	// file not exists, need to create
+
+	dir := filepath.Dir(file)
+	dirParts := strings.Split(dir, fmt.Sprintf("%c", os.PathSeparator))
+
+	missingDirIndex := -1
+	for i := len(dirParts) - 1; i >= 0; i-- {
+		// TODO: support windows path
+		thisDir := filepath.Join("/", filepath.Join(dirParts[:i]...))
+		_, err = os.Stat(thisDir)
+		if err != nil {
+			continue
+		}
+
+		// if the directory to create file exists, no need to create dir
+		if i == len(dirParts)-1 {
+			break
+		}
+
+		// need to create all subsequent dirs in this dir
+		missingDirIndex = i + 1
+	}
+
+	var undoActions []func() error
+
+	if missingDirIndex != -1 {
+		createdDir := filepath.Join("/", filepath.Join(dirParts[:missingDirIndex+1]...))
+		undoActions = append(undoActions, func() error {
+			return os.Remove(createdDir)
+		})
+
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create directory for file: %w", err)
+		}
+	}
+
+	buildUndoFunc := func() func() error {
+		return func() error {
+			var undoErr error
+			for i := len(undoActions) - 1; i >= 0; i-- {
+				undoErr = multierr.Append(undoErr, undoActions[i]())
+			}
+
+			return undoErr
+		}
+	}
+
+	err = ioutil.WriteFile(file, data, perm)
+	if err != nil {
+		return buildUndoFunc(), fmt.Errorf("failed to write file content: %w", err)
+	}
+
+	undoActions = append(undoActions, func() error {
+		return os.Remove(file)
+	})
+
+	return buildUndoFunc(), nil
+}

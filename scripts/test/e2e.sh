@@ -19,15 +19,15 @@ e2e() {
 
   rm -rf build/e2e/charts || true
 
-  mkdir -p build/e2e/charts/template-kubernetes-controller
+  mkdir -p build/e2e/charts/aranya
 
-  cp -r cicd/deploy/charts/template-kubernetes-controller \
-    build/e2e/charts/template-kubernetes-controller/master
+  cp -r cicd/deploy/charts/aranya \
+    build/e2e/charts/aranya/master
 
   helm-stack -c e2e/helm-stack.yaml ensure
 
   # basic override for image pull secrets
-  cp e2e/values/template-kubernetes-controller.yaml "build/e2e/clusters/${kube_version}/template-kubernetes-controller_master.default_template-kubernetes-controller.yaml"
+  cp e2e/values/aranya.yaml "build/e2e/clusters/${kube_version}/aranya_master.default_aranya.yaml"
   cp e2e/values/emqx.yaml "build/e2e/clusters/${kube_version}/emqx_v4.1.1.emqx_emqx.yaml"
 
   helm-stack -c e2e/helm-stack.yaml gen "${kube_version}"

@@ -1,4 +1,4 @@
-build:image:linux:template-kubernetes-controller:
+build:image:linux:aranya:
   stage: build-images
   image: docker:stable
   services:
@@ -14,14 +14,14 @@ build:image:linux:template-kubernetes-controller:
   tags:
   - linux
   dependencies:
-  - test:unit:linux:template-kubernetes-controller
+  - test:unit:linux:aranya
 
 # TODO: build windows containers
-# build:image:windows:template-kubernetes-controller:
+# build:image:windows:aranya:
 #   script:
 #   - make image.build.windows.all
 #   - make image.push.windows.all
 #   tags:
 #   - windows
 #   dependencies:
-#   - test:unit:windows:template-kubernetes-controller
+#   - test:unit:windows:aranya

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aranya.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: metrics
+    {{- include "aranya.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    {{- if .Values.config.aranya.metrics.enabled }}
+    - port: 9876
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+    {{- else }}
+    - port: 65534
+      name: dummy
+    {{- end }}
+  selector:
+    {{- include "aranya.selectorLabels" . | nindent 4 }}

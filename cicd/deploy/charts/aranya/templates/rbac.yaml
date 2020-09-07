@@ -1,0 +1,140 @@
+{{- if .Values.serviceAccount.create -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "aranya.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aranya.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- if .Values.rbac.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "aranya.fullname" . }}:{{ .Release.Namespace }}
+rules:
+{{- if .Values.config.aranya.managed.nodeClusterRoles }}
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources:
+  # to manage cluster role auto generated for nodes belong to the watch namespace
+  - clusterroles
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+{{- end }}
+- apiGroups: [""]
+  resources:
+  # to create virtual node and get node object aranya lives in
+  - nodes
+  # to update virtual node status according to edge devices messages
+  - nodes/status
+  verbs: ["*"]
+- apiGroups: [""]
+  resources:
+  # to get secrets required by CSI plugin
+  - secrets
+  - persistentvolumes
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  # to create kubernetes csr for virtual node certs
+  - certificatesigningrequests
+  verbs:
+  - create
+  - get
+  - delete # delete after been approved
+{{- if .Values.config.virtualnode.node.cert.autoApprove }}
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests/approval
+  verbs:
+  - update
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - signers
+  resourceNames:
+  - kubernetes.io/kubelet-serving
+  verbs:
+  - approve
+{{- end }}
+{{- if .Values.config.virtualnode.node.storage.enabled }}
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - csinodes
+  - csidrivers
+  - volumeattachments
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "aranya.fullname" . }}:{{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "aranya.fullname" . }}:{{ .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "aranya.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "aranya.fullname" . }}:{{ .Release.Namespace }}:discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:discovery
+subjects:
+- kind: ServiceAccount
+  name: {{ include "aranya.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+---
+{{- if .Values.config.virtualnode.node.lease.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "aranya.fullname" . }}:{{ .Release.Namespace }}
+  namespace: kube-node-lease
+rules:
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "aranya.fullname" . }}:{{ .Release.Namespace }}
+  namespace: kube-node-lease
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "aranya.fullname" . }}:{{ .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "aranya.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+---
+{{- end }}
+{{- end }}

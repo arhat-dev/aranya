@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -ex
+set -e
 
 . scripts/version.sh
 . scripts/build/common.sh
@@ -30,9 +30,9 @@ _build() {
   eval "$1"
 }
 
-template_kubernetes_controller() {
+aranya() {
   # TODO: set mandatory tags and predefined tags for specific platforms
-  _build "CGO_ENABLED=0 ${GOBUILD} -tags='foo bar ${PREDEFINED_BUILD_TAGS}' ./cmd/template-kubernetes-controller"
+  _build "CGO_ENABLED=0 ${GOBUILD} -tags='foo bar ${PREDEFINED_BUILD_TAGS}' ./cmd/aranya"
 }
 
 COMP=$(printf "%s" "$@" | cut -d. -f1)
@@ -160,12 +160,11 @@ fi
 CGO_FLAGS="CC=${CC} CXX=${CXX} CC_FOR_TARGET=${CC} CXX_FOR_TARGET=${CXX} CGO_CFLAGS_ALLOW='-W' CGO_CFLAGS='${CFLAGS}' CGO_LDFLAGS='${LDFLAGS}'"
 
 GO_LDFLAGS="-s -w \
-  -X arhat.dev/template-kubernetes-controller/pkg/version.branch=${GIT_BRANCH} \
-  -X arhat.dev/template-kubernetes-controller/pkg/version.commit=${GIT_COMMIT} \
-  -X arhat.dev/template-kubernetes-controller/pkg/version.tag=${GIT_TAG} \
-  -X arhat.dev/template-kubernetes-controller/pkg/version.arch=${ARCH} \
-  -X arhat.dev/template-kubernetes-controller/pkg/version.goVersion=$(go version | cut -d\  -f3) \
-  -X arhat.dev/template-kubernetes-controller/pkg/version.goCompilerPlatform=$(go version | cut -d\  -f4)"
+  -X arhat.dev/aranya/pkg/version.branch=${GIT_BRANCH} \
+  -X arhat.dev/aranya/pkg/version.commit=${GIT_COMMIT} \
+  -X arhat.dev/aranya/pkg/version.tag=${GIT_TAG} \
+  -X arhat.dev/aranya/pkg/version.arch=${ARCH} \
+  -X arhat.dev/aranya/pkg/version.goCompilerPlatform=$(go version | cut -d\  -f4)"
 
 GOARM=$(_get_goarm "${ARCH}")
 if [ -z "${GOARM}" ]; then

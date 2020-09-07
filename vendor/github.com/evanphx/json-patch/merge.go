@@ -311,12 +311,7 @@ func matchesValue(av, bv interface{}) bool {
 			return false
 		}
 		for key := range bt {
-			av, aOK := at[key]
-			bv, bOK := bt[key]
-			if aOK != bOK {
-				return false
-			}
-			if !matchesValue(av, bv) {
+			if !matchesValue(at[key], bt[key]) {
 				return false
 			}
 		}

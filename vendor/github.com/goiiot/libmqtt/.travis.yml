@@ -1,0 +1,31 @@
+sudo: required
+
+language: go
+
+services:
+  - docker
+
+go:
+  - 1.13.x
+
+addons:
+  apt:
+    update: true
+    packages:
+    - curl
+    - unzip
+
+before_install:
+  - export GO111MODULE=on
+
+before_script:
+  - make test_reconnect
+  - bash <(curl -s https://codecov.io/bash)
+  - docker run -d -p 1883:1883 -p 8883:8883 -p 8083:8083 -p 8084:8084 emqx/emqx:v3.0.0
+  - sleep 120
+
+script:
+  - make test
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

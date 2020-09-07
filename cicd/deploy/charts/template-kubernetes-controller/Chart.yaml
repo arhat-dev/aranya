@@ -1,6 +1,0 @@
-apiVersion: v2
-name: template-kubernetes-controller
-description: Sample Chart for Controller
-type: application
-version: 0.1.0
-appVersion: latest

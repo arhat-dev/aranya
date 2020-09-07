@@ -1,0 +1,327 @@
+package edgedevice
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+
+	"arhat.dev/pkg/log"
+	"arhat.dev/pkg/queue"
+	"arhat.dev/pkg/reconcile"
+	rbacv1 "k8s.io/api/rbac/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/constant"
+)
+
+func (c *Controller) checkNodeClusterRoleUpToDate(obj *rbacv1.ClusterRole) bool {
+	crSpec, ok := c.nodeClusterRoles[obj.Name]
+	if !ok {
+		// not managed by us
+		return true
+	}
+
+	switch {
+	case len(obj.Labels) == 0 || obj.Labels[constant.LabelRole] != constant.LabelRoleValueNodeClusterRole:
+		return false
+	case len(obj.Labels) == 0 || obj.Labels[constant.LabelNamespace] != constant.WatchNS():
+		return false
+	}
+
+	nodeNames := make(map[string]struct{})
+	for _, p := range obj.Rules {
+		if len(p.ResourceNames) == 0 {
+			return false
+		}
+
+		switch {
+		case len(p.APIGroups) != 1 || p.APIGroups[0] != "":
+			return false
+		case len(p.Resources) != 1:
+			return false
+		}
+
+		nodeVerbs := crSpec.NodeVerbs
+		nodeStatusVerbs := crSpec.StatusVerbs
+
+		// check edge device override if only one resource name found
+		if len(p.ResourceNames) == 1 {
+			name := p.ResourceNames[0]
+
+			edgeDevice, ok := c.getEdgeDeviceObject(name)
+			if !ok {
+				// no edge device with this name, this entry needs to be removed
+				return false
+			}
+
+			nodePermissions := edgeDevice.Spec.Node.RBAC.ClusterRolePermissions
+			if len(nodePermissions) != 0 {
+				if spec, ok := nodePermissions[obj.Name]; ok {
+					if len(spec.NodeVerbs) != 0 {
+						nodeVerbs = spec.NodeVerbs
+					}
+
+					if len(spec.StatusVerbs) != 0 {
+						nodeStatusVerbs = spec.StatusVerbs
+					}
+				}
+			}
+		}
+
+		var requiredVerbs []string
+		switch p.Resources[0] {
+		case "nodes":
+			requiredVerbs = nodeVerbs
+		case "nodes/status":
+			requiredVerbs = nodeStatusVerbs
+		default:
+			return false
+		}
+
+		// check if all verbs included
+		if !containsAll(p.Verbs, requiredVerbs) {
+			return false
+		}
+
+		// prepare for resource name check
+		for _, n := range p.ResourceNames {
+			nodeNames[n] = struct{}{}
+		}
+	}
+
+	// check if all nodes are exactly included (resource name check)
+
+	edgeDevices := c.edgeDeviceInformer.GetIndexer().ListKeys()
+	if len(edgeDevices) != len(nodeNames) {
+		// current cluster role contains more/less than expected nodes
+		return false
+	}
+
+	for _, namespacedName := range edgeDevices {
+		parts := strings.SplitN(namespacedName, "/", 2)
+		if len(parts) != 2 {
+			// not possible, just in case
+			return false
+		}
+
+		delete(nodeNames, parts[1])
+	}
+
+	// nolint:gosimple
+	if len(nodeNames) != 0 {
+		return false
+	}
+
+	return true
+}
+
+func (c *Controller) requestNodeClusterRoleEnsure() error {
+	if c.crReqRec == nil {
+		return nil
+	}
+
+	err := c.crReqRec.Schedule(queue.Job{Action: queue.ActionAdd, Key: ""}, 0)
+	if err != nil && !errors.Is(err, queue.ErrJobDuplicated) {
+		return fmt.Errorf("failed to schedule node cluster role ensure: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Controller) onNodeClusterRoleEnsureRequested(_ interface{}) *reconcile.Result {
+	for n := range c.nodeClusterRoles {
+		err := c.ensureNodeClusterRole(n)
+		if err != nil {
+			c.Log.I("failed to ensure node cluster role", log.String("name", n), log.Error(err))
+			return &reconcile.Result{Err: err}
+		}
+	}
+
+	return nil
+}
+
+func (c *Controller) onNodeClusterRoleUpdated(oldObj, newObj interface{}) *reconcile.Result {
+	var (
+		err      error
+		newCRObj = newObj.(*rbacv1.ClusterRole)
+		name     = newCRObj.Name
+		logger   = c.Log.WithFields(log.String("name", name))
+	)
+
+	logger.V("cluster role updated")
+	if c.checkNodeClusterRoleUpToDate(newCRObj) {
+		logger.V("cluster role is up to date")
+		return nil
+	}
+
+	logger.D("updating outdated cluster role")
+	err = c.ensureNodeClusterRole(name)
+	if err != nil {
+		logger.I("failed to ensure cluster role up to date: %w", log.Error(err))
+		return &reconcile.Result{Err: err}
+	}
+
+	return nil
+}
+
+func (c *Controller) onNodeClusterRoleDeleting(obj interface{}) *reconcile.Result {
+	err := c.crClient.Delete(c.Context(), obj.(*rbacv1.ClusterRole).Name, *deleteAtOnce)
+	if err != nil && !kubeerrors.IsNotFound(err) {
+		return &reconcile.Result{Err: err}
+	}
+
+	return &reconcile.Result{NextAction: queue.ActionCleanup}
+}
+
+func (c *Controller) onNodeClusterRoleDeleted(obj interface{}) *reconcile.Result {
+	var (
+		name   = obj.(*rbacv1.ClusterRole).Name
+		logger = c.Log.WithFields(log.String("name", name))
+	)
+
+	logger.V("cluster role deleted")
+	err := c.ensureNodeClusterRole(name)
+	if err != nil {
+		logger.I("failed to ensure cluster role after being deleted", log.Error(err))
+		return &reconcile.Result{Err: err}
+	}
+
+	return nil
+}
+
+func (c *Controller) ensureNodeClusterRole(name string) error {
+	crSpec, ok := c.nodeClusterRoles[name]
+	if !ok {
+		// not managed by us, skip
+		return nil
+	}
+
+	var (
+		create bool
+		err    error
+		cr     = c.newNodeClusterRoleForAllEdgeDevices(name, crSpec)
+	)
+
+	oldCR, found := c.getClusterRoleObject(name)
+	if found {
+		if c.checkNodeClusterRoleUpToDate(oldCR) {
+			return nil
+		}
+
+		clone := oldCR.DeepCopy()
+		if clone.Labels == nil {
+			clone.Labels = make(map[string]string)
+		}
+
+		for k, v := range cr.Labels {
+			clone.Labels[k] = v
+		}
+
+		clone.Rules = cr.Rules
+
+		c.Log.D("updating cluster node role")
+		_, err = c.crClient.Update(c.Context(), clone, metav1.UpdateOptions{})
+		if err != nil {
+			if kubeerrors.IsConflict(err) {
+				return err
+			}
+
+			c.Log.I("failed to update cluster role, deleting", log.Error(err))
+			err = c.crClient.Delete(c.Context(), name, *deleteAtOnce)
+			if err != nil && !kubeerrors.IsNotFound(err) {
+				return fmt.Errorf("failed to delete old cluster role: %w", err)
+			}
+
+			create = true
+		}
+	} else {
+		// old cluster role not found
+		create = true
+	}
+
+	if create {
+		c.Log.D("creating new managed cluster role")
+		_, err = c.crClient.Create(c.Context(), cr, metav1.CreateOptions{})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Controller) newNodeClusterRoleForAllEdgeDevices(
+	crName string,
+	crSpec aranyaapi.NodeClusterRolePermissions,
+) *rbacv1.ClusterRole {
+	var (
+		policies                   []rbacv1.PolicyRule
+		nodeWithDefaultNodeVerbs   []string
+		nodeWithDefaultStatusVerbs []string
+	)
+
+	for _, obj := range c.edgeDeviceInformer.GetStore().List() {
+		edgeDevice, ok := obj.(*aranyaapi.EdgeDevice)
+		if !ok {
+			continue
+		}
+
+		if nodeCRs := edgeDevice.Spec.Node.RBAC.ClusterRolePermissions; len(nodeCRs) == 0 {
+			nodeWithDefaultNodeVerbs = append(nodeWithDefaultNodeVerbs, edgeDevice.Name)
+			nodeWithDefaultStatusVerbs = append(nodeWithDefaultStatusVerbs, edgeDevice.Name)
+		} else if nodePermissions, ok := nodeCRs[crName]; ok {
+			if len(nodePermissions.NodeVerbs) != 0 {
+				policies = append(policies, rbacv1.PolicyRule{
+					APIGroups:     []string{""},
+					Resources:     []string{"nodes"},
+					Verbs:         nodePermissions.NodeVerbs,
+					ResourceNames: []string{edgeDevice.Name},
+				})
+			} else {
+				nodeWithDefaultNodeVerbs = append(nodeWithDefaultNodeVerbs, edgeDevice.Name)
+			}
+
+			if len(nodePermissions.StatusVerbs) != 0 {
+				policies = append(policies, rbacv1.PolicyRule{
+					APIGroups:     []string{""},
+					Resources:     []string{"nodes/status"},
+					Verbs:         nodePermissions.StatusVerbs,
+					ResourceNames: []string{edgeDevice.Name},
+				})
+			} else {
+				nodeWithDefaultStatusVerbs = append(nodeWithDefaultStatusVerbs, edgeDevice.Name)
+			}
+		}
+	}
+
+	if len(nodeWithDefaultNodeVerbs) != 0 {
+		policies = append(policies, rbacv1.PolicyRule{
+			APIGroups:     []string{""},
+			Resources:     []string{"nodes"},
+			Verbs:         crSpec.NodeVerbs,
+			ResourceNames: nodeWithDefaultNodeVerbs,
+		})
+	}
+
+	if len(nodeWithDefaultStatusVerbs) != 0 {
+		policies = append(policies, rbacv1.PolicyRule{
+			APIGroups:     []string{""},
+			Resources:     []string{"nodes/status"},
+			Verbs:         crSpec.StatusVerbs,
+			ResourceNames: nodeWithDefaultStatusVerbs,
+		})
+	}
+
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: crName,
+			Labels: map[string]string{
+				constant.LabelRole:      constant.LabelRoleValueNodeClusterRole,
+				constant.LabelNamespace: constant.WatchNS(),
+			},
+		},
+		Rules: policies,
+	}
+}

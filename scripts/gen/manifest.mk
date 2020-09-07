@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-gen.manifests.template-kubernetes-controller:
+gen.manifests.aranya:
 	helm template \
-		template-kubernetes-controller \
-		cicd/deploy/charts/template-kubernetes-controller \
+		aranya \
+		cicd/deploy/charts/aranya \
 		--include-crds --namespace ${NS} --debug \
-		| tee cicd/deploy/kube/template-kubernetes-controller.yaml
+		| tee cicd/deploy/kube/aranya.yaml

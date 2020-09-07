@@ -61,8 +61,8 @@ _do_gen_clients() {
   mkdir -p build
 
   bash "${GOPATH}/pkg/mod/k8s.io/code-generator@v0.18.8/generate-groups.sh" client,lister,informer \
-    "arhat.dev/template-kubernetes-controller/pkg/apis/${group_name}/generated" \
-    arhat.dev/template-kubernetes-controller/pkg/apis "${group_name}:${group_version}" \
+    "arhat.dev/aranya/pkg/apis/${group_name}/generated" \
+    arhat.dev/aranya/pkg/apis "${group_name}:${group_version}" \
     --go-header-file "$(pwd)/scripts/gen/boilerplate.go.txt" \
     --plural-exceptions "Maintenance:Maintenance" \
     -v 2 2>&1 | tee build/gen_clients.log | grep -E -e '(Assembling)|(violation)'
@@ -70,16 +70,16 @@ _do_gen_clients() {
   rm -rf "./pkg/apis/${group_name}/generated"
   mkdir -p "./pkg/apis/${group_name}/generated"
 
-  if [ -d "${GOPATH}/src/arhat.dev/template-kubernetes-controller/pkg/apis/${group_name}/generated/clientset" ]; then
-    mv "${GOPATH}/src/arhat.dev/template-kubernetes-controller/pkg/apis/${group_name}/generated/clientset" "./pkg/apis/${group_name}/generated"
+  if [ -d "${GOPATH}/src/arhat.dev/aranya/pkg/apis/${group_name}/generated/clientset" ]; then
+    mv "${GOPATH}/src/arhat.dev/aranya/pkg/apis/${group_name}/generated/clientset" "./pkg/apis/${group_name}/generated"
   fi
 
-  if [ -d "${GOPATH}/src/arhat.dev/template-kubernetes-controller/pkg/apis/${group_name}/generated/informers" ]; then
-    mv "${GOPATH}/src/arhat.dev/template-kubernetes-controller/pkg/apis/${group_name}/generated/informers" "./pkg/apis/${group_name}/generated"
+  if [ -d "${GOPATH}/src/arhat.dev/aranya/pkg/apis/${group_name}/generated/informers" ]; then
+    mv "${GOPATH}/src/arhat.dev/aranya/pkg/apis/${group_name}/generated/informers" "./pkg/apis/${group_name}/generated"
   fi
 
-  if [ -d "${GOPATH}/src/arhat.dev/template-kubernetes-controller/pkg/apis/${group_name}/generated/listers" ]; then
-    mv "${GOPATH}/src/arhat.dev/template-kubernetes-controller/pkg/apis/${group_name}/generated/listers" "./pkg/apis/${group_name}/generated"
+  if [ -d "${GOPATH}/src/arhat.dev/aranya/pkg/apis/${group_name}/generated/listers" ]; then
+    mv "${GOPATH}/src/arhat.dev/aranya/pkg/apis/${group_name}/generated/listers" "./pkg/apis/${group_name}/generated"
   fi
 }
 
@@ -92,7 +92,7 @@ _do_gen_deepcopy() {
 _do_gen_crd_manifests() {
   group_name="$1"
 
-	"${CONTROLLER_GEN}" crd:preserveUnknownFields=true output:dir=./cicd/deploy/charts/template-kubernetes-controller/crds/ paths="./pkg/apis/${group_name}/..."
+	"${CONTROLLER_GEN}" crd:preserveUnknownFields=true output:dir=./cicd/deploy/charts/aranya/crds/ paths="./pkg/apis/${group_name}/..."
 }
 
 gen() {

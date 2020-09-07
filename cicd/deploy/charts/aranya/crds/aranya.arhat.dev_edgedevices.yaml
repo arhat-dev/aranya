@@ -1,0 +1,770 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: (devel)
+  creationTimestamp: null
+  name: edgedevices.aranya.arhat.dev
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.connectivity.method
+    name: Connectivity
+    type: string
+  - JSONPath: .status.hostNode
+    name: Host-Node
+    type: string
+  group: aranya.arhat.dev
+  names:
+    kind: EdgeDevice
+    listKind: EdgeDeviceList
+    plural: edgedevices
+    shortNames:
+    - ed
+    - eds
+    singular: edgedevice
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: EdgeDevice is the Schema for the edgedevices API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: EdgeDeviceSpec defines the desired state of EdgeDevice
+          properties:
+            connectivity:
+              description: Connectivity config how we serve the according agent
+              properties:
+                amqp:
+                  description: AMQP to tell aranya how to create rabbitMQ client
+                  properties:
+                    broker:
+                      description: Broker address in the form of host:port
+                      type: string
+                    exchange:
+                      description: Exchange in AMQP, if exists, MUST be a topic exchange
+                      type: string
+                    tlsSecretRef:
+                      description: Secret for tls cert-key pair
+                      properties:
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                      type: object
+                    topicNamespace:
+                      description: TopicNamespace to share with arhat agent
+                      type: string
+                    userPassRef:
+                      description: LocalObjectReference contains enough information
+                        to let you locate the referenced object inside the same namespace.
+                      properties:
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                      type: object
+                    version:
+                      description: Version of AMQP
+                      type: string
+                    vhost:
+                      type: string
+                  type: object
+                azureIoTHub:
+                  description: AzureIoTHub for azure iot hub connection
+                  properties:
+                    deviceID:
+                      description: DeviceID of the iot hub device
+                      type: string
+                    eventHub:
+                      properties:
+                        connectionStringSecretKeyRef:
+                          properties:
+                            key:
+                              description: Key of the data
+                              type: string
+                            name:
+                              description: Name of the referent
+                              type: string
+                          type: object
+                        consumerGroup:
+                          type: string
+                      type: object
+                    iotHub:
+                      properties:
+                        connectionStringSecretKeyRef:
+                          properties:
+                            key:
+                              description: Key of the data
+                              type: string
+                            name:
+                              description: Name of the referent
+                              type: string
+                          type: object
+                        deviceStatusPollInterval:
+                          description: poll interval to get device twin info, default
+                            to 1 minute
+                          type: string
+                      type: object
+                  type: object
+                backoff:
+                  properties:
+                    factor:
+                      format: double
+                      type: number
+                    initialDelay:
+                      type: string
+                    maxDelay:
+                      type: string
+                  type: object
+                gcpIoTCore:
+                  description: GCPIoTCore for google cloud pub/sub connection
+                  properties:
+                    cloudIoT:
+                      description: CloudIoT service used to send commands to device
+                      properties:
+                        credentialsSecretKeyRef:
+                          properties:
+                            key:
+                              description: Key of the data
+                              type: string
+                            name:
+                              description: Name of the referent
+                              type: string
+                          type: object
+                        deviceID:
+                          type: string
+                        deviceStatusPollInterval:
+                          description: poll interval to get device info, default to
+                            1 minute
+                          type: string
+                        region:
+                          type: string
+                        registryID:
+                          type: string
+                      type: object
+                    projectID:
+                      type: string
+                    pubSub:
+                      description: PubSub service used to receive messages sent from
+                        device
+                      properties:
+                        credentialsSecretKeyRef:
+                          properties:
+                            key:
+                              description: Key of the data
+                              type: string
+                            name:
+                              description: Name of the referent
+                              type: string
+                          type: object
+                        stateTopicID:
+                          type: string
+                        telemetryTopicID:
+                          type: string
+                      type: object
+                  type: object
+                grpc:
+                  description: GRPC to tell aranya how to create grpc server
+                  properties:
+                    tlsSecretRef:
+                      description: Secret for server side tls cert-key pair
+                      properties:
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                      type: object
+                  type: object
+                method:
+                  description: Method of how to establish communication channel between
+                    server and devices
+                  type: string
+                mqtt:
+                  description: MQTT to tell aranya how to create mqtt client
+                  properties:
+                    broker:
+                      description: Broker address in the form of host:port
+                      type: string
+                    clientID:
+                      type: string
+                    keepalive:
+                      format: int32
+                      type: integer
+                    tlsSecretRef:
+                      description: Secret for tls cert-key pair
+                      properties:
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                      type: object
+                    topicNamespace:
+                      description: TopicNamespace to share with arhat agent
+                      type: string
+                    transport:
+                      description: Transport protocol underlying the MQTT protocol,
+                        one of [tcp, websocket]
+                      enum:
+                      - tcp
+                      - websocket
+                      type: string
+                    userPassRef:
+                      description: LocalObjectReference contains enough information
+                        to let you locate the referenced object inside the same namespace.
+                      properties:
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                      type: object
+                    version:
+                      description: Version of MQTT protocol can be one of [3.1.1]
+                      enum:
+                      - 3.1.1
+                      type: string
+                  type: object
+                timers:
+                  properties:
+                    unarySessionTimeout:
+                      type: string
+                  type: object
+              type: object
+            devices:
+              description: Devices managed by this EdgeDevice
+              items:
+                description: DeviceSpec is the physical device related to (managed
+                  by) this edge device (e.g. sensors, switches)
+                properties:
+                  connectivity:
+                    description: Connectivity instructs how to connect to this device
+                    properties:
+                      mode:
+                        description: Mode when connecting to this device
+                        enum:
+                        - client
+                        - server
+                        type: string
+                      params:
+                        additionalProperties:
+                          type: string
+                        description: Params for this connectivity (can be overridden
+                          by the )
+                        type: object
+                      target:
+                        description: "Target value for transport, its value depends
+                          on the transport method you chose \t- for `file`, `serial`,
+                          `unix/{*}`: the local file path \t- for `unix`: the unix
+                          socket path \t- for `{*/}tcp`,`{*/}udp`: the ip address:port
+                          combination \t- for `serial`: the serial port device path"
+                        type: string
+                      tls:
+                        description: TLS config for network related connectivity
+                        properties:
+                          allowInsecureHashes:
+                            description: options for dtls
+                            type: boolean
+                          certSecretRef:
+                            description: CertSecretRef for pem encoded x.509 certificate
+                              key pair
+                            properties:
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind,
+                                  uid?'
+                                type: string
+                            type: object
+                          cipherSuites:
+                            items:
+                              type: string
+                            type: array
+                          insecureSkipVerify:
+                            type: boolean
+                          keyLogFile:
+                            description: write tls session shared key to this file
+                            type: string
+                          preSharedKey:
+                            properties:
+                              identityHint:
+                                description: the client hint provided to server, base64
+                                  encoded value
+                                type: string
+                              serverHintMapping:
+                                description: map server hint(s) to pre shared key(s)
+                                  column separated base64 encoded key value pairs
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          serverName:
+                            type: string
+                        type: object
+                      transport:
+                        description: Transport method interacting with this physical
+                          device
+                        enum:
+                        - file
+                        - serial
+                        - socket
+                        - http
+                        - mqtt
+                        - modbus
+                        - opcua
+                        type: string
+                    type: object
+                  metrics:
+                    description: Metrics collection/report from this device
+                    items:
+                      description: DeviceMetrics to upload device metrics for prometheus
+                      properties:
+                        name:
+                          description: Name of the metrics, will be formatted to `aranya_edgedevice_devices_<device
+                            name>_<metrics name>` for prometheus
+                          pattern: '[a-z0-9]([_a-z0-9]*[a-z0-9])?'
+                          type: string
+                        transportParams:
+                          additionalProperties:
+                            type: string
+                          description: TransportParams to override ..connectivity.params
+                            to get metrics
+                          type: object
+                        uploadMethod:
+                          description: UploadMethod for this metrics
+                          enum:
+                          - WithNodeMetrics
+                          - WithArhatConnectivity
+                          - WithStandaloneClient
+                          type: string
+                        uploadParams:
+                          additionalProperties:
+                            type: string
+                          description: UploadParams
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                  name:
+                    description: 'Name of the physical device, and this name will
+                      become available in virtual pod as a container name NOTE: name
+                      `host` is reserved by the aranya'
+                    pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                    type: string
+                  operations:
+                    description: Operations supported by this device
+                    items:
+                      description: DeviceOperation defines operation we can perform
+                        on the device
+                      properties:
+                        name:
+                          description: Name of the operation (e.g. "on", "off" ...)
+                          type: string
+                        pseudoCommand:
+                          description: PseudoCommand used to trigger this operation,
+                            so you can trigger this operation by executing `kubectl
+                            exec <virtual pod> -c <device name> -- <pseudo command>`
+                            Defaults to operation name
+                          type: string
+                        transportParams:
+                          additionalProperties:
+                            type: string
+                          description: TransportParams to override ..connectivity.params
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                  uploadConnectivity:
+                    description: UploadConnectivity instructs how to upload metrics
+                    properties:
+                      mode:
+                        description: Mode when connecting to this device
+                        enum:
+                        - client
+                        - server
+                        type: string
+                      params:
+                        additionalProperties:
+                          type: string
+                        description: Params for this connectivity (can be overridden
+                          by the )
+                        type: object
+                      target:
+                        description: "Target value for transport, its value depends
+                          on the transport method you chose \t- for `file`, `serial`,
+                          `unix/{*}`: the local file path \t- for `unix`: the unix
+                          socket path \t- for `{*/}tcp`,`{*/}udp`: the ip address:port
+                          combination \t- for `serial`: the serial port device path"
+                        type: string
+                      tls:
+                        description: TLS config for network related connectivity
+                        properties:
+                          allowInsecureHashes:
+                            description: options for dtls
+                            type: boolean
+                          certSecretRef:
+                            description: CertSecretRef for pem encoded x.509 certificate
+                              key pair
+                            properties:
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind,
+                                  uid?'
+                                type: string
+                            type: object
+                          cipherSuites:
+                            items:
+                              type: string
+                            type: array
+                          insecureSkipVerify:
+                            type: boolean
+                          keyLogFile:
+                            description: write tls session shared key to this file
+                            type: string
+                          preSharedKey:
+                            properties:
+                              identityHint:
+                                description: the client hint provided to server, base64
+                                  encoded value
+                                type: string
+                              serverHintMapping:
+                                description: map server hint(s) to pre shared key(s)
+                                  column separated base64 encoded key value pairs
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          serverName:
+                            type: string
+                        type: object
+                      transport:
+                        description: Transport method interacting with this physical
+                          device
+                        enum:
+                        - file
+                        - serial
+                        - socket
+                        - http
+                        - mqtt
+                        - modbus
+                        - opcua
+                        type: string
+                    type: object
+                required:
+                - name
+                type: object
+              type: array
+            node:
+              description: Node related settings
+              properties:
+                annotations:
+                  additionalProperties:
+                    type: string
+                  description: Annotations expected to be applied to node object
+                  type: object
+                cert:
+                  description: Cert for this node
+                  properties:
+                    country:
+                      type: string
+                    locality:
+                      type: string
+                    org:
+                      type: string
+                    orgUnit:
+                      type: string
+                    state:
+                      type: string
+                  type: object
+                fieldHooks:
+                  description: FieldHooks to update node object attributes according
+                    to current field value
+                  items:
+                    description: FiledHook to update a node filed (currently only
+                      annotations/labels supported) if aranya was able to perform
+                      a successful query on some field(s) (all node object fields)
+                    properties:
+                      query:
+                        description: Query in jq syntax, result is always an array
+                          of unstructured objects ([]interface{})
+                        type: string
+                      targetFieldPath:
+                        description: TargetFieldPath
+                        type: string
+                      value:
+                        description: Value the plain text value for target field
+                        type: string
+                      valueExpression:
+                        description: ValueExpression jq expression applied to values
+                          found by Query, only the first result will be used as the
+                          final value
+                        type: string
+                    required:
+                    - query
+                    - targetFieldPath
+                    type: object
+                  type: array
+                labels:
+                  additionalProperties:
+                    type: string
+                  description: Labels expected to be applied to node object
+                  type: object
+                metrics:
+                  properties:
+                    collect:
+                      description: Collect is the list of prometheus node-exporter
+                        collectors to use
+                      items:
+                        type: string
+                      type: array
+                    enabled:
+                      description: Enabled flag to enable metrics collection
+                      type: boolean
+                    extraArgs:
+                      description: ExtraArgs to provide additional cli args for node_exporter
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                rbac:
+                  description: RBAC setup for this node, an override of aranya configuration
+                  properties:
+                    clusterRolePermissions:
+                      additionalProperties:
+                        properties:
+                          nodeVerbs:
+                            description: NodeVerbs allowed verbs for this node
+                            items:
+                              type: string
+                            type: array
+                          statusVerbs:
+                            description: StatusVerbs allowed verbs for this nodeStatus
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      description: ClusterRolePermissions set cluster roles and their
+                        verbs for this node
+                      type: object
+                  type: object
+                storage:
+                  description: Storage config
+                  properties:
+                    enabled:
+                      type: boolean
+                  type: object
+                taints:
+                  description: Taints add extra taints in addition to default taint
+                    arhat.dev/namespace=<EdgeDevice Namespace>:NoSchedule
+                  items:
+                    description: The node this Taint is attached to has the "effect"
+                      on any pod that does not tolerate the Taint.
+                    properties:
+                      effect:
+                        description: Required. The effect of the taint on pods that
+                          do not tolerate the taint. Valid effects are NoSchedule,
+                          PreferNoSchedule and NoExecute.
+                        type: string
+                      key:
+                        description: Required. The taint key to be applied to a node.
+                        type: string
+                      timeAdded:
+                        description: TimeAdded represents the time at which the taint
+                          was added. It is only written for NoExecute taints.
+                        format: date-time
+                        type: string
+                      value:
+                        description: The taint value corresponding to the taint key.
+                        type: string
+                    required:
+                    - effect
+                    - key
+                    type: object
+                  type: array
+                timers:
+                  properties:
+                    forceSyncInterval:
+                      type: string
+                  type: object
+              type: object
+            pod:
+              description: Pod related settings
+              properties:
+                allocatable:
+                  minimum: 0
+                  type: integer
+                dns:
+                  description: DNS config for edge device
+                  properties:
+                    options:
+                      description: A list of DNS resolver options.
+                      items:
+                        type: string
+                      type: array
+                    searches:
+                      description: A list of DNS search domains for host-name lookup.
+                      items:
+                        type: string
+                      type: array
+                    servers:
+                      description: A list of DNS name server IP addresses.
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                ipv4CIDR:
+                  description: IPv4CIDR pod ipv4 range in this edge device
+                  type: string
+                ipv6CIDR:
+                  type: string
+                metrics:
+                  properties:
+                    collect:
+                      description: Collect is the list of prometheus node-exporter
+                        collectors to use
+                      items:
+                        type: string
+                      type: array
+                    enabled:
+                      description: Enabled flag to enable metrics collection
+                      type: boolean
+                    extraArgs:
+                      description: ExtraArgs to provide additional cli args for node_exporter
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                rbac:
+                  properties:
+                    rolePermissions:
+                      additionalProperties:
+                        properties:
+                          allowAttach:
+                            description: AllowAttach to allow "create" for resource
+                              pods/attach
+                            type: boolean
+                          allowExec:
+                            description: AllowExec to allow "create" for resource
+                              pods/exec
+                            type: boolean
+                          allowLog:
+                            description: AllowLog to allow "create" for resource pods/log
+                            type: boolean
+                          allowPortForward:
+                            description: AllowPortForward to allow "create" for resource
+                              pods/portforward
+                            type: boolean
+                          podVerbs:
+                            description: PodVerbs allowed verbs for resource pods
+                            items:
+                              type: string
+                            type: array
+                          statusVerbs:
+                            description: PodStatus allowed verbs for resource pods/status
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      description: ClusterRolePermissions for the pods admitted by
+                        this edge device
+                      type: object
+                    virtualpodRolePermissions:
+                      additionalProperties:
+                        properties:
+                          allowAttach:
+                            description: AllowAttach to allow "create" for resource
+                              pods/attach
+                            type: boolean
+                          allowExec:
+                            description: AllowExec to allow "create" for resource
+                              pods/exec
+                            type: boolean
+                          allowLog:
+                            description: AllowLog to allow "create" for resource pods/log
+                            type: boolean
+                          allowPortForward:
+                            description: AllowPortForward to allow "create" for resource
+                              pods/portforward
+                            type: boolean
+                          podVerbs:
+                            description: PodVerbs allowed verbs for resource pods
+                            items:
+                              type: string
+                            type: array
+                          statusVerbs:
+                            description: PodStatus allowed verbs for resource pods/status
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      description: VirtualPodRolePermissions for host related operations
+                        (will restrict resource name to edge device's name)
+                      type: object
+                  type: object
+                timers:
+                  properties:
+                    forceSyncInterval:
+                      type: string
+                  type: object
+              type: object
+            reverseProxy:
+              properties:
+                portMappings:
+                  items:
+                    properties:
+                      port:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        x-kubernetes-int-or-string: true
+                      protocol:
+                        type: string
+                      proxyPort:
+                        format: int32
+                        type: integer
+                    type: object
+                  type: array
+                selector:
+                  additionalProperties:
+                    type: string
+                  type: object
+              type: object
+          type: object
+        status:
+          description: EdgeDeviceStatus defines the observed state of EdgeDevice
+          properties:
+            hostNode:
+              type: string
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

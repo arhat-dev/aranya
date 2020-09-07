@@ -1,0 +1,8 @@
+/.idea
+/.vscode
+
+/fuzz-test
+/test-dir
+
+coverage.txt
+libmqtt-fuzz.zip

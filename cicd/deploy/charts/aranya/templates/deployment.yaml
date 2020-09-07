@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aranya.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aranya.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "aranya.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "aranya.selectorLabels" . | nindent 8 }}
+    spec:
+      # required to run in host network mode to serve kubelet http service
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "aranya.fullname" . }}
+        {{- if .Values.config.virtualnode.node.storage.enabled }}
+        - name: kubelet-plugins-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins
+            type: Directory
+        - name: kubelet-registration-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: DirectoryOrCreate # to make it compatible with old kubernetes
+        - name: pods-dir
+          hostPath:
+            path: /var/lib/aranya
+            type: DirectoryOrCreate
+        {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "aranya.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: aranya
+          {{- if .Values.config.virtualnode.node.storage.enabled }}
+          securityContext:
+            privileged: true
+          {{- else }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+          - /aranya
+          - -c
+          - /etc/aranya/config.yaml
+          env:
+            - name: GODEBUG
+              value: madvdontneed=1
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: WATCH_NAMESPACE
+              {{- if .Values.watchNamespace }}
+              value: {{ .Values.watchNamespace }}
+              {{- else }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+              {{- end }}
+          {{- if and .Values.config.aranya.metrics.enabled (ne (include "aranya.metricsPort" .) "0") }}
+          ports:
+            - name: metrics
+              containerPort: {{ include "aranya.metricsPort" . }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.config.aranya.metrics.httpPath | default "/metrics" }}
+              port: metrics
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.config.aranya.metrics.httpPath | default "/metrics" }}
+              port: metrics
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/aranya/config.yaml
+              subPath: config.yaml
+            {{- if .Values.config.virtualnode.node.storage.enabled }}
+            - name: kubelet-plugins-dir
+              mountPath: /var/lib/kubelet/plugins
+            - name: kubelet-registration-dir
+              mountPath: /var/lib/kubelet/plugins_registry
+            # mount path of the pods dir MUST be the same with its host path value
+            # because we will not share the mount path with the CSI plugin
+            - name: pods-dir
+              mountPath: /var/lib/aranya
+              mountPropagation: Bidirectional
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
