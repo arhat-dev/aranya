@@ -32,7 +32,7 @@ _build() {
 
 aranya() {
   # TODO: set mandatory tags and predefined tags for specific platforms
-  _build "CGO_ENABLED=0 ${GOBUILD} -tags='foo bar ${PREDEFINED_BUILD_TAGS}' ./cmd/aranya"
+  _build "CGO_ENABLED=0 ${GOBUILD} -tags='${PREDEFINED_BUILD_TAGS}' ./cmd/aranya"
 }
 
 COMP=$(printf "%s" "$@" | cut -d. -f1)
@@ -166,16 +166,16 @@ GO_LDFLAGS="-s -w \
   -X arhat.dev/aranya/pkg/version.arch=${ARCH} \
   -X arhat.dev/aranya/pkg/version.goCompilerPlatform=$(go version | cut -d\  -f4)"
 
-GOARM=$(_get_goarm "${ARCH}")
+GOARM="$(_get_goarm "${ARCH}")"
 if [ -z "${GOARM}" ]; then
   # this can happen if no ARCH specified
-  GOARM=$(go env GOARM)
+  GOARM="$(go env GOARM)"
 fi
 
-GOMIPS=$(_get_gomips "${ARCH}")
+GOMIPS="$(_get_gomips "${ARCH}")"
 if [ -z "${GOMIPS}" ]; then
   # this can happen if no ARCH specified
-  GOMIPS=$(go env GOMIPS)
+  GOMIPS="$(go env GOMIPS)"
 fi
 
 GOBUILD="GO111MODULE=on GOOS=${GOOS} GOARCH=$(_get_goarch "${ARCH}") \
