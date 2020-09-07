@@ -19,6 +19,11 @@ set -ex
 GOPATH=$(go env GOPATH)
 export GOPATH
 
+GOOS=$(go env GOHOSTOS)
+GOARCH=$(go env GOHOSTARCH)
+export GOOS
+export GOARCH
+
 CONTROLLER_GEN="${GOPATH}/bin/kube-controller-gen"
 
 _install_go_bin() {
