@@ -8,7 +8,7 @@ image:
   repository: docker.io/arhatdev/aranya
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "amd64"
+  tag: latest
 
 imagePullSecrets: []
 nameOverride: ""
@@ -202,8 +202,8 @@ config:
         streamCreationTimeout: 30s
       dns:
         servers:
-        - "1.1.1.1"
-        - "8.8.8.8"
+        - "1.1.1.1" # yamllint disable-line rule:quoted-strings
+        - "8.8.8.8" # yamllint disable-line rule:quoted-strings
         searches:
         - cluster.local
         options:
