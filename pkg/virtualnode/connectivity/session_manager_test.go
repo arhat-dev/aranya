@@ -22,14 +22,14 @@ package connectivity
 
 // 	"github.com/stretchr/testify/assert"
 
-// 	"arhat.dev/aranya-proto/gopb"
+// 	"arhat.dev/aranya-proto/aranyagopb"
 // )
 
 // func TestSessionManager_Add(t *testing.T) {
 // 	mgr := NewSessionManager()
-// 	sidA, chA := mgr.Add(gopb.NewPodListCmd("", "", true), time.Second, false)
-// 	sidB, chB := mgr.Add(gopb.NewPodResizeCmd(sidA, 0, 0), time.Second, false)
-// 	sidC, chC := mgr.Add(gopb.NewPodListCmd("", "", true), time.Second, false)
+// 	sidA, chA := mgr.Add(aranyagopb.NewPodListCmd("", "", true), time.Second, false)
+// 	sidB, chB := mgr.Add(aranyagopb.NewPodResizeCmd(sidA, 0, 0), time.Second, false)
+// 	sidC, chC := mgr.Add(aranyagopb.NewPodListCmd("", "", true), time.Second, false)
 
 // 	assert.NotNil(t, sidA)
 // 	assert.Equal(t, sidA, sidB)
@@ -49,9 +49,9 @@ package connectivity
 
 // func TestSessionManager_Del(t *testing.T) {
 // 	mgr := NewSessionManager()
-// 	sid, ch := mgr.Add(gopb.NewPodListCmd("", "", true), 0, false)
+// 	sid, ch := mgr.Add(aranyagopb.NewPodListCmd("", "", true), 0, false)
 // 	mgr.Delete(sid)
-// 	ok := mgr.Dispatch(gopb.NewDataMsg(1, true, gopb.DATA_OTHER, 0, nil))
+// 	ok := mgr.Dispatch(aranyagopb.NewDataMsg(1, true, aranyagopb.DATA_OTHER, 0, nil))
 // 	assert.Equal(t, false, ok)
 
 // 	_, more := <-ch

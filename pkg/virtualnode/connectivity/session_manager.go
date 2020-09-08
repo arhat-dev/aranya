@@ -24,7 +24,7 @@ import (
 
 	"arhat.dev/pkg/queue"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 )
 
 type session struct {
@@ -49,7 +49,7 @@ func (s *session) nextSeq() uint64 {
 	return seq
 }
 
-func (s *session) deliverMsg(msg *gopb.Msg) bool {
+func (s *session) deliverMsg(msg *aranyagopb.Msg) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -59,14 +59,14 @@ func (s *session) deliverMsg(msg *gopb.Msg) bool {
 	}
 
 	var reallyCompleted bool
-	if s.seqQ == nil || msg.Kind != gopb.MSG_DATA {
+	if s.seqQ == nil || msg.Kind != aranyagopb.MSG_DATA {
 		// nolint:gosimple
 		select {
 		case s.msgCh <- msg:
 		}
 		reallyCompleted = msg.Completed
 	} else {
-		dataMsg := new(gopb.Data)
+		dataMsg := new(aranyagopb.Data)
 		_ = dataMsg.Unmarshal(msg.Body)
 
 		if msg.Completed {
@@ -161,7 +161,7 @@ func (m *SessionManager) Start(stopCh <-chan struct{}) error {
 				}
 
 				if sid, ok := session.Key.(uint64); ok {
-					m.Dispatch(gopb.NewTimeoutErrorMsg(sid))
+					m.Dispatch(aranyagopb.NewTimeoutErrorMsg(sid))
 					m.Delete(sid)
 				}
 			case <-stopCh:
@@ -194,8 +194,8 @@ func (m *SessionManager) Add(
 
 		// nolint:gocritic
 		switch c := cmd.(type) {
-		case *gopb.PodOperationCmd:
-			if opts, ok := c.Options.(*gopb.PodOperationCmd_InputOptions); ok {
+		case *aranyagopb.PodOperationCmd:
+			if opts, ok := c.Options.(*aranyagopb.PodOperationCmd_InputOptions); ok {
 				opts.InputOptions.Seq = oldSession.nextSeq()
 			}
 		}
@@ -224,7 +224,7 @@ func (m *SessionManager) Add(
 	return realSid, ch
 }
 
-func (m *SessionManager) Dispatch(msg *gopb.Msg) bool {
+func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
 	m.mu.RLock()
 	session, ok := m.m[msg.SessionId]
 	m.mu.RUnlock()

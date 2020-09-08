@@ -32,8 +32,10 @@ import (
 	api "k8s.io/kubernetes/pkg/apis/core"
 	kubeletpf "k8s.io/kubernetes/pkg/kubelet/server/portforward"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
+
 	"arhat.dev/aranya/pkg/constant"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 const (
@@ -234,7 +236,7 @@ func (m *Manager) handleNewHTTPStream(wg *sync.WaitGroup, s *stream, hs httpstre
 }
 
 func (m *Manager) doPortForward(s *stream) {
-	pfCmd := gopb.NewPodPortForwardCmd(s.podUID, s.port, s.protocol)
+	pfCmd := aranyagopb.NewPodPortForwardCmd(s.podUID, s.port, s.protocol)
 	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, pfCmd)
 	if err != nil {
 		s.writeErr(fmt.Sprintf("failed to create port-forward session: %v", err))
@@ -255,7 +257,7 @@ func (m *Manager) doPortForward(s *stream) {
 				}
 			}
 
-			_, _, err := m.ConnectivityManager.PostCmd(sid, gopb.NewPodInputCmd(true, nil))
+			_, _, err := m.ConnectivityManager.PostCmd(sid, aranyagopb.NewPodInputCmd(true, nil))
 			if err != nil {
 				s.writeErr(fmt.Sprintf("failed to post port-forward read close cmd: %v", err))
 			}
@@ -271,7 +273,7 @@ func (m *Manager) doPortForward(s *stream) {
 				<-timer.C
 			}
 
-			inputCmd := gopb.NewPodInputCmd(false, data)
+			inputCmd := aranyagopb.NewPodInputCmd(false, data)
 			_, _, err := m.ConnectivityManager.PostCmd(sid, inputCmd)
 			if err != nil {
 				s.writeErr(err.Error())
@@ -279,7 +281,7 @@ func (m *Manager) doPortForward(s *stream) {
 		}
 	}()
 
-	gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		if msgErr := msg.GetError(); msgErr != nil {
 			s.writeErr(msgErr.Error())
 		} else {
@@ -287,9 +289,9 @@ func (m *Manager) doPortForward(s *stream) {
 		}
 
 		return false
-	}, func(dataMsg *gopb.Data) (exit bool) {
-		if dataMsg.Kind == gopb.DATA_ERROR {
-			msgErr := new(gopb.Error)
+	}, func(dataMsg *aranyagopb.Data) (exit bool) {
+		if dataMsg.Kind == aranyagopb.DATA_ERROR {
+			msgErr := new(aranyagopb.Error)
 			_ = msgErr.Unmarshal(dataMsg.Data)
 			s.writeErr(msgErr.Error())
 			return true
@@ -301,7 +303,7 @@ func (m *Manager) doPortForward(s *stream) {
 		}
 
 		return false
-	}, gopb.HandleUnknownMessage(m.Log))
+	}, connectivity.HandleUnknownMessage(m.Log))
 }
 
 type stream struct {

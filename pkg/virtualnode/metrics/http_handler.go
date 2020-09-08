@@ -32,7 +32,7 @@ import (
 	"github.com/prometheus/common/expfmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/util/cache"
 )
 
@@ -177,14 +177,14 @@ func (m *Manager) serveMetrics(cache *cache.MetricsCache, resp http.ResponseWrit
 			return
 		}
 
-		m.retrieveDeviceMetrics(gopb.NewMetricsCollectCmd(gopb.COLLECT_NODE_METRICS))
+		m.retrieveDeviceMetrics(aranyagopb.NewMetricsCollectCmd(aranyagopb.COLLECT_NODE_METRICS))
 	case m.containerMetricsCache:
 		if !m.options.ContainerMetrics.Enabled || !m.containerMetricsSupported() {
 			http.Error(resp, "container metrics not supported", http.StatusNotImplemented)
 			return
 		}
 
-		m.retrieveDeviceMetrics(gopb.NewMetricsCollectCmd(gopb.COLLECT_CONTAINER_METRICS))
+		m.retrieveDeviceMetrics(aranyagopb.NewMetricsCollectCmd(aranyagopb.COLLECT_CONTAINER_METRICS))
 	}
 
 	contentType := expfmt.Negotiate(r.Header)

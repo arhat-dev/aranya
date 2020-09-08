@@ -29,9 +29,11 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	kubeletrc "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
+
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/logutil"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 type containerExecutor func(
@@ -91,7 +93,7 @@ func (m *Manager) doGetContainerLogs(
 		since      time.Time
 		tailLines  int64 = -1
 		bytesLimit int64 = -1
-		cmd        *gopb.PodOperationCmd
+		cmd        *aranyagopb.PodOperationCmd
 		podLog     string
 		logger     = m.Log.WithFields(log.String("type", "logs"))
 	)
@@ -112,7 +114,7 @@ func (m *Manager) doGetContainerLogs(
 			bytesLimit = *options.LimitBytes
 		}
 
-		cmd = gopb.NewPodLogCmd(
+		cmd = aranyagopb.NewPodLogCmd(
 			string(uid),
 			options.Container,
 			options.Follow,
@@ -138,7 +140,7 @@ func (m *Manager) doGetContainerLogs(
 			podLog = ""
 		}
 	case logPath != "":
-		cmd = gopb.NewHostLogCmd(logPath)
+		cmd = aranyagopb.NewHostLogCmd(logPath)
 	default:
 		return 0, nil, fmt.Errorf("bad log options")
 	}
@@ -169,15 +171,15 @@ func (m *Manager) doGetContainerLogs(
 	go func() {
 		defer func() { _ = writer.Close() }()
 
-		gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 			if msgErr := msg.GetError(); msgErr != nil {
 				logger.I("error happened in pod logs", log.Error(msgErr))
 			}
 
 			return true
-		}, func(dataMsg *gopb.Data) (exit bool) {
-			if dataMsg.Kind == gopb.DATA_ERROR {
-				msgErr := new(gopb.Error)
+		}, func(dataMsg *aranyagopb.Data) (exit bool) {
+			if dataMsg.Kind == aranyagopb.DATA_ERROR {
+				msgErr := new(aranyagopb.Error)
 				_ = msgErr.Unmarshal(dataMsg.Data)
 				logger.I("error happened in pod logs", log.Error(msgErr))
 				return true
@@ -189,7 +191,7 @@ func (m *Manager) doGetContainerLogs(
 			}
 
 			return false
-		}, gopb.HandleUnknownMessage(logger))
+		}, connectivity.HandleUnknownMessage(logger))
 	}()
 
 	return sid, reader, nil
@@ -215,7 +217,11 @@ func (m *Manager) doHandleExecInContainer() kubeletrc.Executor {
 		}()
 
 		// kubectl exec has no support for environment variables
-		execCmd := gopb.NewPodExecCmd(string(uid), container, cmd, stdin != nil, stdout != nil, stderr != nil, tty, nil)
+		execCmd := aranyagopb.NewPodExecCmd(
+			string(uid), container, cmd,
+			stdin != nil, stdout != nil, stderr != nil,
+			tty, nil,
+		)
 		err := m.doServeTerminalStream(execCmd, stdin, stdout, stderr, resize)
 		if err != nil {
 			return err
@@ -242,7 +248,7 @@ func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
 			}
 		}()
 
-		attachCmd := gopb.NewPodAttachCmd(string(uid), container, stdin != nil, stdout != nil, stderr != nil, tty)
+		attachCmd := aranyagopb.NewPodAttachCmd(string(uid), container, stdin != nil, stdout != nil, stderr != nil, tty)
 		err := m.doServeTerminalStream(attachCmd, stdin, stdout, stderr, resize)
 		if err != nil {
 			return err
@@ -253,7 +259,7 @@ func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
 }
 
 func (m *Manager) doServeTerminalStream(
-	initialCmd *gopb.PodOperationCmd,
+	initialCmd *aranyagopb.PodOperationCmd,
 	stdin io.Reader, stdout, stderr io.Writer,
 	resizeCh <-chan remotecommand.TerminalSize,
 ) error {
@@ -273,7 +279,7 @@ func (m *Manager) doServeTerminalStream(
 
 	defer func() {
 		// best effort
-		_, _, err2 := m.ConnectivityManager.PostCmd(sid, gopb.NewSessionCloseCmd(sid))
+		_, _, err2 := m.ConnectivityManager.PostCmd(sid, aranyagopb.NewSessionCloseCmd(sid))
 		if err2 != nil {
 			logger.I("failed to post session close cmd", log.Error(err2))
 		}
@@ -282,7 +288,7 @@ func (m *Manager) doServeTerminalStream(
 	if resizeCh != nil {
 		go func() {
 			for size := range resizeCh {
-				resizeCmd := gopb.NewPodResizeCmd(size.Width, size.Height)
+				resizeCmd := aranyagopb.NewPodResizeCmd(size.Width, size.Height)
 				if _, _, err2 := m.ConnectivityManager.PostCmd(sid, resizeCmd); err2 != nil {
 					logger.I("failed to post resize cmd", log.Error(err2))
 				}
@@ -318,7 +324,7 @@ func (m *Manager) doServeTerminalStream(
 		go func() {
 			defer func() {
 				logger.V("closing remote read")
-				_, _, err2 := m.ConnectivityManager.PostCmd(sid, gopb.NewPodInputCmd(true, nil))
+				_, _, err2 := m.ConnectivityManager.PostCmd(sid, aranyagopb.NewPodInputCmd(true, nil))
 				if err2 != nil {
 					logger.I("failed to post input close cmd", log.Error(err2))
 				}
@@ -333,7 +339,7 @@ func (m *Manager) doServeTerminalStream(
 					<-timer.C
 				}
 
-				_, _, err2 := m.ConnectivityManager.PostCmd(sid, gopb.NewPodInputCmd(false, data))
+				_, _, err2 := m.ConnectivityManager.PostCmd(sid, aranyagopb.NewPodInputCmd(false, data))
 				if err2 != nil {
 					logger.I("failed to post user input", log.Error(err2))
 					return
@@ -342,21 +348,21 @@ func (m *Manager) doServeTerminalStream(
 		}()
 	}
 
-	gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		if msgErr := msg.GetError(); msgErr != nil {
 			err = msgErr
 		}
 		return true
-	}, func(dataMsg *gopb.Data) (exit bool) {
+	}, func(dataMsg *aranyagopb.Data) (exit bool) {
 		// default send to stdout
 		targetOutput := stdout
 		switch dataMsg.Kind {
-		case gopb.DATA_STDERR:
+		case aranyagopb.DATA_STDERR:
 			if stderr != nil {
 				targetOutput = stderr
 			}
-		case gopb.DATA_ERROR:
-			msgErr := new(gopb.Error)
+		case aranyagopb.DATA_ERROR:
+			msgErr := new(aranyagopb.Error)
 			_ = msgErr.Unmarshal(dataMsg.Data)
 			err = msgErr
 			return true
@@ -368,7 +374,7 @@ func (m *Manager) doServeTerminalStream(
 			return true
 		}
 		return false
-	}, gopb.HandleUnknownMessage(logger))
+	}, connectivity.HandleUnknownMessage(logger))
 
 	return err
 }

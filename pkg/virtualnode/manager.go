@@ -33,9 +33,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientcodv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
+
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 func NewVirtualNodeManager(
@@ -142,22 +144,24 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 	}()
 
 	vn.log.D("syncing device info for the first time")
-	if err := vn.SyncDeviceNodeStatus(gopb.GET_NODE_INFO_ALL); err != nil {
+	if err := vn.SyncDeviceNodeStatus(aranyagopb.GET_NODE_INFO_ALL); err != nil {
 		vn.log.I("failed to sync device node info, reject", log.Error(err))
-		vn.opt.ConnectivityManager.Reject(gopb.REJECTION_NODE_STATUS_SYNC_ERROR, "failed to pass initial node sync")
+		vn.opt.ConnectivityManager.Reject(
+			aranyagopb.REJECTION_NODE_STATUS_SYNC_ERROR, "failed to pass initial node sync")
 		return false
 	}
 
 	var supportPod bool
 	vn.log.D("syncing device pods for the first time")
 	if err := vn.podManager.SyncDevicePods(); err != nil {
-		if e, ok := err.(*gopb.Error); ok && e.Kind == gopb.ERR_NOT_SUPPORTED {
+		if e, ok := err.(*aranyagopb.Error); ok && e.Kind == aranyagopb.ERR_NOT_SUPPORTED {
 			// ignore unsupported error
 			supportPod = false
 			vn.log.I("pod not supported in remote device")
 		} else {
 			vn.log.I("failed to sync device pods", log.Error(err))
-			vn.opt.ConnectivityManager.Reject(gopb.REJECTION_POD_STATUS_SYNC_ERROR, "failed to pass initial pod sync")
+			vn.opt.ConnectivityManager.Reject(
+				aranyagopb.REJECTION_POD_STATUS_SYNC_ERROR, "failed to pass initial pod sync")
 			return false
 		}
 	} else {
@@ -169,7 +173,8 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 		vn.log.D("scheduling force node sync", log.Duration("interval", interval))
 		if err := m.nodeForceSyncQ.OfferWithDelay(vn.name, interval, interval); err != nil {
 			vn.log.E("failed to schedule force node sync", log.Error(err))
-			vn.opt.ConnectivityManager.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "force pod sync schedule failure")
+			vn.opt.ConnectivityManager.Reject(
+				aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "force pod sync schedule failure")
 			return false
 		}
 
@@ -183,7 +188,8 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 		vn.log.D("scheduling force pod sync", log.Duration("interval", interval))
 		if err := m.podForceSyncQ.OfferWithDelay(vn.name, interval, interval); err != nil {
 			vn.log.E("failed to schedule force pod sync", log.Error(err))
-			vn.opt.ConnectivityManager.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "force pod sync schedule failure")
+			vn.opt.ConnectivityManager.Reject(
+				aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "force pod sync schedule failure")
 			return false
 		}
 
@@ -201,7 +207,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 		err := m.leaseUpdateQ.OfferWithDelay(vn.name, m.leaseUpdateInterval, wait.Jitter(m.leaseUpdateInterval, .2))
 		if err != nil {
 			vn.log.E("failed to schedule node lease update", log.Error(err))
-			vn.opt.ConnectivityManager.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "lease update failure")
+			vn.opt.ConnectivityManager.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "lease update failure")
 			return false
 		}
 
@@ -215,7 +221,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 		err := m.mirrorUpdateQ.OfferWithDelay(vn.name, m.nodeUpdateInterval, wait.Jitter(m.nodeUpdateInterval, .2))
 		if err != nil {
 			vn.log.E("failed to schedule mirror node update", log.Error(err))
-			vn.opt.ConnectivityManager.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "mirror node sync failure")
+			vn.opt.ConnectivityManager.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "mirror node sync failure")
 			return false
 		}
 
@@ -225,14 +231,16 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 	if vn.storageManager != nil {
 		// send storage credentials when storage enabled
 		vn.log.D("sending storage credentials to device")
-		msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(0, gopb.NewStorageCredentialUpdateCmd(vn.opt.SSHPrivateKey))
+		msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(
+			0, aranyagopb.NewStorageCredentialUpdateCmd(vn.opt.SSHPrivateKey))
 		if err != nil {
 			vn.log.E("failed to send storage credentials", log.Error(err))
-			vn.opt.ConnectivityManager.Reject(gopb.REJECTION_CREDENTIAL_FAILURE, "failed to send node credentials")
+			vn.opt.ConnectivityManager.Reject(
+				aranyagopb.REJECTION_CREDENTIAL_FAILURE, "failed to send node credentials")
 			return false
 		}
 
-		gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 			if msgErr := msg.GetError(); msgErr != nil {
 				err = msgErr
 				return true
@@ -252,14 +260,15 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 			}
 
 			return false
-		}, nil, gopb.HandleUnknownMessage(vn.log))
+		}, nil, connectivity.HandleUnknownMessage(vn.log))
 
 		if err != nil {
-			if e, ok := err.(*gopb.Error); ok && e.Kind == gopb.ERR_NOT_SUPPORTED {
+			if e, ok := err.(*aranyagopb.Error); ok && e.Kind == aranyagopb.ERR_NOT_SUPPORTED {
 				vn.log.I("node credentials not supported")
 			} else {
 				vn.log.I("failed to set node credentials", log.Error(err))
-				vn.opt.ConnectivityManager.Reject(gopb.REJECTION_CREDENTIAL_FAILURE, "failed to set node credentials")
+				vn.opt.ConnectivityManager.Reject(
+					aranyagopb.REJECTION_CREDENTIAL_FAILURE, "failed to set node credentials")
 				return false
 			}
 		}
@@ -352,9 +361,9 @@ func (m *Manager) consumeForceNodeSync() {
 		case <-vn.opt.ConnectivityManager.Connected():
 			go func() {
 				logger.V("syncing")
-				if err := vn.SyncDeviceNodeStatus(gopb.GET_NODE_INFO_DYN); err != nil {
+				if err := vn.SyncDeviceNodeStatus(aranyagopb.GET_NODE_INFO_DYN); err != nil {
 					logger.I("failed", log.Error(err))
-					vn.opt.ConnectivityManager.Reject(gopb.REJECTION_NODE_STATUS_SYNC_ERROR, err.Error())
+					vn.opt.ConnectivityManager.Reject(aranyagopb.REJECTION_NODE_STATUS_SYNC_ERROR, err.Error())
 
 					logger.I("rejected")
 					return
@@ -396,7 +405,7 @@ func (m *Manager) consumeForcePodSync() {
 				logger.V("syncing")
 				if err := vn.podManager.SyncDevicePods(); err != nil {
 					logger.I("failed", log.Error(err))
-					vn.opt.ConnectivityManager.Reject(gopb.REJECTION_POD_STATUS_SYNC_ERROR, err.Error())
+					vn.opt.ConnectivityManager.Reject(aranyagopb.REJECTION_POD_STATUS_SYNC_ERROR, err.Error())
 
 					logger.I("rejected")
 					return
@@ -439,7 +448,7 @@ func (m *Manager) consumeMirrorNodeSync() {
 				err := vn.opt.ScheduleNodeSync()
 				if err != nil {
 					logger.I("failed", log.Error(err))
-					vn.opt.ConnectivityManager.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, err.Error())
+					vn.opt.ConnectivityManager.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, err.Error())
 
 					logger.I("rejected")
 					return
@@ -483,7 +492,8 @@ func (m *Manager) consumeLeaseUpdate() {
 				err := m.updateLeaseWithRetry(vn.name)
 				if err != nil {
 					logger.I("failed", log.Error(err))
-					vn.opt.ConnectivityManager.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "lease update failure")
+					vn.opt.ConnectivityManager.Reject(
+						aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "lease update failure")
 
 					logger.I("rejected")
 					return

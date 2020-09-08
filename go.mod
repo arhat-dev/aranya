@@ -130,7 +130,7 @@ replace (
 )
 
 require (
-	arhat.dev/aranya-proto v0.0.0-20200907100846-7df96dba025d
+	arhat.dev/aranya-proto v0.0.0-20200908142500-6dfc5c1969d3
 	arhat.dev/pkg v0.0.0-20200814094720-eac4d5d5680b
 	cloud.google.com/go/pubsub v1.3.1
 	github.com/Azure/azure-amqp-common-go/v3 v3.0.0
@@ -164,7 +164,6 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
-	github.com/stretchr/testify v1.6.1
 	go.etcd.io/bbolt v1.3.5 // indirect
 	go.etcd.io/etcd v0.0.0-20200401174654-e694b7bb0875 // indirect
 	go.uber.org/multierr v1.5.0

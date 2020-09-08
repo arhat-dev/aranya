@@ -38,7 +38,7 @@ import (
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/csi"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/cache"
@@ -268,21 +268,21 @@ func (m *Manager) Close() {
 
 // nolint:unused
 func (m *Manager) updateDeviceNetwork() error {
-	cmd := gopb.NewPodNetworkUpdateCmd(m.netMgr.GetPodCIDR(false), m.netMgr.GetPodCIDR(true))
+	cmd := aranyagopb.NewPodNetworkUpdateCmd(m.netMgr.GetPodCIDR(false), m.netMgr.GetPodCIDR(true))
 	msgCh, _, err := m.ConnectivityManager.PostCmd(0, cmd)
 	if err != nil {
 		return fmt.Errorf("failed to post network update cmd: %w", err)
 	}
 
 	var retErr error
-	gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		// if there is no abbot container running in the edge device (ERR_NOT_SUPPORTED)
 		// we can assume the edge device is not using cluster network, no more action required
-		if msgErr := msg.GetError(); msgErr != nil && msgErr.Kind != gopb.ERR_NOT_SUPPORTED {
+		if msgErr := msg.GetError(); msgErr != nil && msgErr.Kind != aranyagopb.ERR_NOT_SUPPORTED {
 			retErr = multierr.Append(retErr, msgErr)
 		}
 
 		return false
-	}, nil, gopb.HandleUnknownMessage(m.Log))
+	}, nil, connectivity.HandleUnknownMessage(m.Log))
 	return nil
 }

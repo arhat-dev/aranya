@@ -23,7 +23,7 @@ import (
 
 	"arhat.dev/pkg/log"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/util/cache"
 	"arhat.dev/aranya/pkg/util/manager"
@@ -89,9 +89,9 @@ func (m *Manager) Start() error {
 			if m.options.NodeMetrics.Enabled {
 				m.Log.I("configuring device node metrics")
 				m.configureDeviceMetricsCollection(
-					gopb.NewMetricsConfigureCmd(
-						gopb.CONFIGURE_NODE_METRICS_COLLECTION,
-						&gopb.MetricsConfigOptions{
+					aranyagopb.NewMetricsConfigureCmd(
+						aranyagopb.CONFIGURE_NODE_METRICS_COLLECTION,
+						&aranyagopb.MetricsConfigOptions{
 							Collect:   m.options.NodeMetrics.Collect,
 							ExtraArgs: m.options.NodeMetrics.ExtraArgs,
 						},
@@ -102,9 +102,9 @@ func (m *Manager) Start() error {
 			if m.options.ContainerMetrics.Enabled {
 				m.Log.I("configuring device container metrics")
 				m.configureDeviceMetricsCollection(
-					gopb.NewMetricsConfigureCmd(
-						gopb.CONFIGURE_CONTAINER_METRICS_COLLECTION,
-						&gopb.MetricsConfigOptions{
+					aranyagopb.NewMetricsConfigureCmd(
+						aranyagopb.CONFIGURE_CONTAINER_METRICS_COLLECTION,
+						&aranyagopb.MetricsConfigOptions{
 							Collect:   m.options.ContainerMetrics.Collect,
 							ExtraArgs: m.options.ContainerMetrics.ExtraArgs,
 						},
@@ -131,20 +131,20 @@ func (m *Manager) Close() {
 	m.OnClose(nil)
 }
 
-func (m *Manager) configureDeviceMetricsCollection(cmd *gopb.MetricsCmd) {
+func (m *Manager) configureDeviceMetricsCollection(cmd *aranyagopb.MetricsCmd) {
 	msgCh, _, err := m.ConnectivityManager.PostCmd(0, cmd)
 	if err != nil {
 		m.Log.I("failed to post metrics config cmd", log.Error(err))
 	}
 
-	gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		if err := msg.GetError(); err != nil {
 			// no more metrics cmd should be issued
 			switch cmd.Action {
-			case gopb.CONFIGURE_NODE_METRICS_COLLECTION:
+			case aranyagopb.CONFIGURE_NODE_METRICS_COLLECTION:
 				m.Log.I("failed to configure node metrics collection", log.Error(err))
 				atomic.StoreUint32(&m.supportNodeMetrics, 0)
-			case gopb.COLLECT_CONTAINER_METRICS:
+			case aranyagopb.COLLECT_CONTAINER_METRICS:
 				m.Log.I("failed to configure container metrics collection", log.Error(err))
 				atomic.StoreUint32(&m.supportContainerMetrics, 0)
 			}
@@ -157,36 +157,36 @@ func (m *Manager) configureDeviceMetricsCollection(cmd *gopb.MetricsCmd) {
 			return true
 		}
 
-		if mc.Kind == gopb.METRICS_COLLECTION_CONFIGURED {
+		if mc.Kind == aranyagopb.METRICS_COLLECTION_CONFIGURED {
 			switch cmd.Action {
-			case gopb.CONFIGURE_NODE_METRICS_COLLECTION:
+			case aranyagopb.CONFIGURE_NODE_METRICS_COLLECTION:
 				m.Log.D("node metrics collection configured")
 				atomic.StoreUint32(&m.supportNodeMetrics, 1)
-			case gopb.CONFIGURE_CONTAINER_METRICS_COLLECTION:
+			case aranyagopb.CONFIGURE_CONTAINER_METRICS_COLLECTION:
 				m.Log.D("container metrics collection configured")
 				atomic.StoreUint32(&m.supportContainerMetrics, 1)
 			}
 		}
 
 		return false
-	}, nil, gopb.HandleUnknownMessage(m.Log))
+	}, nil, connectivity.HandleUnknownMessage(m.Log))
 }
 
-func (m *Manager) retrieveDeviceMetrics(cmd *gopb.MetricsCmd) {
+func (m *Manager) retrieveDeviceMetrics(cmd *aranyagopb.MetricsCmd) {
 	msgCh, _, err := m.ConnectivityManager.PostCmd(0, cmd)
 	if err != nil {
 		m.Log.I("failed to post metrics collect cmd", log.Error(err))
 	}
 
-	gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		if err := msg.GetError(); err != nil {
 			m.Log.I("failed to get metrics", log.Error(err))
-			if err.Kind == gopb.ERR_NOT_SUPPORTED {
+			if err.Kind == aranyagopb.ERR_NOT_SUPPORTED {
 				// no more metrics cmd should be issued
 				switch cmd.Action {
-				case gopb.COLLECT_NODE_METRICS:
+				case aranyagopb.COLLECT_NODE_METRICS:
 					atomic.StoreUint32(&m.supportNodeMetrics, 0)
-				case gopb.COLLECT_CONTAINER_METRICS:
+				case aranyagopb.COLLECT_CONTAINER_METRICS:
 					atomic.StoreUint32(&m.supportContainerMetrics, 0)
 				}
 			}
@@ -205,19 +205,19 @@ func (m *Manager) retrieveDeviceMetrics(cmd *gopb.MetricsCmd) {
 		}
 
 		return false
-	}, nil, gopb.HandleUnknownMessage(m.Log))
+	}, nil, connectivity.HandleUnknownMessage(m.Log))
 }
 
 // UpdateMetrics cache the newly collected metrics
-func (m *Manager) UpdateMetrics(metrics *gopb.Metrics) error {
+func (m *Manager) UpdateMetrics(metrics *aranyagopb.Metrics) error {
 	if metrics == nil || len(metrics.Data) == 0 {
 		return fmt.Errorf("empty metrics bytes")
 	}
 
 	switch metrics.Kind {
-	case gopb.METRICS_NODE:
+	case aranyagopb.METRICS_NODE:
 		return m.nodeMetricsCache.Update(metrics.Data)
-	case gopb.METRICS_CONTAINER:
+	case aranyagopb.METRICS_CONTAINER:
 		return m.containerMetricsCache.Update(metrics.Data)
 	default:
 		return fmt.Errorf("unknown metrics kind: %v", metrics.Kind)

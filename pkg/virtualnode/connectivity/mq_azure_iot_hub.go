@@ -36,7 +36,7 @@ import (
 	eventhub "github.com/Azure/azure-event-hubs-go/v3"
 	amqp "github.com/Azure/go-amqp"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 )
 
 func newAzureIoTHubClient(parent *MessageQueueManager) (*azureIoTHubClient, error) {
@@ -77,10 +77,10 @@ func newAzureIoTHubClient(parent *MessageQueueManager) (*azureIoTHubClient, erro
 
 		onRecvMsg: parent.onRecvMsg,
 		rejectAgent: func() {
-			parent.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "iot hub connection lost")
+			parent.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "iot hub connection lost")
 		},
-		onlineMsg:  gopb.NewOnlineMsg(opts.Config.DeviceID),
-		offlineMsg: gopb.NewOfflineMsg(opts.Config.DeviceID),
+		onlineMsg:  aranyagopb.NewOnlineMsg(opts.Config.DeviceID),
+		offlineMsg: aranyagopb.NewOfflineMsg(opts.Config.DeviceID),
 
 		recvOpts:        recvOpts,
 		senderStore:     new(atomic.Value),
@@ -103,10 +103,10 @@ type azureIoTHubClient struct {
 	iotHubParsedConn    *conn.ParsedConn
 	iotHubTokenProvider *sas.TokenProvider
 
-	onRecvMsg   func(*gopb.Msg)
+	onRecvMsg   func(*aranyagopb.Msg)
 	rejectAgent func()
-	onlineMsg   *gopb.Msg
-	offlineMsg  *gopb.Msg
+	onlineMsg   *aranyagopb.Msg
+	offlineMsg  *aranyagopb.Msg
 
 	hubOpts           []eventhub.HubOption
 	recvOpts          []eventhub.ReceiveOption
@@ -415,7 +415,7 @@ func (c *azureIoTHubClient) handleEvent(ctx context.Context, event *eventhub.Eve
 		return fmt.Errorf("device id not match")
 	}
 
-	msg := new(gopb.Msg)
+	msg := new(aranyagopb.Msg)
 	err := msg.Unmarshal(event.Data)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal event data: %w", err)

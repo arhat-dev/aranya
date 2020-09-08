@@ -27,7 +27,7 @@ import (
 	"arhat.dev/pkg/iohelper"
 	"arhat.dev/pkg/queue"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 )
 
 const (
@@ -47,7 +47,7 @@ type Stream struct {
 	w   io.WriteCloser
 	seq *queue.SeqQueue
 
-	resizeCh chan *gopb.TtyResizeOptions
+	resizeCh chan *aranyagopb.TtyResizeOptions
 
 	toBeClosed uint32
 }
@@ -60,11 +60,11 @@ func (s *Stream) Reader() io.Reader {
 	return s.r
 }
 
-func (s *Stream) ResizeCh() <-chan *gopb.TtyResizeOptions {
+func (s *Stream) ResizeCh() <-chan *aranyagopb.TtyResizeOptions {
 	return s.resizeCh
 }
 
-func (s *Stream) resize(size *gopb.TtyResizeOptions) bool {
+func (s *Stream) resize(size *aranyagopb.TtyResizeOptions) bool {
 	if s.resizeCh == nil {
 		return false
 	}
@@ -190,7 +190,7 @@ func (m *StreamManager) NewStream(parentCtx context.Context, sid uint64, hasInpu
 		s.seq = queue.NewSeqQueue()
 
 		if hasResize {
-			s.resizeCh = make(chan *gopb.TtyResizeOptions, 1)
+			s.resizeCh = make(chan *aranyagopb.TtyResizeOptions, 1)
 		}
 	}
 
@@ -210,7 +210,7 @@ func (m *StreamManager) Start(stopCh <-chan struct{}) {
 	}()
 }
 
-func (m *StreamManager) Resize(sid uint64, opts *gopb.TtyResizeOptions) bool {
+func (m *StreamManager) Resize(sid uint64, opts *aranyagopb.TtyResizeOptions) bool {
 	if s, ok := m.get(sid); ok {
 		return s.resize(opts)
 	}

@@ -27,12 +27,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
+
 	"arhat.dev/aranya/pkg/constant"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 // UpdateMirrorPod update Kubernetes pod object status according to device pod status
-func (m *Manager) UpdateMirrorPod(pod *corev1.Pod, devicePodStatus *gopb.PodStatus, forInitContainers bool) error {
+func (m *Manager) UpdateMirrorPod(
+	pod *corev1.Pod,
+	devicePodStatus *aranyagopb.PodStatus,
+	forInitContainers bool,
+) error {
 	logger := m.Log.WithFields(log.String("type", "cloud"), log.String("action", "update"))
 
 	if pod == nil {
@@ -176,7 +182,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 
 	// pull images if contains non virtual images
 	if len(imgOpts.ImagePull) > 0 {
-		podImageEnsureCmd := gopb.NewPodImageEnsureCmd(imgOpts)
+		podImageEnsureCmd := aranyagopb.NewPodImageEnsureCmd(imgOpts)
 		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, podImageEnsureCmd)
 		if err2 != nil {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
@@ -186,7 +192,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 		m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 			"Pulling", "Pulling all images")
 
-		gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 			if msgErr := msg.GetError(); msgErr != nil {
 				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 					"ImagePullError", msgErr.Description)
@@ -204,7 +210,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 					"Pulled", "Successfully pulled all images")
 			}
 			return false
-		}, nil, gopb.HandleUnknownMessage(m.Log))
+		}, nil, connectivity.HandleUnknownMessage(m.Log))
 
 		if err != nil {
 			return err
@@ -247,7 +253,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 		} else {
 			// normal init containers
 
-			initCreateCmd := gopb.NewPodCreateCmd(initOpts)
+			initCreateCmd := aranyagopb.NewPodCreateCmd(initOpts)
 			msgCh, _, err3 := m.ConnectivityManager.PostCmd(0, initCreateCmd)
 			if err3 != nil {
 				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
@@ -255,7 +261,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 				return err3
 			}
 
-			gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+			connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 				if msgErr := msg.GetError(); msgErr != nil {
 					m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 						"RunInitContainerError", msgErr.Description)
@@ -274,7 +280,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 					"PodInitialized", "Init container(s) created and finished")
 				_ = m.UpdateMirrorPod(pod, ps, true)
 				return false
-			}, nil, gopb.HandleUnknownMessage(m.Log))
+			}, nil, connectivity.HandleUnknownMessage(m.Log))
 
 			if err != nil {
 				return err
@@ -315,7 +321,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 		}
 	} else {
 		// create work containers
-		workCreateCmd := gopb.NewPodCreateCmd(workOpts)
+		workCreateCmd := aranyagopb.NewPodCreateCmd(workOpts)
 		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, workCreateCmd)
 		if err2 != nil {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
@@ -323,9 +329,9 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 			return err2
 		}
 
-		gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 			if msgErr := msg.GetError(); msgErr != nil {
-				if msgErr.Kind == gopb.ERR_ALREADY_EXISTS {
+				if msgErr.Kind == aranyagopb.ERR_ALREADY_EXISTS {
 					m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 						"Started", "Reused existing container(s)")
 				} else {
@@ -349,7 +355,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "Started", "Container(s) created and started")
 			_ = m.UpdateMirrorPod(pod, ps, false)
 			return false
-		}, nil, gopb.HandleUnknownMessage(m.Log))
+		}, nil, connectivity.HandleUnknownMessage(m.Log))
 	}
 
 	// do not return nil here, we may have collected err from message channel
@@ -360,7 +366,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 	var (
 		graceTime    = time.Duration(0)
-		preStopHooks map[string]*gopb.ActionMethod
+		preStopHooks map[string]*aranyagopb.ActionMethod
 	)
 
 	// usually we should have pod object for pod deletion, but when we are trying to delete a stale pod
@@ -375,7 +381,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 		}
 
 		// collect pre-stop hook spec
-		preStopHooks = make(map[string]*gopb.ActionMethod)
+		preStopHooks = make(map[string]*aranyagopb.ActionMethod)
 		for i, ctr := range podToDelete.Spec.Containers {
 			// ignore pods using virtual images, they do not actually create containers in device
 			if ctr.Image == constant.VirtualImageNameHostExec {
@@ -392,7 +398,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 	}
 
 	// post cmd anyway, check pod cache when processing message
-	podDeleteCmd := gopb.NewPodDeleteCmd(string(podUID), graceTime, preStopHooks)
+	podDeleteCmd := aranyagopb.NewPodDeleteCmd(string(podUID), graceTime, preStopHooks)
 	msgCh, _, err := m.ConnectivityManager.PostCmd(0, podDeleteCmd)
 	if err != nil {
 		if hasPodObj {
@@ -401,13 +407,13 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 		return err
 	}
 
-	gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		if msgErr := msg.GetError(); msgErr != nil {
 			switch msgErr.Kind {
-			case gopb.ERR_NOT_SUPPORTED:
+			case aranyagopb.ERR_NOT_SUPPORTED:
 				// ignore
 				err = nil
-			case gopb.ERR_NOT_FOUND:
+			case aranyagopb.ERR_NOT_FOUND:
 				// successful
 				err = nil
 				if hasPodObj {
@@ -427,7 +433,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 			m.options.EventRecorder.Event(podToDelete, corev1.EventTypeNormal, "Killed", "Delete pod succeeded")
 		}
 		return false
-	}, nil, gopb.HandleUnknownMessage(m.Log))
+	}, nil, connectivity.HandleUnknownMessage(m.Log))
 
 	return err
 }
@@ -437,7 +443,7 @@ func (m *Manager) SyncDevicePods() error {
 	logger := m.Log.WithFields(log.String("type", "device"), log.String("action", "sync"))
 
 	logger.I("syncing device pods")
-	msgCh, _, err := m.ConnectivityManager.PostCmd(0, gopb.NewPodListCmd("", "", true))
+	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.NewPodListCmd("", "", true))
 	if err != nil {
 		logger.I("failed to post pod list cmd", log.Error(err))
 		return err
@@ -448,7 +454,7 @@ func (m *Manager) SyncDevicePods() error {
 		volumeAttached []corev1.AttachedVolume
 	)
 
-	gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		if msgErr := msg.GetError(); msgErr != nil {
 			logger.I("failed to list device pods", log.Error(msgErr))
 			err = msgErr
@@ -497,7 +503,7 @@ func (m *Manager) SyncDevicePods() error {
 		}
 
 		return false
-	}, nil, gopb.HandleUnknownMessage(logger))
+	}, nil, connectivity.HandleUnknownMessage(logger))
 
 	if err != nil {
 		return err

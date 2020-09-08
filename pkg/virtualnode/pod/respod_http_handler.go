@@ -40,7 +40,7 @@ import (
 	kubeletpf "k8s.io/kubernetes/pkg/kubelet/server/portforward"
 	kubeletrc "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/constant"
 )
 
@@ -216,7 +216,7 @@ func (m *Manager) HandlePodLog(w http.ResponseWriter, r *http.Request) {
 	if sid != 0 {
 		defer func() {
 			// best effort to close logging in edge device
-			_, _, err := m.ConnectivityManager.PostCmd(sid, gopb.NewSessionCloseCmd(sid))
+			_, _, err := m.ConnectivityManager.PostCmd(sid, aranyagopb.NewSessionCloseCmd(sid))
 			if err != nil {
 				logger.I("failed to post log session close cmd", log.Error(err))
 			}

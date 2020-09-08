@@ -36,7 +36,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
@@ -571,7 +571,7 @@ func (c *Controller) prepareDeviceOptions(
 	vnConfig *conf.VirtualnodeConfig,
 ) (_ *device.Options, err error) {
 	var (
-		devices = make(map[string]*gopb.Device)
+		devices = make(map[string]*aranyagopb.Device)
 		devs    = make(map[string]struct{})
 	)
 
@@ -593,52 +593,52 @@ func (c *Controller) prepareDeviceOptions(
 
 		devs[d.Name] = struct{}{}
 
-		var mode gopb.DeviceConnectivity_Mode
+		var mode aranyagopb.DeviceConnectivity_Mode
 		switch d.Connectivity.Mode {
 		case aranyaapi.DeviceConnectivityModeServer:
-			mode = gopb.DEVICE_CONNECTIVITY_MODE_SERVER
+			mode = aranyagopb.DEVICE_CONNECTIVITY_MODE_SERVER
 		case aranyaapi.DeviceConnectivityModeClient:
-			mode = gopb.DEVICE_CONNECTIVITY_MODE_CLIENT
+			mode = aranyagopb.DEVICE_CONNECTIVITY_MODE_CLIENT
 		default:
-			mode = gopb.DEVICE_CONNECTIVITY_MODE_CLIENT
+			mode = aranyagopb.DEVICE_CONNECTIVITY_MODE_CLIENT
 		}
 
-		var operations []*gopb.DeviceOperation
+		var operations []*aranyagopb.DeviceOperation
 		for _, op := range d.Operations {
-			operations = append(operations, &gopb.DeviceOperation{
+			operations = append(operations, &aranyagopb.DeviceOperation{
 				Id:              op.Name,
 				TransportParams: op.TransportParams,
 			})
 		}
 
-		var uploadConnectivity *gopb.DeviceConnectivity
+		var uploadConnectivity *aranyagopb.DeviceConnectivity
 		if uc := d.UploadConnectivity; uc != nil {
-			uploadConnectivity = &gopb.DeviceConnectivity{
+			uploadConnectivity = &aranyagopb.DeviceConnectivity{
 				Transport: uc.Transport,
-				Mode:      gopb.DEVICE_CONNECTIVITY_MODE_CLIENT,
+				Mode:      aranyagopb.DEVICE_CONNECTIVITY_MODE_CLIENT,
 				Target:    uc.Target,
 				Params:    uc.Params,
 				//Tls:       ,
 			}
 		}
 
-		var deviceMetrics []*gopb.DeviceMetrics
+		var deviceMetrics []*aranyagopb.DeviceMetrics
 		for _, m := range d.Metrics {
-			var uploadMethod gopb.DeviceMetrics_DeviceMetricsUploadMethod
+			var uploadMethod aranyagopb.DeviceMetrics_DeviceMetricsUploadMethod
 			switch m.UploadMethod {
 			case aranyaapi.UploadWithArhatConnectivity:
-				uploadMethod = gopb.UPLOAD_WITH_ARHAT_CONNECTIVITY
+				uploadMethod = aranyagopb.UPLOAD_WITH_ARHAT_CONNECTIVITY
 			case aranyaapi.UploadWithNodeMetrics:
-				uploadMethod = gopb.UPLOAD_WITH_NODE_METRICS
+				uploadMethod = aranyagopb.UPLOAD_WITH_NODE_METRICS
 			case aranyaapi.UploadWithStandaloneClient:
 				if uploadConnectivity == nil {
 					err = fmt.Errorf("no upload connectivity configured for standalone upload method")
 					return
 				}
-				uploadMethod = gopb.UPLOAD_WITH_STANDALONE_CLIENT
+				uploadMethod = aranyagopb.UPLOAD_WITH_STANDALONE_CLIENT
 			}
 
-			deviceMetrics = append(deviceMetrics, &gopb.DeviceMetrics{
+			deviceMetrics = append(deviceMetrics, &aranyagopb.DeviceMetrics{
 				Id:              m.Name,
 				TransportParams: m.TransportParams,
 				UploadMethod:    uploadMethod,
@@ -646,8 +646,8 @@ func (c *Controller) prepareDeviceOptions(
 			})
 		}
 
-		devices[d.Name] = &gopb.Device{
-			Connectivity: &gopb.DeviceConnectivity{
+		devices[d.Name] = &aranyagopb.Device{
+			Connectivity: &aranyagopb.DeviceConnectivity{
 				Transport: d.Connectivity.Transport,
 				Mode:      mode,
 				Target:    d.Connectivity.Target,

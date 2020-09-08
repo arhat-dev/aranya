@@ -25,11 +25,11 @@ package connectivity
 // 	"github.com/stretchr/testify/assert"
 // 	"google.golang.org/grpc"
 
-// 	"arhat.dev/aranya-proto/gopb"
+// 	"arhat.dev/aranya-proto/aranyagopb"
 // 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 // )
 
-// func newTestGrpcSrvAndStub() (mgr *connectivity.GRPCManager, stub gopb.ConnectivityClient) {
+// func newTestGrpcSrvAndStub() (mgr *connectivity.GRPCManager, stub aranyagopb.ConnectivityClient) {
 // 	l, err := net.Listen("tcp", "localhost:0")
 // 	if err != nil {
 // 		panic(err)
@@ -48,7 +48,7 @@ package connectivity
 // 	if err != nil {
 // 		panic(err)
 // 	}
-// 	stub = gopb.NewConnectivityClient(conn)
+// 	stub = aranyagopb.NewConnectivityClient(conn)
 
 // 	return
 // }
@@ -67,7 +67,7 @@ package connectivity
 // 	mgr, stub := newTestGrpcSrvAndStub()
 // 	defer mgr.Close()
 
-// 	cmd := gopb.NewPodListCmd("foo", "bar", true)
+// 	cmd := aranyagopb.NewPodListCmd("foo", "bar", true)
 
 // 	msgCh, err := mgr.PostCmd(cmd)
 // 	assert.Error(t, err)
@@ -126,14 +126,14 @@ package connectivity
 // 		assert.NoError(t, err)
 // 		assert.Equal(t, cmd.GetSessionId(), cmdRecv.GetSessionId())
 
-// 		err = syncClient.Send(&gopb.Msg{
+// 		err = syncClient.Send(&aranyagopb.Msg{
 // 			SessionId: cmdRecv.GetSessionId(),
 // 			Completed: true,
 // 		})
 // 		assert.NoError(t, err)
 
 // 		for i := 0; i < GlobalMsgCount; i++ {
-// 			err = syncClient.Send(&gopb.Msg{})
+// 			err = syncClient.Send(&aranyagopb.Msg{})
 // 			assert.NoError(t, err)
 // 		}
 

@@ -7,13 +7,13 @@ import (
 
 	"arhat.dev/pkg/log"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/util/manager"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 type Options struct {
-	Devices map[string]*gopb.Device
+	Devices map[string]*aranyagopb.Device
 }
 
 func NewManager(
@@ -32,7 +32,7 @@ func NewManager(
 type Manager struct {
 	*manager.BaseManager
 
-	requestedDevices map[string]*gopb.Device
+	requestedDevices map[string]*aranyagopb.Device
 }
 
 func (m *Manager) Start() error {
@@ -48,20 +48,20 @@ func (m *Manager) Start() error {
 			}
 
 			var (
-				failedDevices  = make(map[string]*gopb.Device)
-				ensuredDevices = make(map[string]*gopb.Device)
+				failedDevices  = make(map[string]*aranyagopb.Device)
+				ensuredDevices = make(map[string]*aranyagopb.Device)
 				deviceToRemove = make(map[string]struct{})
 				err            error
 			)
 
-			msgCh, _, err := m.ConnectivityManager.PostCmd(0, gopb.NewDeviceListCmd())
+			msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.NewDeviceListCmd())
 			if err != nil {
 				logger.I("failed to post device list cmd", log.Error(err))
 
 				goto waitUntilDisconnected
 			}
 
-			gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+			connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 				if msgErr := msg.GetError(); msgErr != nil {
 					logger.I("failed to list devices", log.Error(msgErr))
 					err = msgErr
@@ -75,7 +75,7 @@ func (m *Manager) Start() error {
 
 				for _, ds := range sl.Devices {
 					if d, ok := m.requestedDevices[ds.Id]; ok {
-						if ds.Id == d.Id && ds.State == gopb.DEVICE_STATE_CONNECTED {
+						if ds.Id == d.Id && ds.State == aranyagopb.DEVICE_STATE_CONNECTED {
 							ensuredDevices[d.Id] = d
 						} else {
 							failedDevices[d.Id] = d
@@ -86,7 +86,7 @@ func (m *Manager) Start() error {
 				}
 
 				return false
-			}, nil, gopb.HandleUnknownMessage(logger))
+			}, nil, connectivity.HandleUnknownMessage(logger))
 
 			if err != nil {
 				goto waitUntilDisconnected
@@ -149,13 +149,13 @@ func (m *Manager) removeDevices(deviceToRemove map[string]struct{}) (remains map
 		logger := m.Log.WithFields(log.String("device", deviceID))
 
 		logger.D("removing unwanted devices")
-		msgCh, _, err := m.ConnectivityManager.PostCmd(0, gopb.NewDeviceRemoveCmd(deviceID))
+		msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.NewDeviceRemoveCmd(deviceID))
 		if err != nil {
 			logger.I("failed to post device remove cmd", log.Error(err))
 			continue
 		}
 
-		gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 			if msgErr := msg.GetError(); msgErr != nil {
 				logger.I("failed to remove device", log.Error(msgErr))
 				return true
@@ -169,7 +169,7 @@ func (m *Manager) removeDevices(deviceToRemove map[string]struct{}) (remains map
 			// TODO: update pod status
 			removedDevice = append(removedDevice, status.Id)
 			return false
-		}, nil, gopb.HandleUnknownMessage(logger))
+		}, nil, connectivity.HandleUnknownMessage(logger))
 	}
 
 	for _, id := range removedDevice {
@@ -180,10 +180,10 @@ func (m *Manager) removeDevices(deviceToRemove map[string]struct{}) (remains map
 }
 
 func (m *Manager) ensureDevices(
-	devices map[string]*gopb.Device,
-) (ensuredDevices, failedDevices map[string]*gopb.Device) {
-	failedDevices = make(map[string]*gopb.Device)
-	ensuredDevices = make(map[string]*gopb.Device)
+	devices map[string]*aranyagopb.Device,
+) (ensuredDevices, failedDevices map[string]*aranyagopb.Device) {
+	failedDevices = make(map[string]*aranyagopb.Device)
+	ensuredDevices = make(map[string]*aranyagopb.Device)
 
 	for _, dev := range devices {
 		d := dev
@@ -193,13 +193,13 @@ func (m *Manager) ensureDevices(
 
 		logger := m.Log.WithFields(log.String("device", d.Id))
 
-		msgCh, _, err := m.ConnectivityManager.PostCmd(0, gopb.NewDeviceEnsureCmd(d))
+		msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.NewDeviceEnsureCmd(d))
 		if err != nil {
 			logger.I("failed to post device ensure cmd", log.Error(err))
 			failedDevices[d.Id] = devices[d.Id]
 		}
 
-		gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 			if msgErr := msg.GetError(); msgErr != nil {
 				logger.I("failed to ensure device", log.Error(msgErr))
 				failedDevices[d.Id] = devices[d.Id]
@@ -215,9 +215,9 @@ func (m *Manager) ensureDevices(
 
 			logger.D("ensured device")
 			switch status.State {
-			case gopb.DEVICE_STATE_UNKNOWN:
+			case aranyagopb.DEVICE_STATE_UNKNOWN:
 				fallthrough
-			case gopb.DEVICE_STATE_ERRORED:
+			case aranyagopb.DEVICE_STATE_ERRORED:
 				failedDevices[d.Id] = devices[d.Id]
 			default:
 				// TODO: update pod status
@@ -225,7 +225,7 @@ func (m *Manager) ensureDevices(
 			}
 
 			return false
-		}, nil, gopb.HandleUnknownMessage(logger))
+		}, nil, connectivity.HandleUnknownMessage(logger))
 	}
 
 	return

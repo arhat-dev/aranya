@@ -33,7 +33,7 @@ import (
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/middleware"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
@@ -416,7 +416,8 @@ func (vn *VirtualNode) Start() error {
 				vn.log.I("syncing mirror node status for the first time")
 				if err := vn.opt.ScheduleNodeSync(); err != nil {
 					vn.log.I("failed to schedule mirror node sync, reject", log.Error(err))
-					vn.opt.ConnectivityManager.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "mirror node sync failure")
+					vn.opt.ConnectivityManager.Reject(
+						aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "mirror node sync failure")
 				}
 
 				select {

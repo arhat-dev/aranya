@@ -8,10 +8,10 @@ import (
 	"k8s.io/kubernetes/pkg/credentialprovider/secrets"
 	"k8s.io/kubernetes/pkg/util/parsers"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 )
 
-func (m *Manager) resolveImagePullAuthConfig(pod *corev1.Pod) (map[string]*gopb.AuthConfig, error) {
+func (m *Manager) resolveImagePullAuthConfig(pod *corev1.Pod) (map[string]*aranyagopb.AuthConfig, error) {
 	secret := make([]corev1.Secret, len(pod.Spec.ImagePullSecrets))
 	for i, secretRef := range pod.Spec.ImagePullSecrets {
 		s := m.options.GetSecret(secretRef.Name)
@@ -21,7 +21,7 @@ func (m *Manager) resolveImagePullAuthConfig(pod *corev1.Pod) (map[string]*gopb.
 		secret[i] = *s
 	}
 
-	imageNameToAuthConfigMap := make(map[string]*gopb.AuthConfig)
+	imageNameToAuthConfigMap := make(map[string]*aranyagopb.AuthConfig)
 
 	keyring, err := secrets.MakeDockerKeyring(secret, credentialprovider.NewDockerKeyring())
 	if err != nil {
@@ -41,7 +41,7 @@ func (m *Manager) resolveImagePullAuthConfig(pod *corev1.Pod) (map[string]*gopb.
 		}
 
 		for _, currentCreds := range creds {
-			imageNameToAuthConfigMap[apiCtr.Image] = &gopb.AuthConfig{
+			imageNameToAuthConfigMap[apiCtr.Image] = &aranyagopb.AuthConfig{
 				Username:      currentCreds.Username,
 				Password:      currentCreds.Password,
 				Auth:          currentCreds.Auth,

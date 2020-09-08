@@ -29,7 +29,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 )
 
 func newGCPIoTCoreClient(parent *MessageQueueManager) (*gcpIoTCoreClient, error) {
@@ -80,10 +80,10 @@ func newGCPIoTCoreClient(parent *MessageQueueManager) (*gcpIoTCoreClient, error)
 
 		onRecvMsg: parent.onRecvMsg,
 		rejectAgent: func() {
-			parent.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "gcp iot core connection lost")
+			parent.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "gcp iot core connection lost")
 		},
-		onlineMsg:  gopb.NewOnlineMsg(opts.Config.CloudIoT.DeviceID),
-		offlineMsg: gopb.NewOfflineMsg(opts.Config.CloudIoT.DeviceID),
+		onlineMsg:  aranyagopb.NewOnlineMsg(opts.Config.CloudIoT.DeviceID),
+		offlineMsg: aranyagopb.NewOfflineMsg(opts.Config.CloudIoT.DeviceID),
 	}
 
 	return client, nil
@@ -102,10 +102,10 @@ type gcpIoTCoreClient struct {
 	stateTopic *pubsub.Topic
 	cmdTopic   string
 
-	onRecvMsg   func(*gopb.Msg)
+	onRecvMsg   func(*aranyagopb.Msg)
 	rejectAgent func()
-	onlineMsg   *gopb.Msg
-	offlineMsg  *gopb.Msg
+	onlineMsg   *aranyagopb.Msg
+	offlineMsg  *aranyagopb.Msg
 }
 
 func (c *gcpIoTCoreClient) Connect() error {
@@ -186,11 +186,11 @@ func (c *gcpIoTCoreClient) Subscribe() error {
 					break
 				}
 
-				var msg *gopb.Msg
+				var msg *aranyagopb.Msg
 				if online {
-					msg = gopb.NewOnlineMsg(c.deviceID)
+					msg = aranyagopb.NewOnlineMsg(c.deviceID)
 				} else {
-					msg = gopb.NewOfflineMsg(c.deviceID)
+					msg = aranyagopb.NewOfflineMsg(c.deviceID)
 				}
 
 				data, _ := msg.Marshal()
@@ -303,7 +303,7 @@ func (c *gcpIoTCoreClient) handleRecv(ctx context.Context, msg *pubsub.Message) 
 		return
 	}
 
-	m := new(gopb.Msg)
+	m := new(aranyagopb.Msg)
 	err := m.Unmarshal(msg.Data)
 	if err != nil {
 		msg.Nack()

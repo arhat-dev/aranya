@@ -23,7 +23,7 @@ import (
 
 	"arhat.dev/pkg/log"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 )
 
 var (
@@ -79,7 +79,7 @@ func NewMessageQueueManager(parentCtx context.Context, name string, mgrConfig *O
 		return nil, fmt.Errorf("failed to subscribe topic %v: %v", mgr.client.SubTopics(), err)
 	}
 
-	mgr.sendCmd = func(cmd *gopb.Cmd) error {
+	mgr.sendCmd = func(cmd *aranyagopb.Cmd) error {
 		data, err := cmd.Marshal()
 		if err != nil {
 			return err
@@ -119,11 +119,11 @@ func (m *MessageQueueManager) Close() {
 	m.onClose(func() {})
 }
 
-func (m *MessageQueueManager) Reject(reason gopb.RejectCmd_Reason, message string) {
+func (m *MessageQueueManager) Reject(reason aranyagopb.RejectCmd_Reason, message string) {
 	m.onReject(func() {
 		// best effort
 		if m.sendCmd != nil {
-			_ = m.sendCmd(gopb.NewCmd(0, gopb.NewRejectCmd(reason, message)))
+			_ = m.sendCmd(aranyagopb.NewCmd(0, aranyagopb.NewRejectCmd(reason, message)))
 		}
 	})
 }

@@ -23,11 +23,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb/aranyagoconst"
+
 	"arhat.dev/pkg/log"
 	"github.com/goiiot/libmqtt"
 
-	"arhat.dev/aranya-proto/gopb"
-	"arhat.dev/aranya-proto/gopb/protoconst"
+	"arhat.dev/aranya-proto/aranyagopb"
 )
 
 var errAlreadySubscribing = fmt.Errorf("already subscribing")
@@ -80,7 +81,7 @@ func newMQTTClient(parent *MessageQueueManager) (*mqttClient, error) {
 		return nil, err
 	}
 
-	pubTopic, subTopic, subWillTopic := protoconst.MQTTTopics(opts.Config.TopicNamespace)
+	pubTopic, subTopic, subWillTopic := aranyagoconst.MQTTTopics(opts.Config.TopicNamespace)
 	return &mqttClient{
 		log:    parent.log,
 		broker: opts.Config.Broker,
@@ -88,7 +89,7 @@ func newMQTTClient(parent *MessageQueueManager) (*mqttClient, error) {
 
 		onRecvMsg: parent.onRecvMsg,
 		rejectAgent: func() {
-			parent.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "mqtt connectivity lost")
+			parent.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "mqtt connectivity lost")
 		},
 
 		pubTopic:     pubTopic,
@@ -105,7 +106,7 @@ type mqttClient struct {
 	log         log.Interface
 	broker      string
 	client      libmqtt.Client
-	onRecvMsg   func(*gopb.Msg)
+	onRecvMsg   func(*aranyagopb.Msg)
 	rejectAgent func()
 
 	pubTopic     string
@@ -324,7 +325,7 @@ func (c *mqttClient) handlePub(client libmqtt.Client, topic string, err error) {
 }
 
 func (c *mqttClient) handleTopicMsg(client libmqtt.Client, topic string, qos libmqtt.QosLevel, msgBytes []byte) {
-	msg := new(gopb.Msg)
+	msg := new(aranyagopb.Msg)
 	err := msg.Unmarshal(msgBytes)
 	if err != nil {
 		c.log.I("failed to unmarshal msg", log.Binary("msgBytes", msgBytes), log.Error(err))

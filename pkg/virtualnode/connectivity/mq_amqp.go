@@ -24,12 +24,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb/aranyagoconst"
+
 	"arhat.dev/pkg/backoff"
 	"arhat.dev/pkg/log"
 	"github.com/streadway/amqp"
 
-	"arhat.dev/aranya-proto/gopb"
-	"arhat.dev/aranya-proto/gopb/protoconst"
+	"arhat.dev/aranya-proto/aranyagopb"
 )
 
 func newAMQPClient(parent *MessageQueueManager) (*amqpClient, error) {
@@ -68,7 +69,7 @@ func newAMQPClient(parent *MessageQueueManager) (*amqpClient, error) {
 		subWillTopic string
 	)
 
-	pubTopic, subTopic, subWillTopic = protoconst.AMQPTopics(opts.Config.TopicNamespace)
+	pubTopic, subTopic, subWillTopic = aranyagoconst.AMQPTopics(opts.Config.TopicNamespace)
 	return &amqpClient{
 		log:       parent.log,
 		url:       uri.String(),
@@ -76,7 +77,7 @@ func newAMQPClient(parent *MessageQueueManager) (*amqpClient, error) {
 
 		onRecvMsg: parent.onRecvMsg,
 		rejectAgent: func() {
-			parent.Reject(gopb.REJECTION_INTERNAL_SERVER_ERROR, "amqp connection lost")
+			parent.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "amqp connection lost")
 		},
 
 		sessionStore: new(atomic.Value),
@@ -106,7 +107,7 @@ type amqpClient struct {
 	log         log.Interface
 	url         string
 	tlsConfig   *tls.Config
-	onRecvMsg   func(*gopb.Msg)
+	onRecvMsg   func(*aranyagopb.Msg)
 	rejectAgent func()
 
 	sessionStore *atomic.Value
@@ -167,7 +168,7 @@ func (c *amqpClient) Connect() (err error) {
 	failedPub := ch.NotifyReturn(make(chan amqp.Return))
 	go func() {
 		for m := range failedPub {
-			cmd := new(gopb.Cmd)
+			cmd := new(aranyagopb.Cmd)
 			_ = cmd.Unmarshal(m.Body)
 			c.log.I("failed to publish cmd", log.Any("cmd", cmd))
 		}
@@ -287,7 +288,7 @@ func (c *amqpClient) Subscribe() error {
 				return
 			}
 
-			msg := new(gopb.Msg)
+			msg := new(aranyagopb.Msg)
 			err := msg.Unmarshal(recvDeliver.Body)
 			if err != nil {
 				c.log.I("failed to unmarshal msg bytes", log.Error(err), log.Binary("msgBytes", recvDeliver.Body))

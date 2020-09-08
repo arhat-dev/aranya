@@ -26,7 +26,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/constant"
 )
 
@@ -35,7 +35,7 @@ var _ Manager = &GRPCManager{}
 type GRPCManager struct {
 	*baseManager
 
-	clientSessions map[string]gopb.Connectivity_SyncServer
+	clientSessions map[string]aranyagopb.Connectivity_SyncServer
 
 	server   *grpc.Server
 	listener net.Listener
@@ -45,14 +45,14 @@ func NewGRPCManager(parentCtx context.Context, name string, mgrConfig *Options) 
 	mgr := &GRPCManager{
 		baseManager: newBaseManager(parentCtx, name, mgrConfig),
 
-		clientSessions: make(map[string]gopb.Connectivity_SyncServer),
+		clientSessions: make(map[string]aranyagopb.Connectivity_SyncServer),
 
 		listener: mgrConfig.GRPCOpts.Listener,
 		server:   mgrConfig.GRPCOpts.Server,
 	}
-	gopb.RegisterConnectivityServer(mgrConfig.GRPCOpts.Server, mgr)
+	aranyagopb.RegisterConnectivityServer(mgrConfig.GRPCOpts.Server, mgr)
 
-	mgr.sendCmd = func(cmd *gopb.Cmd) error {
+	mgr.sendCmd = func(cmd *aranyagopb.Cmd) error {
 		mgr.mu.RLock()
 		defer mgr.mu.RUnlock()
 
@@ -78,20 +78,20 @@ func (m *GRPCManager) Close() {
 	})
 }
 
-func (m *GRPCManager) Reject(reason gopb.RejectCmd_Reason, message string) {
+func (m *GRPCManager) Reject(reason aranyagopb.RejectCmd_Reason, message string) {
 	m.onReject(func() {
 		// best effort
 		for _, syncSrv := range m.clientSessions {
-			_ = syncSrv.Send(gopb.NewCmd(0, gopb.NewRejectCmd(reason, message)))
+			_ = syncSrv.Send(aranyagopb.NewCmd(0, aranyagopb.NewRejectCmd(reason, message)))
 		}
 	})
 }
 
-func (m *GRPCManager) Sync(server gopb.Connectivity_SyncServer) error {
+func (m *GRPCManager) Sync(server aranyagopb.Connectivity_SyncServer) error {
 	connCtx, closeConn := context.WithCancel(server.Context())
 	defer closeConn()
 
-	allMsgCh := make(chan *gopb.Msg, constant.DefaultConnectivityMsgChannelSize)
+	allMsgCh := make(chan *aranyagopb.Msg, constant.DefaultConnectivityMsgChannelSize)
 	go func() {
 		for {
 			msg, err := server.Recv()
@@ -138,23 +138,23 @@ func (m *GRPCManager) Sync(server gopb.Connectivity_SyncServer) error {
 				return nil
 			}
 
-			if msg.Kind == gopb.MSG_STATE {
+			if msg.Kind == aranyagopb.MSG_STATE {
 				s := msg.GetState()
 				if s == nil {
-					m.Reject(gopb.REJECTION_INVALID_PROTO, "invalid protocol")
+					m.Reject(aranyagopb.REJECTION_INVALID_PROTO, "invalid protocol")
 					return nil
 				}
 
 				switch s.Action {
-				case gopb.ONLINE:
+				case aranyagopb.ONLINE:
 					if alreadyOnline {
 						// online message MUST not be received more than once
-						m.Reject(gopb.REJECTION_ALREADY_CONNECTED, "client has sent online message once")
+						m.Reject(aranyagopb.REJECTION_ALREADY_CONNECTED, "client has sent online message once")
 					}
 
 					onlineID = s.DeviceId
 					if _, ok := m.clientSessions[onlineID]; ok {
-						m.Reject(gopb.REJECTION_ALREADY_CONNECTED, "client already connected with same online-id")
+						m.Reject(aranyagopb.REJECTION_ALREADY_CONNECTED, "client already connected with same online-id")
 					}
 
 					alreadyOnline = true
@@ -162,7 +162,7 @@ func (m *GRPCManager) Sync(server gopb.Connectivity_SyncServer) error {
 					m.mu.Lock()
 					m.clientSessions[onlineID] = server
 					m.mu.Unlock()
-				case gopb.OFFLINE:
+				case aranyagopb.OFFLINE:
 					// received offline message
 					return nil
 				}

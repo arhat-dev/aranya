@@ -5,27 +5,27 @@ import (
 
 	"arhat.dev/pkg/wellknownerrors"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
 )
 
-func ToConnectivityError(err error) *gopb.Error {
+func ToConnectivityError(err error) *aranyagopb.Error {
 	if err == nil {
 		return nil
 	}
 
 	var (
 		msg  = err.Error()
-		kind = gopb.ERR_COMMON
+		kind = aranyagopb.ERR_COMMON
 	)
 
 	switch {
 	case errors.Is(err, wellknownerrors.ErrAlreadyExists):
-		kind = gopb.ERR_ALREADY_EXISTS
+		kind = aranyagopb.ERR_ALREADY_EXISTS
 	case errors.Is(err, wellknownerrors.ErrNotFound):
-		kind = gopb.ERR_NOT_FOUND
+		kind = aranyagopb.ERR_NOT_FOUND
 	case errors.Is(err, wellknownerrors.ErrNotSupported):
-		kind = gopb.ERR_NOT_SUPPORTED
+		kind = aranyagopb.ERR_NOT_SUPPORTED
 	}
 
-	return gopb.NewError(kind, msg)
+	return aranyagopb.NewError(kind, msg)
 }

@@ -29,8 +29,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 
-	"arhat.dev/aranya-proto/gopb"
-	"arhat.dev/aranya-proto/gopb/protoconst"
+	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/aranya-proto/aranyagopb/aranyagoconst"
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 )
 
@@ -103,7 +103,7 @@ type Manager interface {
 	Close()
 
 	// Reject current device connection if any
-	Reject(reason gopb.RejectCmd_Reason, message string)
+	Reject(reason aranyagopb.RejectCmd_Reason, message string)
 
 	// Connected signal
 	Connected() <-chan struct{}
@@ -112,7 +112,7 @@ type Manager interface {
 	Disconnected() <-chan struct{}
 
 	// GlobalMessages message with no session attached
-	GlobalMessages() <-chan *gopb.Msg
+	GlobalMessages() <-chan *aranyagopb.Msg
 
 	// PostCmd send a command to remote device with timeout
 	// return a channel for messages to be received in the session
@@ -142,8 +142,8 @@ type baseManager struct {
 
 	maxDataSize      int
 	log              log.Interface
-	sendCmd          func(*gopb.Cmd) error
-	globalMsgChan    chan *gopb.Msg
+	sendCmd          func(*aranyagopb.Cmd) error
+	globalMsgChan    chan *aranyagopb.Msg
 	connectedDevices map[string]struct{}
 
 	// signals
@@ -171,15 +171,15 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) *ba
 	var maxDataSize int
 	switch {
 	case config.MQTTOpts != nil, config.AMQPOpts != nil:
-		maxDataSize = protoconst.MaxMQTTDataSize
+		maxDataSize = aranyagoconst.MaxMQTTDataSize
 	case config.AzureIoTHubOpts != nil:
-		maxDataSize = protoconst.MaxAzureIoTHubC2DDataSize
+		maxDataSize = aranyagoconst.MaxAzureIoTHubC2DDataSize
 	case config.GCPIoTCoreOpts != nil:
-		maxDataSize = protoconst.MaxGCPIoTCoreC2DDataSize
+		maxDataSize = aranyagoconst.MaxGCPIoTCoreC2DDataSize
 	case config.GRPCOpts != nil:
 		fallthrough
 	default:
-		maxDataSize = protoconst.MaxGRPCDataSize
+		maxDataSize = aranyagoconst.MaxGRPCDataSize
 	}
 
 	return &baseManager{
@@ -188,10 +188,10 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) *ba
 		config:   config,
 		sessions: sessions,
 
-		maxDataSize:      maxDataSize - gopb.EmptyInputCmdSize,
+		maxDataSize:      maxDataSize - aranyagopb.EmptyInputCmdSize,
 		log:              log.Log.WithName(fmt.Sprintf("conn.%s", name)),
 		sendCmd:          nil,
-		globalMsgChan:    make(chan *gopb.Msg, 1),
+		globalMsgChan:    make(chan *aranyagopb.Msg, 1),
 		connectedDevices: make(map[string]struct{}),
 
 		connected:       make(chan struct{}),
@@ -208,7 +208,7 @@ func (m *baseManager) MaxDataSize() int {
 	return m.maxDataSize
 }
 
-func (m *baseManager) GlobalMessages() <-chan *gopb.Msg {
+func (m *baseManager) GlobalMessages() <-chan *aranyagopb.Msg {
 	return m.globalMsgChan
 }
 
@@ -290,7 +290,7 @@ func (m *baseManager) OnConnected(initialize func() (id string)) {
 	m.alreadyRejected = false
 }
 
-func (m *baseManager) onRecvMsg(msg *gopb.Msg) {
+func (m *baseManager) onRecvMsg(msg *aranyagopb.Msg) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -304,10 +304,10 @@ func (m *baseManager) onRecvMsg(msg *gopb.Msg) {
 
 	// nolint:gocritic
 	switch msg.Kind {
-	case gopb.MSG_ERROR:
-		if msg.GetError().GetKind() == gopb.ERR_TIMEOUT {
+	case aranyagopb.MSG_ERROR:
+		if msg.GetError().GetKind() == aranyagopb.ERR_TIMEOUT {
 			// close session with best effort
-			_, _, _ = m.PostCmd(0, gopb.NewSessionCloseCmd(msg.SessionId))
+			_, _, _ = m.PostCmd(0, aranyagopb.NewSessionCloseCmd(msg.SessionId))
 		}
 	}
 }
@@ -371,25 +371,25 @@ func (m *baseManager) PostCmd(sid uint64, cmd proto.Marshaler) (msgCh <-chan int
 
 	// session id should not be empty if it's a input or resize command
 	switch c := cmd.(type) {
-	case *gopb.SessionCmd:
+	case *aranyagopb.SessionCmd:
 		recordSession = false
 		// nolint:gocritic
 		switch c.Action {
-		case gopb.CLOSE_SESSION:
+		case aranyagopb.CLOSE_SESSION:
 			defer m.sessions.Delete(sid)
 		}
-	case *gopb.PodOperationCmd:
+	case *aranyagopb.PodOperationCmd:
 		switch c.Action {
-		case gopb.PORT_FORWARD_TO_CONTAINER,
-			gopb.EXEC_IN_CONTAINER,
-			gopb.ATTACH_TO_CONTAINER,
-			gopb.RETRIEVE_CONTAINER_LOG:
+		case aranyagopb.PORT_FORWARD_TO_CONTAINER,
+			aranyagopb.EXEC_IN_CONTAINER,
+			aranyagopb.ATTACH_TO_CONTAINER,
+			aranyagopb.RETRIEVE_CONTAINER_LOG:
 			// we don't control stream session timeout here
 			// it is controlled by pod manager
 			expectSeqData = true
 			timeout = 0
-		case gopb.RESIZE_CONTAINER_TTY,
-			gopb.WRITE_TO_CONTAINER:
+		case aranyagopb.RESIZE_CONTAINER_TTY,
+			aranyagopb.WRITE_TO_CONTAINER:
 			timeout = 0
 			sessionMustExist = true
 
@@ -416,7 +416,7 @@ func (m *baseManager) PostCmd(sid uint64, cmd proto.Marshaler) (msgCh <-chan int
 		sid = realSid
 	}
 
-	if err = m.sendCmd(gopb.NewCmd(sid, cmd)); err != nil {
+	if err = m.sendCmd(aranyagopb.NewCmd(sid, cmd)); err != nil {
 		return nil, 0, err
 	}
 

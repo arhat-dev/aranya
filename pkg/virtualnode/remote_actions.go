@@ -26,17 +26,18 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"arhat.dev/aranya-proto/gopb"
+	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 // generate in cluster node cache for remote device
-func (vn *VirtualNode) SyncDeviceNodeStatus(action gopb.NodeCmd_Action) error {
-	msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(0, gopb.NewNodeCmd(action))
+func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeCmd_Action) error {
+	msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(0, aranyagopb.NewNodeCmd(action))
 	if err != nil {
 		return err
 	}
 
-	gopb.HandleMessages(msgCh, func(msg *gopb.Msg) (exit bool) {
+	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		if msgErr := msg.GetError(); msgErr != nil {
 			err = msgErr
 			return true
@@ -50,7 +51,7 @@ func (vn *VirtualNode) SyncDeviceNodeStatus(action gopb.NodeCmd_Action) error {
 
 		vn.updateNodeCache(deviceNodeStatus)
 		return false
-	}, nil, gopb.HandleUnknownMessage(vn.log))
+	}, nil, connectivity.HandleUnknownMessage(vn.log))
 
 	if err != nil {
 		return fmt.Errorf("failed to sync device node status: %w", err)
@@ -59,18 +60,18 @@ func (vn *VirtualNode) SyncDeviceNodeStatus(action gopb.NodeCmd_Action) error {
 	return nil
 }
 
-func (vn *VirtualNode) handleGlobalMsg(msg *gopb.Msg) {
+func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 	logger := vn.log.WithFields(log.String("from", "global"))
 
 	switch msg.Kind {
-	case gopb.MSG_STATE:
+	case aranyagopb.MSG_STATE:
 		s := msg.GetState()
 		if s == nil {
 			// TODO: handle invalid msg
 			return
 		}
 		switch s.Action {
-		case gopb.ONLINE:
+		case aranyagopb.ONLINE:
 			logger.I("device connected", log.String("id", s.DeviceId))
 
 			vn.opt.ConnectivityManager.OnConnected(func() (id string) {
@@ -90,14 +91,14 @@ func (vn *VirtualNode) handleGlobalMsg(msg *gopb.Msg) {
 
 				return s.DeviceId
 			})
-		case gopb.OFFLINE:
+		case aranyagopb.OFFLINE:
 			logger.I("device disconnected", log.String("id", s.DeviceId))
 
 			vn.opt.ConnectivityManager.OnDisconnected(func() (id string, all bool) {
 				return s.DeviceId, false
 			})
 		}
-	case gopb.MSG_NODE:
+	case aranyagopb.MSG_NODE:
 		ns := msg.GetNodeStatus()
 		if ns == nil {
 			// TODO: handle invalid msg
@@ -112,7 +113,7 @@ func (vn *VirtualNode) handleGlobalMsg(msg *gopb.Msg) {
 		if err != nil {
 			logger.I("failed to sync mirror node status", log.Error(err))
 		}
-	case gopb.MSG_METRICS:
+	case aranyagopb.MSG_METRICS:
 		m := msg.GetMetrics()
 		if m == nil {
 			// TODO: handle invalid msg
@@ -122,14 +123,14 @@ func (vn *VirtualNode) handleGlobalMsg(msg *gopb.Msg) {
 		logger.V("received global metrics")
 
 		switch m.Kind {
-		case gopb.METRICS_CONTAINER, gopb.METRICS_NODE:
+		case aranyagopb.METRICS_CONTAINER, aranyagopb.METRICS_NODE:
 			if err := vn.metricsManager.UpdateMetrics(m); err != nil {
 				logger.I("failed to update metrics")
 			}
 		}
-	case gopb.MSG_NETWORK:
-	case gopb.MSG_DEVICE:
-	case gopb.MSG_STORAGE:
+	case aranyagopb.MSG_NETWORK:
+	case aranyagopb.MSG_DEVICE:
+	case aranyagopb.MSG_STORAGE:
 		if ss := msg.GetStorageStatus(); ss != nil {
 			logger.V("received global storage status")
 		} else if ssl := msg.GetStorageStatusList(); ssl != nil {
@@ -138,9 +139,9 @@ func (vn *VirtualNode) handleGlobalMsg(msg *gopb.Msg) {
 			// TODO: handle invalid msg
 			return
 		}
-	case gopb.MSG_ERROR:
+	case aranyagopb.MSG_ERROR:
 		logger.D("received global error", log.Error(msg.GetError()))
-	case gopb.MSG_DATA:
+	case aranyagopb.MSG_DATA:
 		data := msg.GetData()
 		if data == nil {
 			// TODO: handle invalid msg
@@ -149,9 +150,9 @@ func (vn *VirtualNode) handleGlobalMsg(msg *gopb.Msg) {
 
 		logger.D("received orphan data", log.Uint64("sid", msg.SessionId), log.Binary("data", data.Data))
 		// close previous session, best effort
-		_, _, _ = vn.opt.ConnectivityManager.PostCmd(0, gopb.NewSessionCloseCmd(msg.SessionId))
-	case gopb.MSG_CRED:
-	case gopb.MSG_POD:
+		_, _, _ = vn.opt.ConnectivityManager.PostCmd(0, aranyagopb.NewSessionCloseCmd(msg.SessionId))
+	case aranyagopb.MSG_CRED:
+	case aranyagopb.MSG_POD:
 		if ps := msg.GetPodStatus(); ps != nil {
 			logger.V("received global pod status")
 
@@ -178,7 +179,7 @@ func (vn *VirtualNode) handleGlobalMsg(msg *gopb.Msg) {
 	}
 }
 
-func (vn *VirtualNode) updateNodeCache(msg *gopb.NodeStatus) {
+func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatus) {
 	if sysInfo := msg.GetSystemInfo(); sysInfo != nil {
 		vn.nodeStatusCache.UpdateSystemInfo(&corev1.NodeSystemInfo{
 			OperatingSystem: sysInfo.GetOs(),
@@ -237,33 +238,33 @@ func (vn *VirtualNode) updateNodeCache(msg *gopb.NodeStatus) {
 		}
 
 		switch info.Operator {
-		case gopb.NODE_EXT_INFO_OPERATOR_SET:
+		case aranyagopb.NODE_EXT_INFO_OPERATOR_SET:
 			target[key] = info.Value
-		case gopb.NODE_EXT_INFO_OPERATOR_ADD,
-			gopb.NODE_EXT_INFO_OPERATOR_MINUS:
+		case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD,
+			aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
 			oldVal := oldTarget[key]
 
 			switch info.ValueType {
-			case gopb.NODE_EXT_INFO_TYPE_STRING:
+			case aranyagopb.NODE_EXT_INFO_TYPE_STRING:
 				target[key] = oldTarget[key] + info.Value
-			case gopb.NODE_EXT_INFO_TYPE_INTEGER:
+			case aranyagopb.NODE_EXT_INFO_TYPE_INTEGER:
 				oldIntVal, _ := strconv.ParseInt(oldVal, 0, 64)
 				val, _ := strconv.ParseInt(info.Value, 0, 64)
 
 				switch info.Operator {
-				case gopb.NODE_EXT_INFO_OPERATOR_ADD:
+				case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
 					target[key] = strconv.FormatInt(oldIntVal+val, 10)
-				case gopb.NODE_EXT_INFO_OPERATOR_MINUS:
+				case aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
 					target[key] = strconv.FormatInt(oldIntVal-val, 10)
 				}
-			case gopb.NODE_EXT_INFO_TYPE_FLOAT:
+			case aranyagopb.NODE_EXT_INFO_TYPE_FLOAT:
 				oldFloatVal, _ := strconv.ParseFloat(oldVal, 64)
 				val, _ := strconv.ParseFloat(info.Value, 64)
 
 				switch info.Operator {
-				case gopb.NODE_EXT_INFO_OPERATOR_ADD:
+				case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
 					target[key] = strconv.FormatFloat(oldFloatVal+val, 'f', -1, 64)
-				case gopb.NODE_EXT_INFO_OPERATOR_MINUS:
+				case aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
 					target[key] = strconv.FormatFloat(oldFloatVal-val, 'f', -1, 64)
 				}
 			}
@@ -274,7 +275,7 @@ func (vn *VirtualNode) updateNodeCache(msg *gopb.NodeStatus) {
 	vn.nodeStatusCache.UpdatePhase(corev1.NodeRunning)
 }
 
-func translateDeviceResourcesCapacity(res *gopb.NodeResources, maxPods int64) corev1.ResourceList {
+func translateDeviceResourcesCapacity(res *aranyagopb.NodeResources, maxPods int64) corev1.ResourceList {
 	return corev1.ResourceList{
 		corev1.ResourceCPU:              *resource.NewQuantity(int64(res.GetCpuCount()), resource.DecimalSI),
 		corev1.ResourceMemory:           *resource.NewQuantity(int64(res.GetMemoryBytes()), resource.BinarySI),
@@ -283,12 +284,12 @@ func translateDeviceResourcesCapacity(res *gopb.NodeResources, maxPods int64) co
 	}
 }
 
-func translateDeviceCondition(prev []corev1.NodeCondition, cond *gopb.NodeConditions) []corev1.NodeCondition {
-	translate := func(condition gopb.NodeConditions_Condition) corev1.ConditionStatus {
+func translateDeviceCondition(prev []corev1.NodeCondition, cond *aranyagopb.NodeConditions) []corev1.NodeCondition {
+	translate := func(condition aranyagopb.NodeConditions_Condition) corev1.ConditionStatus {
 		switch condition {
-		case gopb.NODE_CONDITION_HEALTHY:
+		case aranyagopb.NODE_CONDITION_HEALTHY:
 			return corev1.ConditionFalse
-		case gopb.NODE_CONDITION_UNHEALTHY:
+		case aranyagopb.NODE_CONDITION_UNHEALTHY:
 			return corev1.ConditionTrue
 		default:
 			return corev1.ConditionUnknown
@@ -300,9 +301,9 @@ func translateDeviceCondition(prev []corev1.NodeCondition, cond *gopb.NodeCondit
 			Type: corev1.NodeReady,
 			Status: func() corev1.ConditionStatus {
 				switch cond.GetReady() {
-				case gopb.NODE_CONDITION_HEALTHY:
+				case aranyagopb.NODE_CONDITION_HEALTHY:
 					return corev1.ConditionTrue
-				case gopb.NODE_CONDITION_UNHEALTHY:
+				case aranyagopb.NODE_CONDITION_UNHEALTHY:
 					return corev1.ConditionFalse
 				default:
 					return corev1.ConditionUnknown
