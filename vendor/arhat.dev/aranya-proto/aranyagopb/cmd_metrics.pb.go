@@ -27,54 +27,44 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type MetricsCmd_Action int32
+type MetricsTarget int32
 
 const (
-	_INVALID_METRICS_ACTION                MetricsCmd_Action = 0
-	COLLECT_NODE_METRICS                   MetricsCmd_Action = 1
-	COLLECT_CONTAINER_METRICS              MetricsCmd_Action = 2
-	CONFIGURE_NODE_METRICS_COLLECTION      MetricsCmd_Action = 3
-	CONFIGURE_CONTAINER_METRICS_COLLECTION MetricsCmd_Action = 4
+	METRICS_TARGET_NODE      MetricsTarget = 0
+	METRICS_TARGET_CONTAINER MetricsTarget = 1
 )
 
-var MetricsCmd_Action_name = map[int32]string{
-	0: "_INVALID_METRICS_ACTION",
-	1: "COLLECT_NODE_METRICS",
-	2: "COLLECT_CONTAINER_METRICS",
-	3: "CONFIGURE_NODE_METRICS_COLLECTION",
-	4: "CONFIGURE_CONTAINER_METRICS_COLLECTION",
+var MetricsTarget_name = map[int32]string{
+	0: "METRICS_TARGET_NODE",
+	1: "METRICS_TARGET_CONTAINER",
 }
 
-var MetricsCmd_Action_value = map[string]int32{
-	"_INVALID_METRICS_ACTION":                0,
-	"COLLECT_NODE_METRICS":                   1,
-	"COLLECT_CONTAINER_METRICS":              2,
-	"CONFIGURE_NODE_METRICS_COLLECTION":      3,
-	"CONFIGURE_CONTAINER_METRICS_COLLECTION": 4,
+var MetricsTarget_value = map[string]int32{
+	"METRICS_TARGET_NODE":      0,
+	"METRICS_TARGET_CONTAINER": 1,
 }
 
-func (MetricsCmd_Action) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_51db41603dd56180, []int{0, 0}
-}
-
-type MetricsCmd struct {
-	Action MetricsCmd_Action `protobuf:"varint,1,opt,name=action,proto3,enum=aranya.MetricsCmd_Action" json:"action,omitempty"`
-	// Types that are valid to be assigned to Options:
-	//	*MetricsCmd_Config
-	Options isMetricsCmd_Options `protobuf_oneof:"options"`
-}
-
-func (m *MetricsCmd) Reset()      { *m = MetricsCmd{} }
-func (*MetricsCmd) ProtoMessage() {}
-func (*MetricsCmd) Descriptor() ([]byte, []int) {
+func (MetricsTarget) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_51db41603dd56180, []int{0}
 }
-func (m *MetricsCmd) XXX_Unmarshal(b []byte) error {
+
+type MetricsConfigCmd struct {
+	Target    MetricsTarget `protobuf:"varint,1,opt,name=target,proto3,enum=aranya.MetricsTarget" json:"target,omitempty"`
+	Collect   []string      `protobuf:"bytes,2,rep,name=collect,proto3" json:"collect,omitempty"`
+	ExtraArgs []string      `protobuf:"bytes,3,rep,name=extra_args,json=extraArgs,proto3" json:"extra_args,omitempty"`
+}
+
+func (m *MetricsConfigCmd) Reset()      { *m = MetricsConfigCmd{} }
+func (*MetricsConfigCmd) ProtoMessage() {}
+func (*MetricsConfigCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_51db41603dd56180, []int{0}
+}
+func (m *MetricsConfigCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MetricsCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MetricsConfigCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_MetricsCmd.Marshal(b, m, deterministic)
+		return xxx_messageInfo_MetricsConfigCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -84,161 +74,127 @@ func (m *MetricsCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *MetricsCmd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MetricsCmd.Merge(m, src)
+func (m *MetricsConfigCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MetricsConfigCmd.Merge(m, src)
 }
-func (m *MetricsCmd) XXX_Size() int {
+func (m *MetricsConfigCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *MetricsCmd) XXX_DiscardUnknown() {
-	xxx_messageInfo_MetricsCmd.DiscardUnknown(m)
+func (m *MetricsConfigCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_MetricsConfigCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MetricsCmd proto.InternalMessageInfo
+var xxx_messageInfo_MetricsConfigCmd proto.InternalMessageInfo
 
-type isMetricsCmd_Options interface {
-	isMetricsCmd_Options()
-	Equal(interface{}) bool
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type MetricsCmd_Config struct {
-	Config *MetricsConfigOptions `protobuf:"bytes,2,opt,name=config,proto3,oneof" json:"config,omitempty"`
-}
-
-func (*MetricsCmd_Config) isMetricsCmd_Options() {}
-
-func (m *MetricsCmd) GetOptions() isMetricsCmd_Options {
+func (m *MetricsConfigCmd) GetTarget() MetricsTarget {
 	if m != nil {
-		return m.Options
+		return m.Target
 	}
-	return nil
+	return METRICS_TARGET_NODE
 }
 
-func (m *MetricsCmd) GetAction() MetricsCmd_Action {
-	if m != nil {
-		return m.Action
-	}
-	return _INVALID_METRICS_ACTION
-}
-
-func (m *MetricsCmd) GetConfig() *MetricsConfigOptions {
-	if x, ok := m.GetOptions().(*MetricsCmd_Config); ok {
-		return x.Config
-	}
-	return nil
-}
-
-// XXX_OneofWrappers is for the internal use of the proto package.
-func (*MetricsCmd) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
-		(*MetricsCmd_Config)(nil),
-	}
-}
-
-type MetricsConfigOptions struct {
-	Collect   []string `protobuf:"bytes,1,rep,name=collect,proto3" json:"collect,omitempty"`
-	ExtraArgs []string `protobuf:"bytes,2,rep,name=extra_args,json=extraArgs,proto3" json:"extra_args,omitempty"`
-}
-
-func (m *MetricsConfigOptions) Reset()      { *m = MetricsConfigOptions{} }
-func (*MetricsConfigOptions) ProtoMessage() {}
-func (*MetricsConfigOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_51db41603dd56180, []int{1}
-}
-func (m *MetricsConfigOptions) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *MetricsConfigOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_MetricsConfigOptions.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *MetricsConfigOptions) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MetricsConfigOptions.Merge(m, src)
-}
-func (m *MetricsConfigOptions) XXX_Size() int {
-	return m.Size()
-}
-func (m *MetricsConfigOptions) XXX_DiscardUnknown() {
-	xxx_messageInfo_MetricsConfigOptions.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MetricsConfigOptions proto.InternalMessageInfo
-
-func (m *MetricsConfigOptions) GetCollect() []string {
+func (m *MetricsConfigCmd) GetCollect() []string {
 	if m != nil {
 		return m.Collect
 	}
 	return nil
 }
 
-func (m *MetricsConfigOptions) GetExtraArgs() []string {
+func (m *MetricsConfigCmd) GetExtraArgs() []string {
 	if m != nil {
 		return m.ExtraArgs
 	}
 	return nil
 }
 
+type MetricsCollectCmd struct {
+	Target MetricsTarget `protobuf:"varint,1,opt,name=target,proto3,enum=aranya.MetricsTarget" json:"target,omitempty"`
+}
+
+func (m *MetricsCollectCmd) Reset()      { *m = MetricsCollectCmd{} }
+func (*MetricsCollectCmd) ProtoMessage() {}
+func (*MetricsCollectCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_51db41603dd56180, []int{1}
+}
+func (m *MetricsCollectCmd) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MetricsCollectCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MetricsCollectCmd.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MetricsCollectCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MetricsCollectCmd.Merge(m, src)
+}
+func (m *MetricsCollectCmd) XXX_Size() int {
+	return m.Size()
+}
+func (m *MetricsCollectCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_MetricsCollectCmd.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MetricsCollectCmd proto.InternalMessageInfo
+
+func (m *MetricsCollectCmd) GetTarget() MetricsTarget {
+	if m != nil {
+		return m.Target
+	}
+	return METRICS_TARGET_NODE
+}
+
 func init() {
-	proto.RegisterEnum("aranya.MetricsCmd_Action", MetricsCmd_Action_name, MetricsCmd_Action_value)
-	proto.RegisterType((*MetricsCmd)(nil), "aranya.MetricsCmd")
-	proto.RegisterType((*MetricsConfigOptions)(nil), "aranya.MetricsConfigOptions")
+	proto.RegisterEnum("aranya.MetricsTarget", MetricsTarget_name, MetricsTarget_value)
+	proto.RegisterType((*MetricsConfigCmd)(nil), "aranya.MetricsConfigCmd")
+	proto.RegisterType((*MetricsCollectCmd)(nil), "aranya.MetricsCollectCmd")
 }
 
 func init() { proto.RegisterFile("cmd_metrics.proto", fileDescriptor_51db41603dd56180) }
 
 var fileDescriptor_51db41603dd56180 = []byte{
-	// 371 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x91, 0xcd, 0x4a, 0xf3, 0x40,
-	0x14, 0x86, 0x67, 0xd2, 0x8f, 0x94, 0x9e, 0x0f, 0xa4, 0x0e, 0x05, 0x53, 0xb4, 0x43, 0x5b, 0x50,
-	0x8a, 0x60, 0xc4, 0x0a, 0xee, 0xd3, 0x34, 0x6a, 0xa0, 0x4d, 0x20, 0x46, 0x05, 0x37, 0x61, 0x9a,
-	0xc6, 0x58, 0x68, 0x9b, 0x92, 0x04, 0xd1, 0x9d, 0x97, 0xe0, 0x65, 0xb8, 0x75, 0xe3, 0x35, 0xb8,
-	0xec, 0xb2, 0x4b, 0x9b, 0x6e, 0x5c, 0xf6, 0x12, 0xa4, 0x49, 0x6a, 0xfd, 0x5b, 0x9e, 0xf3, 0x3c,
-	0xef, 0x0b, 0x67, 0x06, 0xd6, 0xed, 0x41, 0xd7, 0x1a, 0x38, 0xa1, 0xdf, 0xb3, 0x03, 0x71, 0xe4,
-	0x7b, 0xa1, 0x47, 0x78, 0xe6, 0xb3, 0xe1, 0x3d, 0xab, 0xbe, 0x70, 0x00, 0xed, 0x84, 0xc8, 0x83,
-	0x2e, 0x39, 0x00, 0x9e, 0xd9, 0x61, 0xcf, 0x1b, 0x0a, 0xb8, 0x8c, 0x6b, 0x6b, 0xf5, 0xa2, 0x98,
-	0x78, 0xe2, 0xca, 0x11, 0xa5, 0x58, 0x30, 0x52, 0x91, 0x1c, 0x01, 0x6f, 0x7b, 0xc3, 0xeb, 0x9e,
-	0x2b, 0x70, 0x65, 0x5c, 0xfb, 0x5f, 0xdf, 0xfa, 0x19, 0x89, 0xa1, 0x3e, 0x5a, 0xc8, 0xc1, 0x29,
-	0x32, 0x52, 0xbb, 0xfa, 0x8c, 0x81, 0x4f, 0xaa, 0xc8, 0x26, 0x6c, 0x58, 0xaa, 0x76, 0x21, 0xb5,
-	0xd4, 0xa6, 0xd5, 0x56, 0x4c, 0x43, 0x95, 0xcf, 0x2c, 0x49, 0x36, 0x55, 0x5d, 0xcb, 0x23, 0x22,
-	0x40, 0x41, 0xd6, 0x5b, 0x2d, 0x45, 0x36, 0x2d, 0x4d, 0x6f, 0x2a, 0x4b, 0x21, 0x8f, 0x49, 0x09,
-	0x8a, 0x4b, 0x22, 0xeb, 0x9a, 0x29, 0xa9, 0x9a, 0x62, 0x7c, 0x62, 0x8e, 0x6c, 0x43, 0x45, 0xd6,
-	0xb5, 0x63, 0xf5, 0xe4, 0xdc, 0x50, 0xbe, 0x45, 0xad, 0x34, 0xb5, 0xe8, 0xcf, 0x90, 0x5d, 0xd8,
-	0x59, 0x69, 0xbf, 0x7a, 0xbe, 0xba, 0xff, 0x1a, 0x39, 0xc8, 0x7a, 0xc9, 0x21, 0x55, 0x1d, 0x0a,
-	0x7f, 0x1d, 0x48, 0x04, 0xc8, 0xda, 0x5e, 0xbf, 0xef, 0xd8, 0xa1, 0x80, 0xcb, 0x99, 0x5a, 0xce,
-	0x58, 0x8e, 0xa4, 0x04, 0xe0, 0xdc, 0x85, 0x3e, 0xb3, 0x98, 0xef, 0x06, 0x02, 0x17, 0xc3, 0x5c,
-	0xbc, 0x91, 0x7c, 0x37, 0x68, 0x5c, 0x8e, 0xa7, 0x14, 0x4d, 0xa6, 0x14, 0xcd, 0xa7, 0x14, 0x3f,
-	0x44, 0x14, 0x3f, 0x45, 0x14, 0xbf, 0x46, 0x14, 0x8f, 0x23, 0x8a, 0xdf, 0x22, 0x8a, 0xdf, 0x23,
-	0x8a, 0xe6, 0x11, 0xc5, 0x8f, 0x33, 0x8a, 0xc6, 0x33, 0x8a, 0x26, 0x33, 0x8a, 0xae, 0x2a, 0xcc,
-	0xbf, 0x61, 0xa1, 0xd8, 0x75, 0x6e, 0xf7, 0x93, 0x67, 0xdf, 0x8b, 0xff, 0x37, 0x1d, 0x5c, 0x6f,
-	0xd4, 0xe9, 0xf0, 0xf1, 0xe6, 0xf0, 0x23, 0x00, 0x00, 0xff, 0xff, 0x71, 0x33, 0x13, 0x8e, 0x06,
-	0x02, 0x00, 0x00,
+	// 285 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x4c, 0xce, 0x4d, 0x89,
+	0xcf, 0x4d, 0x2d, 0x29, 0xca, 0x4c, 0x2e, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4b,
+	0x2c, 0x4a, 0xcc, 0xab, 0x4c, 0x54, 0xaa, 0xe2, 0x12, 0xf0, 0x85, 0x48, 0x38, 0xe7, 0xe7, 0xa5,
+	0x65, 0xa6, 0x3b, 0xe7, 0xa6, 0x08, 0xe9, 0x72, 0xb1, 0x95, 0x24, 0x16, 0xa5, 0xa7, 0x96, 0x48,
+	0x30, 0x2a, 0x30, 0x6a, 0xf0, 0x19, 0x89, 0xea, 0x41, 0x14, 0xeb, 0x41, 0x55, 0x86, 0x80, 0x25,
+	0x83, 0xa0, 0x8a, 0x84, 0x24, 0xb8, 0xd8, 0x93, 0xf3, 0x73, 0x72, 0x52, 0x93, 0x4b, 0x24, 0x98,
+	0x14, 0x98, 0x35, 0x38, 0x83, 0x60, 0x5c, 0x21, 0x59, 0x2e, 0xae, 0xd4, 0x8a, 0x92, 0xa2, 0xc4,
+	0xf8, 0xc4, 0xa2, 0xf4, 0x62, 0x09, 0x66, 0xb0, 0x24, 0x27, 0x58, 0xc4, 0xb1, 0x28, 0xbd, 0x58,
+	0xc9, 0x89, 0x4b, 0x10, 0x6e, 0x37, 0x58, 0x03, 0xe9, 0x96, 0x6b, 0xb9, 0x71, 0xf1, 0xa2, 0x48,
+	0x08, 0x89, 0x73, 0x09, 0xfb, 0xba, 0x86, 0x04, 0x79, 0x3a, 0x07, 0xc7, 0x87, 0x38, 0x06, 0xb9,
+	0xbb, 0x86, 0xc4, 0xfb, 0xf9, 0xbb, 0xb8, 0x0a, 0x30, 0x08, 0xc9, 0x70, 0x49, 0xa0, 0x49, 0x38,
+	0xfb, 0xfb, 0x85, 0x38, 0x7a, 0xfa, 0xb9, 0x06, 0x09, 0x30, 0x3a, 0x85, 0x5f, 0x78, 0x28, 0xc7,
+	0x70, 0xe3, 0xa1, 0x1c, 0xc3, 0x87, 0x87, 0x72, 0x8c, 0x0d, 0x8f, 0xe4, 0x18, 0x57, 0x3c, 0x92,
+	0x63, 0x3c, 0xf1, 0x48, 0x8e, 0xf1, 0xc2, 0x23, 0x39, 0xc6, 0x07, 0x8f, 0xe4, 0x18, 0x5f, 0x3c,
+	0x92, 0x63, 0xf8, 0xf0, 0x48, 0x8e, 0x71, 0xc2, 0x63, 0x39, 0x86, 0x0b, 0x8f, 0xe5, 0x18, 0x6e,
+	0x3c, 0x96, 0x63, 0x88, 0x52, 0x4c, 0x2c, 0xca, 0x48, 0x2c, 0xd1, 0x4b, 0x49, 0x2d, 0xd3, 0x87,
+	0xb8, 0x52, 0x17, 0x1c, 0xba, 0x50, 0x4e, 0x7a, 0x7e, 0x41, 0x52, 0x12, 0x1b, 0x58, 0xc4, 0x18,
+	0x10, 0x00, 0x00, 0xff, 0xff, 0xb2, 0xcc, 0x4d, 0x57, 0x84, 0x01, 0x00, 0x00,
 }
 
-func (x MetricsCmd_Action) String() string {
-	s, ok := MetricsCmd_Action_name[int32(x)]
+func (x MetricsTarget) String() string {
+	s, ok := MetricsTarget_name[int32(x)]
 	if ok {
 		return s
 	}
 	return strconv.Itoa(int(x))
 }
-func (this *MetricsCmd) Equal(that interface{}) bool {
+func (this *MetricsConfigCmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*MetricsCmd)
+	that1, ok := that.(*MetricsConfigCmd)
 	if !ok {
-		that2, ok := that.(MetricsCmd)
+		that2, ok := that.(MetricsConfigCmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -250,61 +206,7 @@ func (this *MetricsCmd) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Action != that1.Action {
-		return false
-	}
-	if that1.Options == nil {
-		if this.Options != nil {
-			return false
-		}
-	} else if this.Options == nil {
-		return false
-	} else if !this.Options.Equal(that1.Options) {
-		return false
-	}
-	return true
-}
-func (this *MetricsCmd_Config) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*MetricsCmd_Config)
-	if !ok {
-		that2, ok := that.(MetricsCmd_Config)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Config.Equal(that1.Config) {
-		return false
-	}
-	return true
-}
-func (this *MetricsConfigOptions) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*MetricsConfigOptions)
-	if !ok {
-		that2, ok := that.(MetricsConfigOptions)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
+	if this.Target != that1.Target {
 		return false
 	}
 	if len(this.Collect) != len(that1.Collect) {
@@ -325,35 +227,49 @@ func (this *MetricsConfigOptions) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *MetricsCmd) GoString() string {
+func (this *MetricsCollectCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*MetricsCollectCmd)
+	if !ok {
+		that2, ok := that.(MetricsCollectCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Target != that1.Target {
+		return false
+	}
+	return true
+}
+func (this *MetricsConfigCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 6)
-	s = append(s, "&aranyagopb.MetricsCmd{")
-	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
-	if this.Options != nil {
-		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
-	}
+	s := make([]string, 0, 7)
+	s = append(s, "&aranyagopb.MetricsConfigCmd{")
+	s = append(s, "Target: "+fmt.Sprintf("%#v", this.Target)+",\n")
+	s = append(s, "Collect: "+fmt.Sprintf("%#v", this.Collect)+",\n")
+	s = append(s, "ExtraArgs: "+fmt.Sprintf("%#v", this.ExtraArgs)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *MetricsCmd_Config) GoString() string {
+func (this *MetricsCollectCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&aranyagopb.MetricsCmd_Config{` +
-		`Config:` + fmt.Sprintf("%#v", this.Config) + `}`}, ", ")
-	return s
-}
-func (this *MetricsConfigOptions) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&aranyagopb.MetricsConfigOptions{")
-	s = append(s, "Collect: "+fmt.Sprintf("%#v", this.Collect)+",\n")
-	s = append(s, "ExtraArgs: "+fmt.Sprintf("%#v", this.ExtraArgs)+",\n")
+	s := make([]string, 0, 5)
+	s = append(s, "&aranyagopb.MetricsCollectCmd{")
+	s = append(s, "Target: "+fmt.Sprintf("%#v", this.Target)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -365,7 +281,7 @@ func valueToGoStringCmdMetrics(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func (m *MetricsCmd) Marshal() (dAtA []byte, err error) {
+func (m *MetricsConfigCmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -375,70 +291,12 @@ func (m *MetricsCmd) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MetricsCmd) MarshalTo(dAtA []byte) (int, error) {
+func (m *MetricsConfigCmd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MetricsCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Options != nil {
-		{
-			size := m.Options.Size()
-			i -= size
-			if _, err := m.Options.MarshalTo(dAtA[i:]); err != nil {
-				return 0, err
-			}
-		}
-	}
-	if m.Action != 0 {
-		i = encodeVarintCmdMetrics(dAtA, i, uint64(m.Action))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *MetricsCmd_Config) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *MetricsCmd_Config) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.Config != nil {
-		{
-			size, err := m.Config.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintCmdMetrics(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	return len(dAtA) - i, nil
-}
-func (m *MetricsConfigOptions) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *MetricsConfigOptions) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *MetricsConfigOptions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MetricsConfigCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -449,7 +307,7 @@ func (m *MetricsConfigOptions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			copy(dAtA[i:], m.ExtraArgs[iNdEx])
 			i = encodeVarintCmdMetrics(dAtA, i, uint64(len(m.ExtraArgs[iNdEx])))
 			i--
-			dAtA[i] = 0x12
+			dAtA[i] = 0x1a
 		}
 	}
 	if len(m.Collect) > 0 {
@@ -458,8 +316,41 @@ func (m *MetricsConfigOptions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			copy(dAtA[i:], m.Collect[iNdEx])
 			i = encodeVarintCmdMetrics(dAtA, i, uint64(len(m.Collect[iNdEx])))
 			i--
-			dAtA[i] = 0xa
+			dAtA[i] = 0x12
 		}
+	}
+	if m.Target != 0 {
+		i = encodeVarintCmdMetrics(dAtA, i, uint64(m.Target))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MetricsCollectCmd) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MetricsCollectCmd) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MetricsCollectCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Target != 0 {
+		i = encodeVarintCmdMetrics(dAtA, i, uint64(m.Target))
+		i--
+		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -475,39 +366,15 @@ func encodeVarintCmdMetrics(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *MetricsCmd) Size() (n int) {
+func (m *MetricsConfigCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.Action != 0 {
-		n += 1 + sovCmdMetrics(uint64(m.Action))
+	if m.Target != 0 {
+		n += 1 + sovCmdMetrics(uint64(m.Target))
 	}
-	if m.Options != nil {
-		n += m.Options.Size()
-	}
-	return n
-}
-
-func (m *MetricsCmd_Config) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Config != nil {
-		l = m.Config.Size()
-		n += 1 + l + sovCmdMetrics(uint64(l))
-	}
-	return n
-}
-func (m *MetricsConfigOptions) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
 	if len(m.Collect) > 0 {
 		for _, s := range m.Collect {
 			l = len(s)
@@ -523,40 +390,42 @@ func (m *MetricsConfigOptions) Size() (n int) {
 	return n
 }
 
+func (m *MetricsCollectCmd) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Target != 0 {
+		n += 1 + sovCmdMetrics(uint64(m.Target))
+	}
+	return n
+}
+
 func sovCmdMetrics(x uint64) (n int) {
 	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozCmdMetrics(x uint64) (n int) {
 	return sovCmdMetrics(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (this *MetricsCmd) String() string {
+func (this *MetricsConfigCmd) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&MetricsCmd{`,
-		`Action:` + fmt.Sprintf("%v", this.Action) + `,`,
-		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *MetricsCmd_Config) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&MetricsCmd_Config{`,
-		`Config:` + strings.Replace(fmt.Sprintf("%v", this.Config), "MetricsConfigOptions", "MetricsConfigOptions", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *MetricsConfigOptions) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&MetricsConfigOptions{`,
+	s := strings.Join([]string{`&MetricsConfigCmd{`,
+		`Target:` + fmt.Sprintf("%v", this.Target) + `,`,
 		`Collect:` + fmt.Sprintf("%v", this.Collect) + `,`,
 		`ExtraArgs:` + fmt.Sprintf("%v", this.ExtraArgs) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *MetricsCollectCmd) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&MetricsCollectCmd{`,
+		`Target:` + fmt.Sprintf("%v", this.Target) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -569,7 +438,7 @@ func valueToStringCmdMetrics(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
-func (m *MetricsCmd) Unmarshal(dAtA []byte) error {
+func (m *MetricsConfigCmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -592,17 +461,17 @@ func (m *MetricsCmd) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MetricsCmd: wiretype end group for non-group")
+			return fmt.Errorf("proto: MetricsConfigCmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MetricsCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MetricsConfigCmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Action", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Target", wireType)
 			}
-			m.Action = 0
+			m.Target = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowCmdMetrics
@@ -612,100 +481,12 @@ func (m *MetricsCmd) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Action |= MetricsCmd_Action(b&0x7F) << shift
+				m.Target |= MetricsTarget(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
 		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Config", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdMetrics
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthCmdMetrics
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdMetrics
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &MetricsConfigOptions{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Options = &MetricsCmd_Config{v}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipCmdMetrics(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdMetrics
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthCmdMetrics
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *MetricsConfigOptions) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowCmdMetrics
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: MetricsConfigOptions: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MetricsConfigOptions: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Collect", wireType)
 			}
@@ -737,7 +518,7 @@ func (m *MetricsConfigOptions) Unmarshal(dAtA []byte) error {
 			}
 			m.Collect = append(m.Collect, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
-		case 2:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ExtraArgs", wireType)
 			}
@@ -769,6 +550,78 @@ func (m *MetricsConfigOptions) Unmarshal(dAtA []byte) error {
 			}
 			m.ExtraArgs = append(m.ExtraArgs, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCmdMetrics(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCmdMetrics
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCmdMetrics
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MetricsCollectCmd) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCmdMetrics
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MetricsCollectCmd: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MetricsCollectCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Target", wireType)
+			}
+			m.Target = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdMetrics
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Target |= MetricsTarget(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCmdMetrics(dAtA[iNdEx:])

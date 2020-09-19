@@ -29,31 +29,28 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type DeviceCmd_Action int32
+type DeviceMetrics_UploadMethod int32
 
 const (
-	_INVALID_DEVICE_ACTION DeviceCmd_Action = 0
-	LIST_DEVICES           DeviceCmd_Action = 1
-	ENSURE_DEVICE          DeviceCmd_Action = 2
-	REMOVE_DEVICE          DeviceCmd_Action = 3
+	UPLOAD_WITH_NODE_METRICS       DeviceMetrics_UploadMethod = 0
+	UPLOAD_WITH_ARHAT_CONNECTIVITY DeviceMetrics_UploadMethod = 1
+	UPLOAD_WITH_STANDALONE_CLIENT  DeviceMetrics_UploadMethod = 2
 )
 
-var DeviceCmd_Action_name = map[int32]string{
-	0: "_INVALID_DEVICE_ACTION",
-	1: "LIST_DEVICES",
-	2: "ENSURE_DEVICE",
-	3: "REMOVE_DEVICE",
+var DeviceMetrics_UploadMethod_name = map[int32]string{
+	0: "UPLOAD_WITH_NODE_METRICS",
+	1: "UPLOAD_WITH_ARHAT_CONNECTIVITY",
+	2: "UPLOAD_WITH_STANDALONE_CLIENT",
 }
 
-var DeviceCmd_Action_value = map[string]int32{
-	"_INVALID_DEVICE_ACTION": 0,
-	"LIST_DEVICES":           1,
-	"ENSURE_DEVICE":          2,
-	"REMOVE_DEVICE":          3,
+var DeviceMetrics_UploadMethod_value = map[string]int32{
+	"UPLOAD_WITH_NODE_METRICS":       0,
+	"UPLOAD_WITH_ARHAT_CONNECTIVITY": 1,
+	"UPLOAD_WITH_STANDALONE_CLIENT":  2,
 }
 
-func (DeviceCmd_Action) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_9e38e886ce453fd3, []int{0, 0}
+func (DeviceMetrics_UploadMethod) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_9e38e886ce453fd3, []int{1, 0}
 }
 
 type DeviceConnectivity_Mode int32
@@ -74,52 +71,25 @@ var DeviceConnectivity_Mode_value = map[string]int32{
 }
 
 func (DeviceConnectivity_Mode) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_9e38e886ce453fd3, []int{2, 0}
+	return fileDescriptor_9e38e886ce453fd3, []int{3, 0}
 }
 
-type DeviceMetrics_DeviceMetricsUploadMethod int32
-
-const (
-	UPLOAD_WITH_NODE_METRICS       DeviceMetrics_DeviceMetricsUploadMethod = 0
-	UPLOAD_WITH_ARHAT_CONNECTIVITY DeviceMetrics_DeviceMetricsUploadMethod = 1
-	UPLOAD_WITH_STANDALONE_CLIENT  DeviceMetrics_DeviceMetricsUploadMethod = 2
-)
-
-var DeviceMetrics_DeviceMetricsUploadMethod_name = map[int32]string{
-	0: "UPLOAD_WITH_NODE_METRICS",
-	1: "UPLOAD_WITH_ARHAT_CONNECTIVITY",
-	2: "UPLOAD_WITH_STANDALONE_CLIENT",
+type DeviceOperation struct {
+	Id              string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransportParams map[string]string `protobuf:"bytes,2,rep,name=transport_params,json=transportParams,proto3" json:"transport_params,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
-var DeviceMetrics_DeviceMetricsUploadMethod_value = map[string]int32{
-	"UPLOAD_WITH_NODE_METRICS":       0,
-	"UPLOAD_WITH_ARHAT_CONNECTIVITY": 1,
-	"UPLOAD_WITH_STANDALONE_CLIENT":  2,
-}
-
-func (DeviceMetrics_DeviceMetricsUploadMethod) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_9e38e886ce453fd3, []int{5, 0}
-}
-
-type DeviceCmd struct {
-	Action DeviceCmd_Action `protobuf:"varint,1,opt,name=action,proto3,enum=aranya.DeviceCmd_Action" json:"action,omitempty"`
-	// Types that are valid to be assigned to Options:
-	//	*DeviceCmd_DeviceId
-	//	*DeviceCmd_DeviceSpec
-	Options isDeviceCmd_Options `protobuf_oneof:"options"`
-}
-
-func (m *DeviceCmd) Reset()      { *m = DeviceCmd{} }
-func (*DeviceCmd) ProtoMessage() {}
-func (*DeviceCmd) Descriptor() ([]byte, []int) {
+func (m *DeviceOperation) Reset()      { *m = DeviceOperation{} }
+func (*DeviceOperation) ProtoMessage() {}
+func (*DeviceOperation) Descriptor() ([]byte, []int) {
 	return fileDescriptor_9e38e886ce453fd3, []int{0}
 }
-func (m *DeviceCmd) XXX_Unmarshal(b []byte) error {
+func (m *DeviceOperation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DeviceCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *DeviceOperation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DeviceCmd.Marshal(b, m, deterministic)
+		return xxx_messageInfo_DeviceOperation.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -129,142 +99,154 @@ func (m *DeviceCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *DeviceCmd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DeviceCmd.Merge(m, src)
+func (m *DeviceOperation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeviceOperation.Merge(m, src)
 }
-func (m *DeviceCmd) XXX_Size() int {
+func (m *DeviceOperation) XXX_Size() int {
 	return m.Size()
 }
-func (m *DeviceCmd) XXX_DiscardUnknown() {
-	xxx_messageInfo_DeviceCmd.DiscardUnknown(m)
+func (m *DeviceOperation) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeviceOperation.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DeviceCmd proto.InternalMessageInfo
+var xxx_messageInfo_DeviceOperation proto.InternalMessageInfo
 
-type isDeviceCmd_Options interface {
-	isDeviceCmd_Options()
-	Equal(interface{}) bool
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type DeviceCmd_DeviceId struct {
-	DeviceId string `protobuf:"bytes,2,opt,name=device_id,json=deviceId,proto3,oneof" json:"device_id,omitempty"`
-}
-type DeviceCmd_DeviceSpec struct {
-	DeviceSpec *Device `protobuf:"bytes,3,opt,name=device_spec,json=deviceSpec,proto3,oneof" json:"device_spec,omitempty"`
-}
-
-func (*DeviceCmd_DeviceId) isDeviceCmd_Options()   {}
-func (*DeviceCmd_DeviceSpec) isDeviceCmd_Options() {}
-
-func (m *DeviceCmd) GetOptions() isDeviceCmd_Options {
-	if m != nil {
-		return m.Options
-	}
-	return nil
-}
-
-func (m *DeviceCmd) GetAction() DeviceCmd_Action {
-	if m != nil {
-		return m.Action
-	}
-	return _INVALID_DEVICE_ACTION
-}
-
-func (m *DeviceCmd) GetDeviceId() string {
-	if x, ok := m.GetOptions().(*DeviceCmd_DeviceId); ok {
-		return x.DeviceId
-	}
-	return ""
-}
-
-func (m *DeviceCmd) GetDeviceSpec() *Device {
-	if x, ok := m.GetOptions().(*DeviceCmd_DeviceSpec); ok {
-		return x.DeviceSpec
-	}
-	return nil
-}
-
-// XXX_OneofWrappers is for the internal use of the proto package.
-func (*DeviceCmd) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
-		(*DeviceCmd_DeviceId)(nil),
-		(*DeviceCmd_DeviceSpec)(nil),
-	}
-}
-
-type Device struct {
-	Id                 string              `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Connectivity       *DeviceConnectivity `protobuf:"bytes,2,opt,name=connectivity,proto3" json:"connectivity,omitempty"`
-	Operations         []*DeviceOperation  `protobuf:"bytes,3,rep,name=operations,proto3" json:"operations,omitempty"`
-	Metrics            []*DeviceMetrics    `protobuf:"bytes,4,rep,name=metrics,proto3" json:"metrics,omitempty"`
-	UploadConnectivity *DeviceConnectivity `protobuf:"bytes,5,opt,name=upload_connectivity,json=uploadConnectivity,proto3" json:"upload_connectivity,omitempty"`
-}
-
-func (m *Device) Reset()      { *m = Device{} }
-func (*Device) ProtoMessage() {}
-func (*Device) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9e38e886ce453fd3, []int{1}
-}
-func (m *Device) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Device) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Device.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Device) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Device.Merge(m, src)
-}
-func (m *Device) XXX_Size() int {
-	return m.Size()
-}
-func (m *Device) XXX_DiscardUnknown() {
-	xxx_messageInfo_Device.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Device proto.InternalMessageInfo
-
-func (m *Device) GetId() string {
+func (m *DeviceOperation) GetId() string {
 	if m != nil {
 		return m.Id
 	}
 	return ""
 }
 
-func (m *Device) GetConnectivity() *DeviceConnectivity {
+func (m *DeviceOperation) GetTransportParams() map[string]string {
 	if m != nil {
-		return m.Connectivity
+		return m.TransportParams
 	}
 	return nil
 }
 
-func (m *Device) GetOperations() []*DeviceOperation {
+type DeviceMetrics struct {
+	Name            string                     `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	TransportParams map[string]string          `protobuf:"bytes,2,rep,name=transport_params,json=transportParams,proto3" json:"transport_params,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	UploadMethod    DeviceMetrics_UploadMethod `protobuf:"varint,3,opt,name=upload_method,json=uploadMethod,proto3,enum=aranya.DeviceMetrics_UploadMethod" json:"upload_method,omitempty"`
+	UploadParams    map[string]string          `protobuf:"bytes,4,rep,name=upload_params,json=uploadParams,proto3" json:"upload_params,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+}
+
+func (m *DeviceMetrics) Reset()      { *m = DeviceMetrics{} }
+func (*DeviceMetrics) ProtoMessage() {}
+func (*DeviceMetrics) Descriptor() ([]byte, []int) {
+	return fileDescriptor_9e38e886ce453fd3, []int{1}
+}
+func (m *DeviceMetrics) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DeviceMetrics) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DeviceMetrics.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DeviceMetrics) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeviceMetrics.Merge(m, src)
+}
+func (m *DeviceMetrics) XXX_Size() int {
+	return m.Size()
+}
+func (m *DeviceMetrics) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeviceMetrics.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeviceMetrics proto.InternalMessageInfo
+
+func (m *DeviceMetrics) GetName() string {
 	if m != nil {
-		return m.Operations
+		return m.Name
+	}
+	return ""
+}
+
+func (m *DeviceMetrics) GetTransportParams() map[string]string {
+	if m != nil {
+		return m.TransportParams
 	}
 	return nil
 }
 
-func (m *Device) GetMetrics() []*DeviceMetrics {
+func (m *DeviceMetrics) GetUploadMethod() DeviceMetrics_UploadMethod {
 	if m != nil {
-		return m.Metrics
+		return m.UploadMethod
+	}
+	return UPLOAD_WITH_NODE_METRICS
+}
+
+func (m *DeviceMetrics) GetUploadParams() map[string]string {
+	if m != nil {
+		return m.UploadParams
 	}
 	return nil
 }
 
-func (m *Device) GetUploadConnectivity() *DeviceConnectivity {
+type DeviceConnectivityTLSConfig struct {
+	CaCert []byte `protobuf:"bytes,1,opt,name=ca_cert,json=caCert,proto3" json:"ca_cert,omitempty"`
+	Cert   []byte `protobuf:"bytes,2,opt,name=cert,proto3" json:"cert,omitempty"`
+	Key    []byte `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+}
+
+func (m *DeviceConnectivityTLSConfig) Reset()      { *m = DeviceConnectivityTLSConfig{} }
+func (*DeviceConnectivityTLSConfig) ProtoMessage() {}
+func (*DeviceConnectivityTLSConfig) Descriptor() ([]byte, []int) {
+	return fileDescriptor_9e38e886ce453fd3, []int{2}
+}
+func (m *DeviceConnectivityTLSConfig) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DeviceConnectivityTLSConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DeviceConnectivityTLSConfig.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DeviceConnectivityTLSConfig) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeviceConnectivityTLSConfig.Merge(m, src)
+}
+func (m *DeviceConnectivityTLSConfig) XXX_Size() int {
+	return m.Size()
+}
+func (m *DeviceConnectivityTLSConfig) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeviceConnectivityTLSConfig.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeviceConnectivityTLSConfig proto.InternalMessageInfo
+
+func (m *DeviceConnectivityTLSConfig) GetCaCert() []byte {
 	if m != nil {
-		return m.UploadConnectivity
+		return m.CaCert
+	}
+	return nil
+}
+
+func (m *DeviceConnectivityTLSConfig) GetCert() []byte {
+	if m != nil {
+		return m.Cert
+	}
+	return nil
+}
+
+func (m *DeviceConnectivityTLSConfig) GetKey() []byte {
+	if m != nil {
+		return m.Key
 	}
 	return nil
 }
@@ -280,7 +262,7 @@ type DeviceConnectivity struct {
 func (m *DeviceConnectivity) Reset()      { *m = DeviceConnectivity{} }
 func (*DeviceConnectivity) ProtoMessage() {}
 func (*DeviceConnectivity) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9e38e886ce453fd3, []int{2}
+	return fileDescriptor_9e38e886ce453fd3, []int{3}
 }
 func (m *DeviceConnectivity) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -344,81 +326,25 @@ func (m *DeviceConnectivity) GetTls() *DeviceConnectivityTLSConfig {
 	return nil
 }
 
-type DeviceConnectivityTLSConfig struct {
-	CaCert []byte `protobuf:"bytes,1,opt,name=ca_cert,json=caCert,proto3" json:"ca_cert,omitempty"`
-	Cert   []byte `protobuf:"bytes,2,opt,name=cert,proto3" json:"cert,omitempty"`
-	Key    []byte `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+type DeviceEnsureCmd struct {
+	DeviceId           string              `protobuf:"bytes,1,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
+	DeviceConnectivity *DeviceConnectivity `protobuf:"bytes,2,opt,name=device_connectivity,json=deviceConnectivity,proto3" json:"device_connectivity,omitempty"`
+	UploadConnectivity *DeviceConnectivity `protobuf:"bytes,3,opt,name=upload_connectivity,json=uploadConnectivity,proto3" json:"upload_connectivity,omitempty"`
+	DeviceOperations   []*DeviceOperation  `protobuf:"bytes,4,rep,name=device_operations,json=deviceOperations,proto3" json:"device_operations,omitempty"`
+	DeviceMetrics      []*DeviceMetrics    `protobuf:"bytes,5,rep,name=device_metrics,json=deviceMetrics,proto3" json:"device_metrics,omitempty"`
 }
 
-func (m *DeviceConnectivityTLSConfig) Reset()      { *m = DeviceConnectivityTLSConfig{} }
-func (*DeviceConnectivityTLSConfig) ProtoMessage() {}
-func (*DeviceConnectivityTLSConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9e38e886ce453fd3, []int{3}
-}
-func (m *DeviceConnectivityTLSConfig) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *DeviceConnectivityTLSConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_DeviceConnectivityTLSConfig.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *DeviceConnectivityTLSConfig) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DeviceConnectivityTLSConfig.Merge(m, src)
-}
-func (m *DeviceConnectivityTLSConfig) XXX_Size() int {
-	return m.Size()
-}
-func (m *DeviceConnectivityTLSConfig) XXX_DiscardUnknown() {
-	xxx_messageInfo_DeviceConnectivityTLSConfig.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_DeviceConnectivityTLSConfig proto.InternalMessageInfo
-
-func (m *DeviceConnectivityTLSConfig) GetCaCert() []byte {
-	if m != nil {
-		return m.CaCert
-	}
-	return nil
-}
-
-func (m *DeviceConnectivityTLSConfig) GetCert() []byte {
-	if m != nil {
-		return m.Cert
-	}
-	return nil
-}
-
-func (m *DeviceConnectivityTLSConfig) GetKey() []byte {
-	if m != nil {
-		return m.Key
-	}
-	return nil
-}
-
-type DeviceOperation struct {
-	Id              string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TransportParams map[string]string `protobuf:"bytes,2,rep,name=transport_params,json=transportParams,proto3" json:"transport_params,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-}
-
-func (m *DeviceOperation) Reset()      { *m = DeviceOperation{} }
-func (*DeviceOperation) ProtoMessage() {}
-func (*DeviceOperation) Descriptor() ([]byte, []int) {
+func (m *DeviceEnsureCmd) Reset()      { *m = DeviceEnsureCmd{} }
+func (*DeviceEnsureCmd) ProtoMessage() {}
+func (*DeviceEnsureCmd) Descriptor() ([]byte, []int) {
 	return fileDescriptor_9e38e886ce453fd3, []int{4}
 }
-func (m *DeviceOperation) XXX_Unmarshal(b []byte) error {
+func (m *DeviceEnsureCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DeviceOperation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *DeviceEnsureCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DeviceOperation.Marshal(b, m, deterministic)
+		return xxx_messageInfo_DeviceEnsureCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -428,50 +354,67 @@ func (m *DeviceOperation) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (m *DeviceOperation) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DeviceOperation.Merge(m, src)
+func (m *DeviceEnsureCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeviceEnsureCmd.Merge(m, src)
 }
-func (m *DeviceOperation) XXX_Size() int {
+func (m *DeviceEnsureCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *DeviceOperation) XXX_DiscardUnknown() {
-	xxx_messageInfo_DeviceOperation.DiscardUnknown(m)
+func (m *DeviceEnsureCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeviceEnsureCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DeviceOperation proto.InternalMessageInfo
+var xxx_messageInfo_DeviceEnsureCmd proto.InternalMessageInfo
 
-func (m *DeviceOperation) GetId() string {
+func (m *DeviceEnsureCmd) GetDeviceId() string {
 	if m != nil {
-		return m.Id
+		return m.DeviceId
 	}
 	return ""
 }
 
-func (m *DeviceOperation) GetTransportParams() map[string]string {
+func (m *DeviceEnsureCmd) GetDeviceConnectivity() *DeviceConnectivity {
 	if m != nil {
-		return m.TransportParams
+		return m.DeviceConnectivity
 	}
 	return nil
 }
 
-type DeviceMetrics struct {
-	Id              string                                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TransportParams map[string]string                       `protobuf:"bytes,2,rep,name=transport_params,json=transportParams,proto3" json:"transport_params,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	UploadMethod    DeviceMetrics_DeviceMetricsUploadMethod `protobuf:"varint,3,opt,name=upload_method,json=uploadMethod,proto3,enum=aranya.DeviceMetrics_DeviceMetricsUploadMethod" json:"upload_method,omitempty"`
-	UploadParams    map[string]string                       `protobuf:"bytes,4,rep,name=upload_params,json=uploadParams,proto3" json:"upload_params,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+func (m *DeviceEnsureCmd) GetUploadConnectivity() *DeviceConnectivity {
+	if m != nil {
+		return m.UploadConnectivity
+	}
+	return nil
 }
 
-func (m *DeviceMetrics) Reset()      { *m = DeviceMetrics{} }
-func (*DeviceMetrics) ProtoMessage() {}
-func (*DeviceMetrics) Descriptor() ([]byte, []int) {
+func (m *DeviceEnsureCmd) GetDeviceOperations() []*DeviceOperation {
+	if m != nil {
+		return m.DeviceOperations
+	}
+	return nil
+}
+
+func (m *DeviceEnsureCmd) GetDeviceMetrics() []*DeviceMetrics {
+	if m != nil {
+		return m.DeviceMetrics
+	}
+	return nil
+}
+
+type DeviceListCmd struct {
+}
+
+func (m *DeviceListCmd) Reset()      { *m = DeviceListCmd{} }
+func (*DeviceListCmd) ProtoMessage() {}
+func (*DeviceListCmd) Descriptor() ([]byte, []int) {
 	return fileDescriptor_9e38e886ce453fd3, []int{5}
 }
-func (m *DeviceMetrics) XXX_Unmarshal(b []byte) error {
+func (m *DeviceListCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DeviceMetrics) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *DeviceListCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DeviceMetrics.Marshal(b, m, deterministic)
+		return xxx_messageInfo_DeviceListCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -481,121 +424,133 @@ func (m *DeviceMetrics) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return b[:n], nil
 	}
 }
-func (m *DeviceMetrics) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DeviceMetrics.Merge(m, src)
+func (m *DeviceListCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeviceListCmd.Merge(m, src)
 }
-func (m *DeviceMetrics) XXX_Size() int {
+func (m *DeviceListCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *DeviceMetrics) XXX_DiscardUnknown() {
-	xxx_messageInfo_DeviceMetrics.DiscardUnknown(m)
+func (m *DeviceListCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeviceListCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DeviceMetrics proto.InternalMessageInfo
+var xxx_messageInfo_DeviceListCmd proto.InternalMessageInfo
 
-func (m *DeviceMetrics) GetId() string {
-	if m != nil {
-		return m.Id
+type DeviceDeleteCmd struct {
+	DeviceIds []string `protobuf:"bytes,1,rep,name=device_ids,json=deviceIds,proto3" json:"device_ids,omitempty"`
+}
+
+func (m *DeviceDeleteCmd) Reset()      { *m = DeviceDeleteCmd{} }
+func (*DeviceDeleteCmd) ProtoMessage() {}
+func (*DeviceDeleteCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_9e38e886ce453fd3, []int{6}
+}
+func (m *DeviceDeleteCmd) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DeviceDeleteCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DeviceDeleteCmd.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
 	}
-	return ""
+}
+func (m *DeviceDeleteCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeviceDeleteCmd.Merge(m, src)
+}
+func (m *DeviceDeleteCmd) XXX_Size() int {
+	return m.Size()
+}
+func (m *DeviceDeleteCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeviceDeleteCmd.DiscardUnknown(m)
 }
 
-func (m *DeviceMetrics) GetTransportParams() map[string]string {
-	if m != nil {
-		return m.TransportParams
-	}
-	return nil
-}
+var xxx_messageInfo_DeviceDeleteCmd proto.InternalMessageInfo
 
-func (m *DeviceMetrics) GetUploadMethod() DeviceMetrics_DeviceMetricsUploadMethod {
+func (m *DeviceDeleteCmd) GetDeviceIds() []string {
 	if m != nil {
-		return m.UploadMethod
-	}
-	return UPLOAD_WITH_NODE_METRICS
-}
-
-func (m *DeviceMetrics) GetUploadParams() map[string]string {
-	if m != nil {
-		return m.UploadParams
+		return m.DeviceIds
 	}
 	return nil
 }
 
 func init() {
-	proto.RegisterEnum("aranya.DeviceCmd_Action", DeviceCmd_Action_name, DeviceCmd_Action_value)
+	proto.RegisterEnum("aranya.DeviceMetrics_UploadMethod", DeviceMetrics_UploadMethod_name, DeviceMetrics_UploadMethod_value)
 	proto.RegisterEnum("aranya.DeviceConnectivity_Mode", DeviceConnectivity_Mode_name, DeviceConnectivity_Mode_value)
-	proto.RegisterEnum("aranya.DeviceMetrics_DeviceMetricsUploadMethod", DeviceMetrics_DeviceMetricsUploadMethod_name, DeviceMetrics_DeviceMetricsUploadMethod_value)
-	proto.RegisterType((*DeviceCmd)(nil), "aranya.DeviceCmd")
-	proto.RegisterType((*Device)(nil), "aranya.Device")
-	proto.RegisterType((*DeviceConnectivity)(nil), "aranya.DeviceConnectivity")
-	proto.RegisterMapType((map[string]string)(nil), "aranya.DeviceConnectivity.ParamsEntry")
-	proto.RegisterType((*DeviceConnectivityTLSConfig)(nil), "aranya.DeviceConnectivityTLSConfig")
 	proto.RegisterType((*DeviceOperation)(nil), "aranya.DeviceOperation")
 	proto.RegisterMapType((map[string]string)(nil), "aranya.DeviceOperation.TransportParamsEntry")
 	proto.RegisterType((*DeviceMetrics)(nil), "aranya.DeviceMetrics")
 	proto.RegisterMapType((map[string]string)(nil), "aranya.DeviceMetrics.TransportParamsEntry")
 	proto.RegisterMapType((map[string]string)(nil), "aranya.DeviceMetrics.UploadParamsEntry")
+	proto.RegisterType((*DeviceConnectivityTLSConfig)(nil), "aranya.DeviceConnectivityTLSConfig")
+	proto.RegisterType((*DeviceConnectivity)(nil), "aranya.DeviceConnectivity")
+	proto.RegisterMapType((map[string]string)(nil), "aranya.DeviceConnectivity.ParamsEntry")
+	proto.RegisterType((*DeviceEnsureCmd)(nil), "aranya.DeviceEnsureCmd")
+	proto.RegisterType((*DeviceListCmd)(nil), "aranya.DeviceListCmd")
+	proto.RegisterType((*DeviceDeleteCmd)(nil), "aranya.DeviceDeleteCmd")
 }
 
 func init() { proto.RegisterFile("cmd_device.proto", fileDescriptor_9e38e886ce453fd3) }
 
 var fileDescriptor_9e38e886ce453fd3 = []byte{
-	// 816 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x55, 0xcd, 0x8e, 0xdb, 0x54,
-	0x14, 0xf6, 0xb5, 0x53, 0x0f, 0x3e, 0xc9, 0xa4, 0xee, 0xa5, 0xb4, 0x21, 0xb4, 0x6e, 0xea, 0x4a,
-	0x10, 0x21, 0xc8, 0x40, 0x2a, 0xc4, 0xcf, 0xa2, 0xc8, 0xe3, 0x58, 0x8a, 0x45, 0xe2, 0x8c, 0xae,
-	0x9d, 0x8c, 0x40, 0x95, 0x2c, 0xd7, 0x36, 0x53, 0x8b, 0x49, 0x6c, 0x39, 0x9e, 0x48, 0xd9, 0x55,
-	0xe2, 0x01, 0xe0, 0x19, 0x58, 0xf1, 0x14, 0xac, 0x59, 0xce, 0xb2, 0x4b, 0x26, 0xb3, 0x61, 0xd9,
-	0x25, 0x4b, 0x94, 0x6b, 0x27, 0xd8, 0x93, 0x64, 0x60, 0x24, 0x76, 0x3e, 0xdf, 0xf9, 0xce, 0x77,
-	0xcf, 0xaf, 0x0c, 0xa2, 0x3b, 0xf6, 0x6c, 0xcf, 0x9f, 0x05, 0xae, 0xdf, 0x8a, 0xe2, 0x30, 0x09,
-	0x31, 0xef, 0xc4, 0xce, 0x64, 0xee, 0xc8, 0x7f, 0x21, 0x10, 0x3a, 0xd4, 0xa1, 0x8e, 0x3d, 0xfc,
-	0x09, 0xf0, 0x8e, 0x9b, 0x04, 0xe1, 0xa4, 0x86, 0x1a, 0xa8, 0x59, 0x6d, 0xd7, 0x5a, 0x29, 0xad,
-	0xb5, 0xa6, 0xb4, 0x14, 0xea, 0x27, 0x19, 0x0f, 0x3f, 0x04, 0x21, 0xd5, 0xb5, 0x03, 0xaf, 0xc6,
-	0x36, 0x50, 0x53, 0xe8, 0x32, 0xe4, 0xad, 0x14, 0xd2, 0x3d, 0xfc, 0x29, 0x94, 0x33, 0xf7, 0x34,
-	0xf2, 0xdd, 0x1a, 0xd7, 0x40, 0xcd, 0x72, 0xbb, 0x5a, 0x54, 0xed, 0x32, 0x04, 0x52, 0x92, 0x19,
-	0xf9, 0xae, 0xfc, 0x1c, 0xf8, 0xf4, 0x0d, 0x5c, 0x87, 0x7b, 0xb6, 0x6e, 0x8c, 0x94, 0x9e, 0xde,
-	0xb1, 0x3b, 0xda, 0x48, 0x57, 0x35, 0x5b, 0x51, 0x2d, 0x7d, 0x60, 0x88, 0x0c, 0x16, 0xa1, 0xd2,
-	0xd3, 0x4d, 0x2b, 0xc3, 0x4d, 0x11, 0xe1, 0x3b, 0xb0, 0xaf, 0x19, 0xe6, 0x90, 0x68, 0x19, 0x26,
-	0xb2, 0x4b, 0x88, 0x68, 0xfd, 0xc1, 0x68, 0x0d, 0x71, 0x87, 0x02, 0xec, 0x85, 0xd1, 0x52, 0x7d,
-	0x2a, 0xff, 0xc4, 0x02, 0x9f, 0x66, 0x80, 0xab, 0xc0, 0x06, 0x1e, 0xad, 0x59, 0x20, 0x6c, 0xe0,
-	0xe1, 0x67, 0x50, 0x71, 0xc3, 0xc9, 0xc4, 0x77, 0x93, 0x60, 0x16, 0x24, 0x73, 0x5a, 0x58, 0xb9,
-	0x5d, 0xbf, 0xd2, 0x8d, 0x1c, 0x83, 0x14, 0xf8, 0xf8, 0x73, 0x80, 0x30, 0xf2, 0x63, 0x87, 0x3e,
-	0x54, 0xe3, 0x1a, 0x5c, 0xb3, 0xdc, 0xbe, 0x5f, 0x8c, 0x1e, 0xac, 0xfc, 0x24, 0x47, 0xc5, 0x07,
-	0xb0, 0x37, 0xf6, 0x93, 0x38, 0x70, 0xa7, 0xb5, 0x12, 0x8d, 0x7a, 0xa7, 0x18, 0xd5, 0x4f, 0x9d,
-	0x64, 0xc5, 0xc2, 0xdf, 0xc0, 0xdb, 0x67, 0xd1, 0x69, 0xe8, 0x78, 0x76, 0x21, 0xe1, 0x5b, 0xff,
-	0x9a, 0x30, 0x4e, 0xc3, 0xf2, 0x98, 0xfc, 0x23, 0x07, 0x78, 0x93, 0x8a, 0x1f, 0x80, 0x90, 0xc4,
-	0xce, 0x64, 0x1a, 0x85, 0x71, 0x92, 0x35, 0xe9, 0x1f, 0x00, 0x3f, 0x85, 0xd2, 0x38, 0xf4, 0x7c,
-	0xda, 0xa3, 0x6a, 0xfb, 0xd1, 0xee, 0x27, 0x5b, 0xfd, 0xd0, 0xf3, 0x09, 0x25, 0xe3, 0x7b, 0xc0,
-	0x27, 0x4e, 0x7c, 0xe2, 0x27, 0x74, 0x25, 0x04, 0x92, 0x59, 0xf8, 0x19, 0xf0, 0x91, 0x13, 0x3b,
-	0xe3, 0x55, 0xf9, 0xef, 0x5f, 0x23, 0x77, 0x44, 0x89, 0xda, 0x24, 0x89, 0xe7, 0x24, 0x8b, 0xc2,
-	0x9f, 0x01, 0x97, 0x9c, 0x4e, 0xb3, 0xf2, 0x9f, 0xec, 0x0e, 0xb6, 0x7a, 0xa6, 0x1a, 0x4e, 0xbe,
-	0x0f, 0x4e, 0xc8, 0x92, 0x5f, 0xff, 0x12, 0xca, 0x39, 0x35, 0x2c, 0x02, 0xf7, 0x83, 0x3f, 0xcf,
-	0x4a, 0x5d, 0x7e, 0xe2, 0xbb, 0x70, 0x6b, 0xe6, 0x9c, 0x9e, 0xa5, 0x55, 0x0a, 0x24, 0x35, 0xbe,
-	0x62, 0xbf, 0x40, 0xf2, 0x11, 0x94, 0x96, 0x75, 0xe1, 0x27, 0xf0, 0x28, 0xdb, 0x51, 0x75, 0x60,
-	0x18, 0x9a, 0x6a, 0xe9, 0x23, 0xdd, 0xfa, 0xd6, 0xee, 0x0f, 0x3a, 0x9a, 0xad, 0xf6, 0x74, 0xcd,
-	0xb0, 0x44, 0xe6, 0x5a, 0x92, 0xa9, 0x91, 0x91, 0x46, 0x44, 0x24, 0x3f, 0x87, 0xf7, 0xae, 0x49,
-	0x18, 0xdf, 0x87, 0x3d, 0xd7, 0xb1, 0x5d, 0x3f, 0x9b, 0x45, 0x85, 0xf0, 0xae, 0xa3, 0xfa, 0x71,
-	0x82, 0x31, 0x94, 0x28, 0xca, 0x52, 0x94, 0x7e, 0xaf, 0x2a, 0xe1, 0x28, 0xb4, 0xfc, 0x94, 0x7f,
-	0x43, 0x70, 0xfb, 0xca, 0x06, 0x6e, 0xac, 0xff, 0x31, 0x88, 0xeb, 0xf9, 0xda, 0xd9, 0x3c, 0x58,
-	0x3a, 0x8f, 0x8f, 0x76, 0x2c, 0x71, 0xcb, 0x5a, 0xf1, 0xf3, 0x53, 0xb9, 0x9d, 0x14, 0xd1, 0xfa,
-	0x21, 0xdc, 0xdd, 0x46, 0xbc, 0x51, 0xc3, 0x7f, 0x29, 0xc1, 0x7e, 0xe1, 0x18, 0x36, 0xd2, 0x1f,
-	0xee, 0x4c, 0xff, 0xc3, 0xad, 0xd7, 0xf4, 0xdf, 0x92, 0xc7, 0x16, 0xec, 0x67, 0xa7, 0x36, 0xf6,
-	0x93, 0x97, 0xa1, 0x47, 0xbb, 0x5a, 0x6d, 0x1f, 0x6c, 0xd7, 0x2c, 0x58, 0x43, 0x1a, 0xd7, 0xa7,
-	0x61, 0xa4, 0x72, 0x96, 0xb3, 0x70, 0x6f, 0xad, 0x5a, 0x58, 0xfc, 0x0f, 0xb6, 0xab, 0xa6, 0x42,
-	0xf9, 0x34, 0x33, 0xb5, 0xff, 0xaf, 0xc1, 0xf5, 0xaf, 0xe1, 0xce, 0xc6, 0x33, 0x37, 0x9a, 0xd0,
-	0x2b, 0x04, 0xef, 0xee, 0x2c, 0x1f, 0x3f, 0x80, 0xda, 0xf0, 0xa8, 0x37, 0x50, 0x3a, 0xf6, 0xb1,
-	0x6e, 0x75, 0x6d, 0x63, 0xb9, 0xfb, 0x7d, 0xcd, 0x22, 0xba, 0x6a, 0x8a, 0x0c, 0x96, 0x41, 0xca,
-	0x7b, 0x15, 0xd2, 0x55, 0xac, 0xc2, 0xb1, 0x88, 0x08, 0x3f, 0x86, 0x87, 0x79, 0x8e, 0x69, 0x29,
-	0x46, 0x47, 0xe9, 0x0d, 0x8c, 0xf5, 0xa1, 0xb1, 0x87, 0xc7, 0xe7, 0x17, 0x12, 0xf3, 0xfa, 0x42,
-	0x62, 0xde, 0x5c, 0x48, 0xe8, 0xd5, 0x42, 0x42, 0xbf, 0x2e, 0x24, 0xf4, 0xfb, 0x42, 0x42, 0xe7,
-	0x0b, 0x09, 0xfd, 0xb1, 0x90, 0xd0, 0x9f, 0x0b, 0x89, 0x79, 0xb3, 0x90, 0xd0, 0xcf, 0x97, 0x12,
-	0x73, 0x7e, 0x29, 0x31, 0xaf, 0x2f, 0x25, 0xe6, 0xbb, 0xc7, 0x4e, 0xfc, 0xd2, 0x49, 0x5a, 0x9e,
-	0x3f, 0x3b, 0x48, 0xbb, 0xff, 0x31, 0xfd, 0x59, 0x66, 0xc6, 0x49, 0x18, 0xbd, 0x78, 0xc1, 0x53,
-	0xe4, 0xe9, 0xdf, 0x01, 0x00, 0x00, 0xff, 0xff, 0x83, 0xfc, 0x3e, 0x4c, 0x52, 0x07, 0x00, 0x00,
+	// 762 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x55, 0x4d, 0x6f, 0xf3, 0x44,
+	0x10, 0xf6, 0xda, 0x69, 0x20, 0x93, 0x36, 0xf5, 0xbb, 0xef, 0x0b, 0xb5, 0xd2, 0xd6, 0x4d, 0x5d,
+	0x09, 0x22, 0x04, 0x01, 0xa5, 0x42, 0x02, 0x84, 0x40, 0xa9, 0x63, 0xd1, 0xa8, 0xf9, 0xa8, 0x1c,
+	0xb7, 0x15, 0x08, 0xc9, 0x72, 0xed, 0xa5, 0xb5, 0x88, 0xed, 0xc8, 0xde, 0x44, 0xca, 0x0d, 0x89,
+	0x23, 0x17, 0x7e, 0x06, 0xbf, 0x82, 0x33, 0x07, 0x0e, 0x3d, 0xf6, 0x48, 0xd3, 0x0b, 0xc7, 0xfe,
+	0x04, 0x94, 0xb5, 0x1d, 0x6c, 0xda, 0x94, 0x0f, 0x71, 0xdb, 0x79, 0xfc, 0xec, 0xb3, 0x33, 0xcf,
+	0x4c, 0x26, 0x20, 0xda, 0x9e, 0x63, 0x3a, 0x64, 0xea, 0xda, 0xa4, 0x31, 0x0e, 0x03, 0x1a, 0xe0,
+	0xa2, 0x15, 0x5a, 0xfe, 0xcc, 0x52, 0x7e, 0x46, 0xb0, 0xd9, 0x66, 0x1f, 0x06, 0x63, 0x12, 0x5a,
+	0xd4, 0x0d, 0x7c, 0x5c, 0x01, 0xde, 0x75, 0x24, 0x54, 0x43, 0xf5, 0x92, 0xce, 0xbb, 0x0e, 0xbe,
+	0x00, 0x91, 0x86, 0x96, 0x1f, 0x8d, 0x83, 0x90, 0x9a, 0x63, 0x2b, 0xb4, 0xbc, 0x48, 0xe2, 0x6b,
+	0x42, 0xbd, 0xdc, 0x7c, 0xb7, 0x11, 0xcb, 0x34, 0xfe, 0x22, 0xd1, 0x30, 0x52, 0xfe, 0x29, 0xa3,
+	0x6b, 0x3e, 0x0d, 0x67, 0xfa, 0x26, 0xcd, 0xa3, 0xd5, 0x23, 0x78, 0xf5, 0x14, 0x11, 0x8b, 0x20,
+	0x7c, 0x4b, 0x66, 0x49, 0x06, 0x8b, 0x23, 0x7e, 0x05, 0x6b, 0x53, 0x6b, 0x34, 0x21, 0x12, 0xcf,
+	0xb0, 0x38, 0xf8, 0x84, 0xff, 0x08, 0x29, 0x3f, 0x14, 0x60, 0x23, 0x7e, 0xbd, 0x47, 0x68, 0xe8,
+	0xda, 0x11, 0xc6, 0x50, 0xf0, 0x2d, 0x8f, 0x24, 0xd7, 0xd9, 0x19, 0x9f, 0xad, 0x2c, 0xe1, 0x9d,
+	0x7c, 0x09, 0x89, 0xc8, 0x3f, 0x2b, 0x00, 0x7f, 0x01, 0x1b, 0x93, 0xf1, 0x28, 0xb0, 0x1c, 0xd3,
+	0x23, 0xf4, 0x3a, 0x70, 0x24, 0xa1, 0x86, 0xea, 0x95, 0xa6, 0xf2, 0xb4, 0xe6, 0x19, 0xa3, 0xf6,
+	0x18, 0x53, 0x5f, 0x9f, 0x64, 0x22, 0xdc, 0x5d, 0x0a, 0x25, 0xc9, 0x15, 0x58, 0x72, 0x6f, 0x3f,
+	0x27, 0x94, 0xcd, 0x2c, 0x51, 0xfb, 0xff, 0x7c, 0xad, 0x7e, 0x0e, 0x2f, 0x1e, 0x3d, 0xf3, 0xaf,
+	0x1a, 0x13, 0xc1, 0x7a, 0xb6, 0x60, 0xbc, 0x03, 0xd2, 0xd9, 0x69, 0x77, 0xd0, 0x6a, 0x9b, 0x17,
+	0x1d, 0xe3, 0xd8, 0xec, 0x0f, 0xda, 0x9a, 0xd9, 0xd3, 0x0c, 0xbd, 0xa3, 0x0e, 0x45, 0x0e, 0x2b,
+	0x20, 0x67, 0xbf, 0xb6, 0xf4, 0xe3, 0x96, 0x61, 0xaa, 0x83, 0x7e, 0x5f, 0x53, 0x8d, 0xce, 0x79,
+	0xc7, 0xf8, 0x52, 0x44, 0x78, 0x1f, 0x76, 0xb3, 0x9c, 0xa1, 0xd1, 0xea, 0xb7, 0x5b, 0xdd, 0x41,
+	0x5f, 0x33, 0xd5, 0x6e, 0x47, 0xeb, 0x1b, 0x22, 0xaf, 0x7c, 0x0d, 0xdb, 0xb1, 0x55, 0x6a, 0xe0,
+	0xfb, 0xc4, 0xa6, 0xee, 0xd4, 0xa5, 0x33, 0xa3, 0x3b, 0x54, 0x03, 0xff, 0x1b, 0xf7, 0x0a, 0x6f,
+	0xc1, 0x6b, 0xb6, 0x65, 0xda, 0x24, 0xa4, 0xac, 0x86, 0x75, 0xbd, 0x68, 0x5b, 0x2a, 0x09, 0xe9,
+	0x62, 0x66, 0x18, 0xca, 0x33, 0x94, 0x9d, 0xd3, 0x62, 0x05, 0x06, 0x2d, 0x8e, 0xca, 0xf7, 0x02,
+	0xe0, 0xc7, 0xf2, 0x78, 0x07, 0x4a, 0xcb, 0xc1, 0x48, 0xbc, 0xf9, 0x13, 0xc0, 0x87, 0x50, 0xf0,
+	0x02, 0x27, 0x36, 0xa8, 0xd2, 0xdc, 0xcb, 0x77, 0x34, 0xab, 0xd3, 0xe8, 0x05, 0x0e, 0xd1, 0x19,
+	0x19, 0xbf, 0x09, 0x45, 0x6a, 0x85, 0x57, 0x84, 0xb2, 0xe7, 0x4b, 0x7a, 0x12, 0xe1, 0xcf, 0xa0,
+	0x98, 0x1b, 0x90, 0xb7, 0x9e, 0x91, 0xcb, 0xce, 0x47, 0x72, 0x0b, 0x7f, 0x08, 0x02, 0x1d, 0x45,
+	0xd2, 0x5a, 0x0d, 0xd5, 0xcb, 0xcd, 0x83, 0xd5, 0x97, 0x97, 0x96, 0xe9, 0x0b, 0x7e, 0xf5, 0x63,
+	0x28, 0xff, 0xd7, 0x31, 0x38, 0x85, 0xc2, 0xa2, 0x2e, 0x7c, 0x00, 0x7b, 0x6d, 0xed, 0xbc, 0xa3,
+	0x6a, 0xb9, 0xae, 0x9a, 0xbd, 0xc5, 0x18, 0x24, 0xed, 0xe3, 0x9e, 0x25, 0x0d, 0x35, 0xfd, 0x5c,
+	0xd3, 0x45, 0xa4, 0xfc, 0xca, 0xa7, 0x2b, 0x4b, 0xf3, 0xa3, 0x49, 0x48, 0x54, 0xcf, 0xc1, 0xdb,
+	0x50, 0x8a, 0xd7, 0x9b, 0xb9, 0xdc, 0x5c, 0xaf, 0xc7, 0x40, 0xc7, 0xc1, 0x27, 0xf0, 0x32, 0xf9,
+	0x68, 0x67, 0x4a, 0x64, 0xa9, 0x96, 0x9b, 0xd5, 0xd5, 0x26, 0xe8, 0xd8, 0x79, 0xdc, 0xec, 0x13,
+	0x78, 0x99, 0xfc, 0x52, 0x73, 0x62, 0xc2, 0xdf, 0x8b, 0xc5, 0xd7, 0x72, 0x62, 0x6d, 0x78, 0x91,
+	0x64, 0x16, 0xa4, 0xab, 0x33, 0xed, 0xec, 0xd6, 0x8a, 0xd5, 0xaa, 0x8b, 0x4e, 0x1e, 0x88, 0xf0,
+	0xa7, 0x50, 0x49, 0x54, 0xbc, 0x78, 0x41, 0x48, 0x6b, 0x4c, 0xe2, 0x8d, 0x27, 0xb7, 0x87, 0xbe,
+	0xe1, 0x64, 0x43, 0x65, 0x33, 0xdd, 0x9f, 0x5d, 0x37, 0xa2, 0xaa, 0xe7, 0x28, 0x1f, 0xa4, 0xf6,
+	0xb6, 0xc9, 0x88, 0x50, 0x66, 0xef, 0x2e, 0xc0, 0xd2, 0xde, 0x48, 0x42, 0x35, 0x61, 0x31, 0xe2,
+	0xa9, 0xbf, 0xd1, 0xd1, 0xc5, 0xcd, 0x9d, 0xcc, 0xdd, 0xde, 0xc9, 0xdc, 0xc3, 0x9d, 0x8c, 0xbe,
+	0x9b, 0xcb, 0xe8, 0xa7, 0xb9, 0x8c, 0x7e, 0x99, 0xcb, 0xe8, 0x66, 0x2e, 0xa3, 0xdf, 0xe6, 0x32,
+	0xfa, 0x7d, 0x2e, 0x73, 0x0f, 0x73, 0x19, 0xfd, 0x78, 0x2f, 0x73, 0x37, 0xf7, 0x32, 0x77, 0x7b,
+	0x2f, 0x73, 0x5f, 0xed, 0x5b, 0xe1, 0xb5, 0x45, 0x1b, 0x0e, 0x99, 0xbe, 0x1f, 0xe7, 0xf9, 0x1e,
+	0xfb, 0x6b, 0x4a, 0x82, 0xab, 0x60, 0x7c, 0x79, 0x59, 0x64, 0xc8, 0xe1, 0x1f, 0x01, 0x00, 0x00,
+	0xff, 0xff, 0x92, 0x92, 0x3e, 0x26, 0xc0, 0x06, 0x00, 0x00,
 }
 
-func (x DeviceCmd_Action) String() string {
-	s, ok := DeviceCmd_Action_name[int32(x)]
+func (x DeviceMetrics_UploadMethod) String() string {
+	s, ok := DeviceMetrics_UploadMethod_name[int32(x)]
 	if ok {
 		return s
 	}
@@ -607,211 +562,6 @@ func (x DeviceConnectivity_Mode) String() string {
 		return s
 	}
 	return strconv.Itoa(int(x))
-}
-func (x DeviceMetrics_DeviceMetricsUploadMethod) String() string {
-	s, ok := DeviceMetrics_DeviceMetricsUploadMethod_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (this *DeviceCmd) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DeviceCmd)
-	if !ok {
-		that2, ok := that.(DeviceCmd)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Action != that1.Action {
-		return false
-	}
-	if that1.Options == nil {
-		if this.Options != nil {
-			return false
-		}
-	} else if this.Options == nil {
-		return false
-	} else if !this.Options.Equal(that1.Options) {
-		return false
-	}
-	return true
-}
-func (this *DeviceCmd_DeviceId) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DeviceCmd_DeviceId)
-	if !ok {
-		that2, ok := that.(DeviceCmd_DeviceId)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.DeviceId != that1.DeviceId {
-		return false
-	}
-	return true
-}
-func (this *DeviceCmd_DeviceSpec) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DeviceCmd_DeviceSpec)
-	if !ok {
-		that2, ok := that.(DeviceCmd_DeviceSpec)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.DeviceSpec.Equal(that1.DeviceSpec) {
-		return false
-	}
-	return true
-}
-func (this *Device) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Device)
-	if !ok {
-		that2, ok := that.(Device)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Id != that1.Id {
-		return false
-	}
-	if !this.Connectivity.Equal(that1.Connectivity) {
-		return false
-	}
-	if len(this.Operations) != len(that1.Operations) {
-		return false
-	}
-	for i := range this.Operations {
-		if !this.Operations[i].Equal(that1.Operations[i]) {
-			return false
-		}
-	}
-	if len(this.Metrics) != len(that1.Metrics) {
-		return false
-	}
-	for i := range this.Metrics {
-		if !this.Metrics[i].Equal(that1.Metrics[i]) {
-			return false
-		}
-	}
-	if !this.UploadConnectivity.Equal(that1.UploadConnectivity) {
-		return false
-	}
-	return true
-}
-func (this *DeviceConnectivity) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DeviceConnectivity)
-	if !ok {
-		that2, ok := that.(DeviceConnectivity)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Transport != that1.Transport {
-		return false
-	}
-	if this.Mode != that1.Mode {
-		return false
-	}
-	if this.Target != that1.Target {
-		return false
-	}
-	if len(this.Params) != len(that1.Params) {
-		return false
-	}
-	for i := range this.Params {
-		if this.Params[i] != that1.Params[i] {
-			return false
-		}
-	}
-	if !this.Tls.Equal(that1.Tls) {
-		return false
-	}
-	return true
-}
-func (this *DeviceConnectivityTLSConfig) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DeviceConnectivityTLSConfig)
-	if !ok {
-		that2, ok := that.(DeviceConnectivityTLSConfig)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.CaCert, that1.CaCert) {
-		return false
-	}
-	if !bytes.Equal(this.Cert, that1.Cert) {
-		return false
-	}
-	if !bytes.Equal(this.Key, that1.Key) {
-		return false
-	}
-	return true
 }
 func (this *DeviceOperation) Equal(that interface{}) bool {
 	if that == nil {
@@ -864,7 +614,7 @@ func (this *DeviceMetrics) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Id != that1.Id {
+	if this.Name != that1.Name {
 		return false
 	}
 	if len(this.TransportParams) != len(that1.TransportParams) {
@@ -888,54 +638,242 @@ func (this *DeviceMetrics) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *DeviceCmd) GoString() string {
+func (this *DeviceConnectivityTLSConfig) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*DeviceConnectivityTLSConfig)
+	if !ok {
+		that2, ok := that.(DeviceConnectivityTLSConfig)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !bytes.Equal(this.CaCert, that1.CaCert) {
+		return false
+	}
+	if !bytes.Equal(this.Cert, that1.Cert) {
+		return false
+	}
+	if !bytes.Equal(this.Key, that1.Key) {
+		return false
+	}
+	return true
+}
+func (this *DeviceConnectivity) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*DeviceConnectivity)
+	if !ok {
+		that2, ok := that.(DeviceConnectivity)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Transport != that1.Transport {
+		return false
+	}
+	if this.Mode != that1.Mode {
+		return false
+	}
+	if this.Target != that1.Target {
+		return false
+	}
+	if len(this.Params) != len(that1.Params) {
+		return false
+	}
+	for i := range this.Params {
+		if this.Params[i] != that1.Params[i] {
+			return false
+		}
+	}
+	if !this.Tls.Equal(that1.Tls) {
+		return false
+	}
+	return true
+}
+func (this *DeviceEnsureCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*DeviceEnsureCmd)
+	if !ok {
+		that2, ok := that.(DeviceEnsureCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.DeviceId != that1.DeviceId {
+		return false
+	}
+	if !this.DeviceConnectivity.Equal(that1.DeviceConnectivity) {
+		return false
+	}
+	if !this.UploadConnectivity.Equal(that1.UploadConnectivity) {
+		return false
+	}
+	if len(this.DeviceOperations) != len(that1.DeviceOperations) {
+		return false
+	}
+	for i := range this.DeviceOperations {
+		if !this.DeviceOperations[i].Equal(that1.DeviceOperations[i]) {
+			return false
+		}
+	}
+	if len(this.DeviceMetrics) != len(that1.DeviceMetrics) {
+		return false
+	}
+	for i := range this.DeviceMetrics {
+		if !this.DeviceMetrics[i].Equal(that1.DeviceMetrics[i]) {
+			return false
+		}
+	}
+	return true
+}
+func (this *DeviceListCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*DeviceListCmd)
+	if !ok {
+		that2, ok := that.(DeviceListCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	return true
+}
+func (this *DeviceDeleteCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*DeviceDeleteCmd)
+	if !ok {
+		that2, ok := that.(DeviceDeleteCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if len(this.DeviceIds) != len(that1.DeviceIds) {
+		return false
+	}
+	for i := range this.DeviceIds {
+		if this.DeviceIds[i] != that1.DeviceIds[i] {
+			return false
+		}
+	}
+	return true
+}
+func (this *DeviceOperation) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 7)
-	s = append(s, "&aranyagopb.DeviceCmd{")
-	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
-	if this.Options != nil {
-		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
+	s := make([]string, 0, 6)
+	s = append(s, "&aranyagopb.DeviceOperation{")
+	s = append(s, "Id: "+fmt.Sprintf("%#v", this.Id)+",\n")
+	keysForTransportParams := make([]string, 0, len(this.TransportParams))
+	for k, _ := range this.TransportParams {
+		keysForTransportParams = append(keysForTransportParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForTransportParams)
+	mapStringForTransportParams := "map[string]string{"
+	for _, k := range keysForTransportParams {
+		mapStringForTransportParams += fmt.Sprintf("%#v: %#v,", k, this.TransportParams[k])
+	}
+	mapStringForTransportParams += "}"
+	if this.TransportParams != nil {
+		s = append(s, "TransportParams: "+mapStringForTransportParams+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *DeviceCmd_DeviceId) GoString() string {
+func (this *DeviceMetrics) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&aranyagopb.DeviceCmd_DeviceId{` +
-		`DeviceId:` + fmt.Sprintf("%#v", this.DeviceId) + `}`}, ", ")
-	return s
+	s := make([]string, 0, 8)
+	s = append(s, "&aranyagopb.DeviceMetrics{")
+	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
+	keysForTransportParams := make([]string, 0, len(this.TransportParams))
+	for k, _ := range this.TransportParams {
+		keysForTransportParams = append(keysForTransportParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForTransportParams)
+	mapStringForTransportParams := "map[string]string{"
+	for _, k := range keysForTransportParams {
+		mapStringForTransportParams += fmt.Sprintf("%#v: %#v,", k, this.TransportParams[k])
+	}
+	mapStringForTransportParams += "}"
+	if this.TransportParams != nil {
+		s = append(s, "TransportParams: "+mapStringForTransportParams+",\n")
+	}
+	s = append(s, "UploadMethod: "+fmt.Sprintf("%#v", this.UploadMethod)+",\n")
+	keysForUploadParams := make([]string, 0, len(this.UploadParams))
+	for k, _ := range this.UploadParams {
+		keysForUploadParams = append(keysForUploadParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForUploadParams)
+	mapStringForUploadParams := "map[string]string{"
+	for _, k := range keysForUploadParams {
+		mapStringForUploadParams += fmt.Sprintf("%#v: %#v,", k, this.UploadParams[k])
+	}
+	mapStringForUploadParams += "}"
+	if this.UploadParams != nil {
+		s = append(s, "UploadParams: "+mapStringForUploadParams+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
 }
-func (this *DeviceCmd_DeviceSpec) GoString() string {
+func (this *DeviceConnectivityTLSConfig) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&aranyagopb.DeviceCmd_DeviceSpec{` +
-		`DeviceSpec:` + fmt.Sprintf("%#v", this.DeviceSpec) + `}`}, ", ")
-	return s
-}
-func (this *Device) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&aranyagopb.Device{")
-	s = append(s, "Id: "+fmt.Sprintf("%#v", this.Id)+",\n")
-	if this.Connectivity != nil {
-		s = append(s, "Connectivity: "+fmt.Sprintf("%#v", this.Connectivity)+",\n")
-	}
-	if this.Operations != nil {
-		s = append(s, "Operations: "+fmt.Sprintf("%#v", this.Operations)+",\n")
-	}
-	if this.Metrics != nil {
-		s = append(s, "Metrics: "+fmt.Sprintf("%#v", this.Metrics)+",\n")
-	}
-	if this.UploadConnectivity != nil {
-		s = append(s, "UploadConnectivity: "+fmt.Sprintf("%#v", this.UploadConnectivity)+",\n")
-	}
+	s := make([]string, 0, 7)
+	s = append(s, "&aranyagopb.DeviceConnectivityTLSConfig{")
+	s = append(s, "CaCert: "+fmt.Sprintf("%#v", this.CaCert)+",\n")
+	s = append(s, "Cert: "+fmt.Sprintf("%#v", this.Cert)+",\n")
+	s = append(s, "Key: "+fmt.Sprintf("%#v", this.Key)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -967,75 +905,44 @@ func (this *DeviceConnectivity) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *DeviceConnectivityTLSConfig) GoString() string {
+func (this *DeviceEnsureCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 7)
-	s = append(s, "&aranyagopb.DeviceConnectivityTLSConfig{")
-	s = append(s, "CaCert: "+fmt.Sprintf("%#v", this.CaCert)+",\n")
-	s = append(s, "Cert: "+fmt.Sprintf("%#v", this.Cert)+",\n")
-	s = append(s, "Key: "+fmt.Sprintf("%#v", this.Key)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DeviceOperation) GoString() string {
-	if this == nil {
-		return "nil"
+	s := make([]string, 0, 9)
+	s = append(s, "&aranyagopb.DeviceEnsureCmd{")
+	s = append(s, "DeviceId: "+fmt.Sprintf("%#v", this.DeviceId)+",\n")
+	if this.DeviceConnectivity != nil {
+		s = append(s, "DeviceConnectivity: "+fmt.Sprintf("%#v", this.DeviceConnectivity)+",\n")
 	}
-	s := make([]string, 0, 6)
-	s = append(s, "&aranyagopb.DeviceOperation{")
-	s = append(s, "Id: "+fmt.Sprintf("%#v", this.Id)+",\n")
-	keysForTransportParams := make([]string, 0, len(this.TransportParams))
-	for k, _ := range this.TransportParams {
-		keysForTransportParams = append(keysForTransportParams, k)
+	if this.UploadConnectivity != nil {
+		s = append(s, "UploadConnectivity: "+fmt.Sprintf("%#v", this.UploadConnectivity)+",\n")
 	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForTransportParams)
-	mapStringForTransportParams := "map[string]string{"
-	for _, k := range keysForTransportParams {
-		mapStringForTransportParams += fmt.Sprintf("%#v: %#v,", k, this.TransportParams[k])
+	if this.DeviceOperations != nil {
+		s = append(s, "DeviceOperations: "+fmt.Sprintf("%#v", this.DeviceOperations)+",\n")
 	}
-	mapStringForTransportParams += "}"
-	if this.TransportParams != nil {
-		s = append(s, "TransportParams: "+mapStringForTransportParams+",\n")
+	if this.DeviceMetrics != nil {
+		s = append(s, "DeviceMetrics: "+fmt.Sprintf("%#v", this.DeviceMetrics)+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *DeviceMetrics) GoString() string {
+func (this *DeviceListCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 8)
-	s = append(s, "&aranyagopb.DeviceMetrics{")
-	s = append(s, "Id: "+fmt.Sprintf("%#v", this.Id)+",\n")
-	keysForTransportParams := make([]string, 0, len(this.TransportParams))
-	for k, _ := range this.TransportParams {
-		keysForTransportParams = append(keysForTransportParams, k)
+	s := make([]string, 0, 4)
+	s = append(s, "&aranyagopb.DeviceListCmd{")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *DeviceDeleteCmd) GoString() string {
+	if this == nil {
+		return "nil"
 	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForTransportParams)
-	mapStringForTransportParams := "map[string]string{"
-	for _, k := range keysForTransportParams {
-		mapStringForTransportParams += fmt.Sprintf("%#v: %#v,", k, this.TransportParams[k])
-	}
-	mapStringForTransportParams += "}"
-	if this.TransportParams != nil {
-		s = append(s, "TransportParams: "+mapStringForTransportParams+",\n")
-	}
-	s = append(s, "UploadMethod: "+fmt.Sprintf("%#v", this.UploadMethod)+",\n")
-	keysForUploadParams := make([]string, 0, len(this.UploadParams))
-	for k, _ := range this.UploadParams {
-		keysForUploadParams = append(keysForUploadParams, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForUploadParams)
-	mapStringForUploadParams := "map[string]string{"
-	for _, k := range keysForUploadParams {
-		mapStringForUploadParams += fmt.Sprintf("%#v: %#v,", k, this.UploadParams[k])
-	}
-	mapStringForUploadParams += "}"
-	if this.UploadParams != nil {
-		s = append(s, "UploadParams: "+mapStringForUploadParams+",\n")
-	}
+	s := make([]string, 0, 5)
+	s = append(s, "&aranyagopb.DeviceDeleteCmd{")
+	s = append(s, "DeviceIds: "+fmt.Sprintf("%#v", this.DeviceIds)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -1047,277 +954,6 @@ func valueToGoStringCmdDevice(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func (m *DeviceCmd) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *DeviceCmd) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DeviceCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Options != nil {
-		{
-			size := m.Options.Size()
-			i -= size
-			if _, err := m.Options.MarshalTo(dAtA[i:]); err != nil {
-				return 0, err
-			}
-		}
-	}
-	if m.Action != 0 {
-		i = encodeVarintCmdDevice(dAtA, i, uint64(m.Action))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *DeviceCmd_DeviceId) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DeviceCmd_DeviceId) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	i -= len(m.DeviceId)
-	copy(dAtA[i:], m.DeviceId)
-	i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.DeviceId)))
-	i--
-	dAtA[i] = 0x12
-	return len(dAtA) - i, nil
-}
-func (m *DeviceCmd_DeviceSpec) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DeviceCmd_DeviceSpec) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.DeviceSpec != nil {
-		{
-			size, err := m.DeviceSpec.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintCmdDevice(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x1a
-	}
-	return len(dAtA) - i, nil
-}
-func (m *Device) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Device) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Device) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.UploadConnectivity != nil {
-		{
-			size, err := m.UploadConnectivity.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintCmdDevice(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x2a
-	}
-	if len(m.Metrics) > 0 {
-		for iNdEx := len(m.Metrics) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Metrics[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintCmdDevice(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x22
-		}
-	}
-	if len(m.Operations) > 0 {
-		for iNdEx := len(m.Operations) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Operations[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintCmdDevice(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x1a
-		}
-	}
-	if m.Connectivity != nil {
-		{
-			size, err := m.Connectivity.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintCmdDevice(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Id) > 0 {
-		i -= len(m.Id)
-		copy(dAtA[i:], m.Id)
-		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.Id)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *DeviceConnectivity) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *DeviceConnectivity) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DeviceConnectivity) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Tls != nil {
-		{
-			size, err := m.Tls.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintCmdDevice(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x2a
-	}
-	if len(m.Params) > 0 {
-		for k := range m.Params {
-			v := m.Params[k]
-			baseI := i
-			i -= len(v)
-			copy(dAtA[i:], v)
-			i = encodeVarintCmdDevice(dAtA, i, uint64(len(v)))
-			i--
-			dAtA[i] = 0x12
-			i -= len(k)
-			copy(dAtA[i:], k)
-			i = encodeVarintCmdDevice(dAtA, i, uint64(len(k)))
-			i--
-			dAtA[i] = 0xa
-			i = encodeVarintCmdDevice(dAtA, i, uint64(baseI-i))
-			i--
-			dAtA[i] = 0x22
-		}
-	}
-	if len(m.Target) > 0 {
-		i -= len(m.Target)
-		copy(dAtA[i:], m.Target)
-		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.Target)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if m.Mode != 0 {
-		i = encodeVarintCmdDevice(dAtA, i, uint64(m.Mode))
-		i--
-		dAtA[i] = 0x10
-	}
-	if len(m.Transport) > 0 {
-		i -= len(m.Transport)
-		copy(dAtA[i:], m.Transport)
-		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.Transport)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *DeviceConnectivityTLSConfig) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *DeviceConnectivityTLSConfig) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DeviceConnectivityTLSConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Key) > 0 {
-		i -= len(m.Key)
-		copy(dAtA[i:], m.Key)
-		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.Key)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.Cert) > 0 {
-		i -= len(m.Cert)
-		copy(dAtA[i:], m.Cert)
-		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.Cert)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.CaCert) > 0 {
-		i -= len(m.CaCert)
-		copy(dAtA[i:], m.CaCert)
-		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.CaCert)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *DeviceOperation) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1430,12 +1066,266 @@ func (m *DeviceMetrics) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			dAtA[i] = 0x12
 		}
 	}
-	if len(m.Id) > 0 {
-		i -= len(m.Id)
-		copy(dAtA[i:], m.Id)
-		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.Id)))
+	if len(m.Name) > 0 {
+		i -= len(m.Name)
+		copy(dAtA[i:], m.Name)
+		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.Name)))
 		i--
 		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DeviceConnectivityTLSConfig) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DeviceConnectivityTLSConfig) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DeviceConnectivityTLSConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Key) > 0 {
+		i -= len(m.Key)
+		copy(dAtA[i:], m.Key)
+		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.Key)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Cert) > 0 {
+		i -= len(m.Cert)
+		copy(dAtA[i:], m.Cert)
+		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.Cert)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.CaCert) > 0 {
+		i -= len(m.CaCert)
+		copy(dAtA[i:], m.CaCert)
+		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.CaCert)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DeviceConnectivity) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DeviceConnectivity) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DeviceConnectivity) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Tls != nil {
+		{
+			size, err := m.Tls.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintCmdDevice(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Params) > 0 {
+		for k := range m.Params {
+			v := m.Params[k]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintCmdDevice(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintCmdDevice(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintCmdDevice(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x22
+		}
+	}
+	if len(m.Target) > 0 {
+		i -= len(m.Target)
+		copy(dAtA[i:], m.Target)
+		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.Target)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.Mode != 0 {
+		i = encodeVarintCmdDevice(dAtA, i, uint64(m.Mode))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.Transport) > 0 {
+		i -= len(m.Transport)
+		copy(dAtA[i:], m.Transport)
+		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.Transport)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DeviceEnsureCmd) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DeviceEnsureCmd) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DeviceEnsureCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.DeviceMetrics) > 0 {
+		for iNdEx := len(m.DeviceMetrics) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.DeviceMetrics[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintCmdDevice(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
+	if len(m.DeviceOperations) > 0 {
+		for iNdEx := len(m.DeviceOperations) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.DeviceOperations[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintCmdDevice(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x22
+		}
+	}
+	if m.UploadConnectivity != nil {
+		{
+			size, err := m.UploadConnectivity.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintCmdDevice(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.DeviceConnectivity != nil {
+		{
+			size, err := m.DeviceConnectivity.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintCmdDevice(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.DeviceId) > 0 {
+		i -= len(m.DeviceId)
+		copy(dAtA[i:], m.DeviceId)
+		i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.DeviceId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DeviceListCmd) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DeviceListCmd) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DeviceListCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *DeviceDeleteCmd) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DeviceDeleteCmd) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DeviceDeleteCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.DeviceIds) > 0 {
+		for iNdEx := len(m.DeviceIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.DeviceIds[iNdEx])
+			copy(dAtA[i:], m.DeviceIds[iNdEx])
+			i = encodeVarintCmdDevice(dAtA, i, uint64(len(m.DeviceIds[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
@@ -1451,44 +1341,7 @@ func encodeVarintCmdDevice(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *DeviceCmd) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Action != 0 {
-		n += 1 + sovCmdDevice(uint64(m.Action))
-	}
-	if m.Options != nil {
-		n += m.Options.Size()
-	}
-	return n
-}
-
-func (m *DeviceCmd_DeviceId) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.DeviceId)
-	n += 1 + l + sovCmdDevice(uint64(l))
-	return n
-}
-func (m *DeviceCmd_DeviceSpec) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.DeviceSpec != nil {
-		l = m.DeviceSpec.Size()
-		n += 1 + l + sovCmdDevice(uint64(l))
-	}
-	return n
-}
-func (m *Device) Size() (n int) {
+func (m *DeviceOperation) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1498,24 +1351,65 @@ func (m *Device) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCmdDevice(uint64(l))
 	}
-	if m.Connectivity != nil {
-		l = m.Connectivity.Size()
+	if len(m.TransportParams) > 0 {
+		for k, v := range m.TransportParams {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovCmdDevice(uint64(len(k))) + 1 + len(v) + sovCmdDevice(uint64(len(v)))
+			n += mapEntrySize + 1 + sovCmdDevice(uint64(mapEntrySize))
+		}
+	}
+	return n
+}
+
+func (m *DeviceMetrics) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Name)
+	if l > 0 {
 		n += 1 + l + sovCmdDevice(uint64(l))
 	}
-	if len(m.Operations) > 0 {
-		for _, e := range m.Operations {
-			l = e.Size()
-			n += 1 + l + sovCmdDevice(uint64(l))
+	if len(m.TransportParams) > 0 {
+		for k, v := range m.TransportParams {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovCmdDevice(uint64(len(k))) + 1 + len(v) + sovCmdDevice(uint64(len(v)))
+			n += mapEntrySize + 1 + sovCmdDevice(uint64(mapEntrySize))
 		}
 	}
-	if len(m.Metrics) > 0 {
-		for _, e := range m.Metrics {
-			l = e.Size()
-			n += 1 + l + sovCmdDevice(uint64(l))
+	if m.UploadMethod != 0 {
+		n += 1 + sovCmdDevice(uint64(m.UploadMethod))
+	}
+	if len(m.UploadParams) > 0 {
+		for k, v := range m.UploadParams {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovCmdDevice(uint64(len(k))) + 1 + len(v) + sovCmdDevice(uint64(len(v)))
+			n += mapEntrySize + 1 + sovCmdDevice(uint64(mapEntrySize))
 		}
 	}
-	if m.UploadConnectivity != nil {
-		l = m.UploadConnectivity.Size()
+	return n
+}
+
+func (m *DeviceConnectivityTLSConfig) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.CaCert)
+	if l > 0 {
+		n += 1 + l + sovCmdDevice(uint64(l))
+	}
+	l = len(m.Cert)
+	if l > 0 {
+		n += 1 + l + sovCmdDevice(uint64(l))
+	}
+	l = len(m.Key)
+	if l > 0 {
 		n += 1 + l + sovCmdDevice(uint64(l))
 	}
 	return n
@@ -1553,75 +1447,58 @@ func (m *DeviceConnectivity) Size() (n int) {
 	return n
 }
 
-func (m *DeviceConnectivityTLSConfig) Size() (n int) {
+func (m *DeviceEnsureCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.CaCert)
+	l = len(m.DeviceId)
 	if l > 0 {
 		n += 1 + l + sovCmdDevice(uint64(l))
 	}
-	l = len(m.Cert)
-	if l > 0 {
+	if m.DeviceConnectivity != nil {
+		l = m.DeviceConnectivity.Size()
 		n += 1 + l + sovCmdDevice(uint64(l))
 	}
-	l = len(m.Key)
-	if l > 0 {
+	if m.UploadConnectivity != nil {
+		l = m.UploadConnectivity.Size()
 		n += 1 + l + sovCmdDevice(uint64(l))
 	}
-	return n
-}
-
-func (m *DeviceOperation) Size() (n int) {
-	if m == nil {
-		return 0
+	if len(m.DeviceOperations) > 0 {
+		for _, e := range m.DeviceOperations {
+			l = e.Size()
+			n += 1 + l + sovCmdDevice(uint64(l))
+		}
 	}
-	var l int
-	_ = l
-	l = len(m.Id)
-	if l > 0 {
-		n += 1 + l + sovCmdDevice(uint64(l))
-	}
-	if len(m.TransportParams) > 0 {
-		for k, v := range m.TransportParams {
-			_ = k
-			_ = v
-			mapEntrySize := 1 + len(k) + sovCmdDevice(uint64(len(k))) + 1 + len(v) + sovCmdDevice(uint64(len(v)))
-			n += mapEntrySize + 1 + sovCmdDevice(uint64(mapEntrySize))
+	if len(m.DeviceMetrics) > 0 {
+		for _, e := range m.DeviceMetrics {
+			l = e.Size()
+			n += 1 + l + sovCmdDevice(uint64(l))
 		}
 	}
 	return n
 }
 
-func (m *DeviceMetrics) Size() (n int) {
+func (m *DeviceListCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.Id)
-	if l > 0 {
-		n += 1 + l + sovCmdDevice(uint64(l))
+	return n
+}
+
+func (m *DeviceDeleteCmd) Size() (n int) {
+	if m == nil {
+		return 0
 	}
-	if len(m.TransportParams) > 0 {
-		for k, v := range m.TransportParams {
-			_ = k
-			_ = v
-			mapEntrySize := 1 + len(k) + sovCmdDevice(uint64(len(k))) + 1 + len(v) + sovCmdDevice(uint64(len(v)))
-			n += mapEntrySize + 1 + sovCmdDevice(uint64(mapEntrySize))
-		}
-	}
-	if m.UploadMethod != 0 {
-		n += 1 + sovCmdDevice(uint64(m.UploadMethod))
-	}
-	if len(m.UploadParams) > 0 {
-		for k, v := range m.UploadParams {
-			_ = k
-			_ = v
-			mapEntrySize := 1 + len(k) + sovCmdDevice(uint64(len(k))) + 1 + len(v) + sovCmdDevice(uint64(len(v)))
-			n += mapEntrySize + 1 + sovCmdDevice(uint64(mapEntrySize))
+	var l int
+	_ = l
+	if len(m.DeviceIds) > 0 {
+		for _, s := range m.DeviceIds {
+			l = len(s)
+			n += 1 + l + sovCmdDevice(uint64(l))
 		}
 	}
 	return n
@@ -1632,97 +1509,6 @@ func sovCmdDevice(x uint64) (n int) {
 }
 func sozCmdDevice(x uint64) (n int) {
 	return sovCmdDevice(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *DeviceCmd) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DeviceCmd{`,
-		`Action:` + fmt.Sprintf("%v", this.Action) + `,`,
-		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DeviceCmd_DeviceId) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DeviceCmd_DeviceId{`,
-		`DeviceId:` + fmt.Sprintf("%v", this.DeviceId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DeviceCmd_DeviceSpec) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DeviceCmd_DeviceSpec{`,
-		`DeviceSpec:` + strings.Replace(fmt.Sprintf("%v", this.DeviceSpec), "Device", "Device", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Device) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForOperations := "[]*DeviceOperation{"
-	for _, f := range this.Operations {
-		repeatedStringForOperations += strings.Replace(f.String(), "DeviceOperation", "DeviceOperation", 1) + ","
-	}
-	repeatedStringForOperations += "}"
-	repeatedStringForMetrics := "[]*DeviceMetrics{"
-	for _, f := range this.Metrics {
-		repeatedStringForMetrics += strings.Replace(f.String(), "DeviceMetrics", "DeviceMetrics", 1) + ","
-	}
-	repeatedStringForMetrics += "}"
-	s := strings.Join([]string{`&Device{`,
-		`Id:` + fmt.Sprintf("%v", this.Id) + `,`,
-		`Connectivity:` + strings.Replace(this.Connectivity.String(), "DeviceConnectivity", "DeviceConnectivity", 1) + `,`,
-		`Operations:` + repeatedStringForOperations + `,`,
-		`Metrics:` + repeatedStringForMetrics + `,`,
-		`UploadConnectivity:` + strings.Replace(this.UploadConnectivity.String(), "DeviceConnectivity", "DeviceConnectivity", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DeviceConnectivity) String() string {
-	if this == nil {
-		return "nil"
-	}
-	keysForParams := make([]string, 0, len(this.Params))
-	for k, _ := range this.Params {
-		keysForParams = append(keysForParams, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForParams)
-	mapStringForParams := "map[string]string{"
-	for _, k := range keysForParams {
-		mapStringForParams += fmt.Sprintf("%v: %v,", k, this.Params[k])
-	}
-	mapStringForParams += "}"
-	s := strings.Join([]string{`&DeviceConnectivity{`,
-		`Transport:` + fmt.Sprintf("%v", this.Transport) + `,`,
-		`Mode:` + fmt.Sprintf("%v", this.Mode) + `,`,
-		`Target:` + fmt.Sprintf("%v", this.Target) + `,`,
-		`Params:` + mapStringForParams + `,`,
-		`Tls:` + strings.Replace(this.Tls.String(), "DeviceConnectivityTLSConfig", "DeviceConnectivityTLSConfig", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DeviceConnectivityTLSConfig) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DeviceConnectivityTLSConfig{`,
-		`CaCert:` + fmt.Sprintf("%v", this.CaCert) + `,`,
-		`Cert:` + fmt.Sprintf("%v", this.Cert) + `,`,
-		`Key:` + fmt.Sprintf("%v", this.Key) + `,`,
-		`}`,
-	}, "")
-	return s
 }
 func (this *DeviceOperation) String() string {
 	if this == nil {
@@ -1770,10 +1556,89 @@ func (this *DeviceMetrics) String() string {
 	}
 	mapStringForUploadParams += "}"
 	s := strings.Join([]string{`&DeviceMetrics{`,
-		`Id:` + fmt.Sprintf("%v", this.Id) + `,`,
+		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
 		`TransportParams:` + mapStringForTransportParams + `,`,
 		`UploadMethod:` + fmt.Sprintf("%v", this.UploadMethod) + `,`,
 		`UploadParams:` + mapStringForUploadParams + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *DeviceConnectivityTLSConfig) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&DeviceConnectivityTLSConfig{`,
+		`CaCert:` + fmt.Sprintf("%v", this.CaCert) + `,`,
+		`Cert:` + fmt.Sprintf("%v", this.Cert) + `,`,
+		`Key:` + fmt.Sprintf("%v", this.Key) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *DeviceConnectivity) String() string {
+	if this == nil {
+		return "nil"
+	}
+	keysForParams := make([]string, 0, len(this.Params))
+	for k, _ := range this.Params {
+		keysForParams = append(keysForParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForParams)
+	mapStringForParams := "map[string]string{"
+	for _, k := range keysForParams {
+		mapStringForParams += fmt.Sprintf("%v: %v,", k, this.Params[k])
+	}
+	mapStringForParams += "}"
+	s := strings.Join([]string{`&DeviceConnectivity{`,
+		`Transport:` + fmt.Sprintf("%v", this.Transport) + `,`,
+		`Mode:` + fmt.Sprintf("%v", this.Mode) + `,`,
+		`Target:` + fmt.Sprintf("%v", this.Target) + `,`,
+		`Params:` + mapStringForParams + `,`,
+		`Tls:` + strings.Replace(this.Tls.String(), "DeviceConnectivityTLSConfig", "DeviceConnectivityTLSConfig", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *DeviceEnsureCmd) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForDeviceOperations := "[]*DeviceOperation{"
+	for _, f := range this.DeviceOperations {
+		repeatedStringForDeviceOperations += strings.Replace(f.String(), "DeviceOperation", "DeviceOperation", 1) + ","
+	}
+	repeatedStringForDeviceOperations += "}"
+	repeatedStringForDeviceMetrics := "[]*DeviceMetrics{"
+	for _, f := range this.DeviceMetrics {
+		repeatedStringForDeviceMetrics += strings.Replace(f.String(), "DeviceMetrics", "DeviceMetrics", 1) + ","
+	}
+	repeatedStringForDeviceMetrics += "}"
+	s := strings.Join([]string{`&DeviceEnsureCmd{`,
+		`DeviceId:` + fmt.Sprintf("%v", this.DeviceId) + `,`,
+		`DeviceConnectivity:` + strings.Replace(this.DeviceConnectivity.String(), "DeviceConnectivity", "DeviceConnectivity", 1) + `,`,
+		`UploadConnectivity:` + strings.Replace(this.UploadConnectivity.String(), "DeviceConnectivity", "DeviceConnectivity", 1) + `,`,
+		`DeviceOperations:` + repeatedStringForDeviceOperations + `,`,
+		`DeviceMetrics:` + repeatedStringForDeviceMetrics + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *DeviceListCmd) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&DeviceListCmd{`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *DeviceDeleteCmd) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&DeviceDeleteCmd{`,
+		`DeviceIds:` + fmt.Sprintf("%v", this.DeviceIds) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1786,7 +1651,7 @@ func valueToStringCmdDevice(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
-func (m *DeviceCmd) Unmarshal(dAtA []byte) error {
+func (m *DeviceOperation) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1809,149 +1674,10 @@ func (m *DeviceCmd) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: DeviceCmd: wiretype end group for non-group")
+			return fmt.Errorf("proto: DeviceOperation: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: DeviceCmd: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Action", wireType)
-			}
-			m.Action = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDevice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Action |= DeviceCmd_Action(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DeviceId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDevice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Options = &DeviceCmd_DeviceId{string(dAtA[iNdEx:postIndex])}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DeviceSpec", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDevice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &Device{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Options = &DeviceCmd_DeviceSpec{v}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipCmdDevice(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Device) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowCmdDevice
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Device: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Device: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: DeviceOperation: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1988,7 +1714,7 @@ func (m *Device) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Connectivity", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field TransportParams", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -2015,18 +1741,588 @@ func (m *Device) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Connectivity == nil {
-				m.Connectivity = &DeviceConnectivity{}
+			if m.TransportParams == nil {
+				m.TransportParams = make(map[string]string)
 			}
-			if err := m.Connectivity.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowCmdDevice
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowCmdDevice
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowCmdDevice
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipCmdDevice(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if skippy < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.TransportParams[mapkey] = mapvalue
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCmdDevice(dAtA[iNdEx:])
+			if err != nil {
 				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DeviceMetrics) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCmdDevice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DeviceMetrics: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DeviceMetrics: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDevice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TransportParams", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDevice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.TransportParams == nil {
+				m.TransportParams = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowCmdDevice
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowCmdDevice
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowCmdDevice
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipCmdDevice(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if skippy < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.TransportParams[mapkey] = mapvalue
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UploadMethod", wireType)
+			}
+			m.UploadMethod = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDevice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.UploadMethod |= DeviceMetrics_UploadMethod(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UploadParams", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDevice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.UploadParams == nil {
+				m.UploadParams = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowCmdDevice
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowCmdDevice
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowCmdDevice
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipCmdDevice(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if skippy < 0 {
+						return ErrInvalidLengthCmdDevice
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.UploadParams[mapkey] = mapvalue
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCmdDevice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DeviceConnectivityTLSConfig) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCmdDevice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DeviceConnectivityTLSConfig: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DeviceConnectivityTLSConfig: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CaCert", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDevice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.CaCert = append(m.CaCert[:0], dAtA[iNdEx:postIndex]...)
+			if m.CaCert == nil {
+				m.CaCert = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Cert", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDevice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Cert = append(m.Cert[:0], dAtA[iNdEx:postIndex]...)
+			if m.Cert == nil {
+				m.Cert = []byte{}
 			}
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Operations", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
 			}
-			var msglen int
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowCmdDevice
@@ -2036,94 +2332,24 @@ func (m *Device) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				msglen |= int(b&0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if msglen < 0 {
+			if byteLen < 0 {
 				return ErrInvalidLengthCmdDevice
 			}
-			postIndex := iNdEx + msglen
+			postIndex := iNdEx + byteLen
 			if postIndex < 0 {
 				return ErrInvalidLengthCmdDevice
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Operations = append(m.Operations, &DeviceOperation{})
-			if err := m.Operations[len(m.Operations)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Metrics", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDevice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Metrics = append(m.Metrics, &DeviceMetrics{})
-			if err := m.Metrics[len(m.Metrics)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UploadConnectivity", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDevice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.UploadConnectivity == nil {
-				m.UploadConnectivity = &DeviceConnectivity{}
-			}
-			if err := m.UploadConnectivity.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
+			m.Key = append(m.Key[:0], dAtA[iNdEx:postIndex]...)
+			if m.Key == nil {
+				m.Key = []byte{}
 			}
 			iNdEx = postIndex
 		default:
@@ -2449,7 +2675,7 @@ func (m *DeviceConnectivity) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *DeviceConnectivityTLSConfig) Unmarshal(dAtA []byte) error {
+func (m *DeviceEnsureCmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2472,170 +2698,15 @@ func (m *DeviceConnectivityTLSConfig) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: DeviceConnectivityTLSConfig: wiretype end group for non-group")
+			return fmt.Errorf("proto: DeviceEnsureCmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: DeviceConnectivityTLSConfig: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: DeviceEnsureCmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CaCert", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDevice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.CaCert = append(m.CaCert[:0], dAtA[iNdEx:postIndex]...)
-			if m.CaCert == nil {
-				m.CaCert = []byte{}
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Cert", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDevice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Cert = append(m.Cert[:0], dAtA[iNdEx:postIndex]...)
-			if m.Cert == nil {
-				m.Cert = []byte{}
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDevice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Key = append(m.Key[:0], dAtA[iNdEx:postIndex]...)
-			if m.Key == nil {
-				m.Key = []byte{}
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipCmdDevice(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *DeviceOperation) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowCmdDevice
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: DeviceOperation: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: DeviceOperation: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field DeviceId", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -2663,11 +2734,11 @@ func (m *DeviceOperation) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Id = string(dAtA[iNdEx:postIndex])
+			m.DeviceId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TransportParams", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field DeviceConnectivity", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -2694,192 +2765,16 @@ func (m *DeviceOperation) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.TransportParams == nil {
-				m.TransportParams = make(map[string]string)
+			if m.DeviceConnectivity == nil {
+				m.DeviceConnectivity = &DeviceConnectivity{}
 			}
-			var mapkey string
-			var mapvalue string
-			for iNdEx < postIndex {
-				entryPreIndex := iNdEx
-				var wire uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowCmdDevice
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					wire |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				fieldNum := int32(wire >> 3)
-				if fieldNum == 1 {
-					var stringLenmapkey uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowCmdDevice
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapkey |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapkey := int(stringLenmapkey)
-					if intStringLenmapkey < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					postStringIndexmapkey := iNdEx + intStringLenmapkey
-					if postStringIndexmapkey < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					if postStringIndexmapkey > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
-					iNdEx = postStringIndexmapkey
-				} else if fieldNum == 2 {
-					var stringLenmapvalue uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowCmdDevice
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapvalue |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapvalue := int(stringLenmapvalue)
-					if intStringLenmapvalue < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
-					if postStringIndexmapvalue < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					if postStringIndexmapvalue > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
-					iNdEx = postStringIndexmapvalue
-				} else {
-					iNdEx = entryPreIndex
-					skippy, err := skipCmdDevice(dAtA[iNdEx:])
-					if err != nil {
-						return err
-					}
-					if skippy < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					if (iNdEx + skippy) > postIndex {
-						return io.ErrUnexpectedEOF
-					}
-					iNdEx += skippy
-				}
-			}
-			m.TransportParams[mapkey] = mapvalue
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipCmdDevice(dAtA[iNdEx:])
-			if err != nil {
+			if err := m.DeviceConnectivity.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *DeviceMetrics) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowCmdDevice
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: DeviceMetrics: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: DeviceMetrics: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDevice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdDevice
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Id = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 2:
+		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TransportParams", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field UploadConnectivity", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -2906,126 +2801,16 @@ func (m *DeviceMetrics) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.TransportParams == nil {
-				m.TransportParams = make(map[string]string)
+			if m.UploadConnectivity == nil {
+				m.UploadConnectivity = &DeviceConnectivity{}
 			}
-			var mapkey string
-			var mapvalue string
-			for iNdEx < postIndex {
-				entryPreIndex := iNdEx
-				var wire uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowCmdDevice
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					wire |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				fieldNum := int32(wire >> 3)
-				if fieldNum == 1 {
-					var stringLenmapkey uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowCmdDevice
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapkey |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapkey := int(stringLenmapkey)
-					if intStringLenmapkey < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					postStringIndexmapkey := iNdEx + intStringLenmapkey
-					if postStringIndexmapkey < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					if postStringIndexmapkey > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
-					iNdEx = postStringIndexmapkey
-				} else if fieldNum == 2 {
-					var stringLenmapvalue uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowCmdDevice
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapvalue |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapvalue := int(stringLenmapvalue)
-					if intStringLenmapvalue < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
-					if postStringIndexmapvalue < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					if postStringIndexmapvalue > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
-					iNdEx = postStringIndexmapvalue
-				} else {
-					iNdEx = entryPreIndex
-					skippy, err := skipCmdDevice(dAtA[iNdEx:])
-					if err != nil {
-						return err
-					}
-					if skippy < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					if (iNdEx + skippy) > postIndex {
-						return io.ErrUnexpectedEOF
-					}
-					iNdEx += skippy
-				}
+			if err := m.UploadConnectivity.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
-			m.TransportParams[mapkey] = mapvalue
 			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UploadMethod", wireType)
-			}
-			m.UploadMethod = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDevice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.UploadMethod |= DeviceMetrics_DeviceMetricsUploadMethod(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UploadParams", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field DeviceOperations", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -3052,103 +2837,182 @@ func (m *DeviceMetrics) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.UploadParams == nil {
-				m.UploadParams = make(map[string]string)
+			m.DeviceOperations = append(m.DeviceOperations, &DeviceOperation{})
+			if err := m.DeviceOperations[len(m.DeviceOperations)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
-			var mapkey string
-			var mapvalue string
-			for iNdEx < postIndex {
-				entryPreIndex := iNdEx
-				var wire uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowCmdDevice
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					wire |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DeviceMetrics", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDevice
 				}
-				fieldNum := int32(wire >> 3)
-				if fieldNum == 1 {
-					var stringLenmapkey uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowCmdDevice
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapkey |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapkey := int(stringLenmapkey)
-					if intStringLenmapkey < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					postStringIndexmapkey := iNdEx + intStringLenmapkey
-					if postStringIndexmapkey < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					if postStringIndexmapkey > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
-					iNdEx = postStringIndexmapkey
-				} else if fieldNum == 2 {
-					var stringLenmapvalue uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowCmdDevice
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapvalue |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapvalue := int(stringLenmapvalue)
-					if intStringLenmapvalue < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
-					if postStringIndexmapvalue < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					if postStringIndexmapvalue > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
-					iNdEx = postStringIndexmapvalue
-				} else {
-					iNdEx = entryPreIndex
-					skippy, err := skipCmdDevice(dAtA[iNdEx:])
-					if err != nil {
-						return err
-					}
-					if skippy < 0 {
-						return ErrInvalidLengthCmdDevice
-					}
-					if (iNdEx + skippy) > postIndex {
-						return io.ErrUnexpectedEOF
-					}
-					iNdEx += skippy
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
 				}
 			}
-			m.UploadParams[mapkey] = mapvalue
+			if msglen < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DeviceMetrics = append(m.DeviceMetrics, &DeviceMetrics{})
+			if err := m.DeviceMetrics[len(m.DeviceMetrics)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCmdDevice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DeviceListCmd) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCmdDevice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DeviceListCmd: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DeviceListCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCmdDevice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DeviceDeleteCmd) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCmdDevice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DeviceDeleteCmd: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DeviceDeleteCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DeviceIds", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDevice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDevice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DeviceIds = append(m.DeviceIds, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

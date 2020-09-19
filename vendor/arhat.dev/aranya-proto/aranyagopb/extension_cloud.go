@@ -18,12 +18,12 @@ limitations under the License.
 
 package aranyagopb
 
-func (m *Msg) GetError() *Error {
-	if m.Kind != MSG_ERROR {
+func (m *Msg) GetError() *ErrorMsg {
+	if m.Header.Kind != MSG_ERROR {
 		return nil
 	}
 
-	err := new(Error)
+	err := new(ErrorMsg)
 	if e := err.Unmarshal(m.Body); e != nil {
 		return nil
 	}
@@ -40,12 +40,12 @@ func (m *Msg) GetError() *Error {
 	}
 }
 
-func (m *Msg) GetStorageStatus() *StorageStatus {
-	if m.Kind != MSG_STORAGE {
+func (m *Msg) GetStorageStatus() *StorageStatusMsg {
+	if m.Header.Kind != MSG_STORAGE_STATUS {
 		return nil
 	}
 
-	ss := new(StorageStatus)
+	ss := new(StorageStatusMsg)
 	if err := ss.Unmarshal(m.Body); err != nil {
 		return nil
 	}
@@ -53,12 +53,12 @@ func (m *Msg) GetStorageStatus() *StorageStatus {
 	return ss
 }
 
-func (m *Msg) GetStorageStatusList() *StorageStatusList {
-	if m.Kind != MSG_STORAGE {
+func (m *Msg) GetStorageStatusList() *StorageStatusListMsg {
+	if m.Header.Kind != MSG_STORAGE_STATUS_LIST {
 		return nil
 	}
 
-	ssl := new(StorageStatusList)
+	ssl := new(StorageStatusListMsg)
 	if err := ssl.Unmarshal(m.Body); err != nil {
 		return nil
 	}
@@ -66,25 +66,22 @@ func (m *Msg) GetStorageStatusList() *StorageStatusList {
 	return ssl
 }
 
-func (m *Msg) GetData() *Data {
-	if m.Kind != MSG_DATA {
+func (m *Msg) GetData() []byte {
+	switch m.Header.Kind {
+	case MSG_DATA_STDOUT, MSG_DATA_STDERR, MSG_DATA_METRICS:
+	default:
 		return nil
 	}
 
-	d := new(Data)
-	if err := d.Unmarshal(m.Body); err != nil {
-		return nil
-	}
-
-	return d
+	return m.Body
 }
 
-func (m *Msg) GetState() *State {
-	if m.Kind != MSG_STATE {
+func (m *Msg) GetState() *StateMsg {
+	if m.Header.Kind != MSG_STATE {
 		return nil
 	}
 
-	s := new(State)
+	s := new(StateMsg)
 	if err := s.Unmarshal(m.Body); err != nil {
 		return nil
 	}
@@ -92,12 +89,12 @@ func (m *Msg) GetState() *State {
 	return s
 }
 
-func (m *Msg) GetNodeStatus() *NodeStatus {
-	if m.Kind != MSG_NODE {
+func (m *Msg) GetNodeStatus() *NodeStatusMsg {
+	if m.Header.Kind != MSG_NODE_STATUS {
 		return nil
 	}
 
-	ns := new(NodeStatus)
+	ns := new(NodeStatusMsg)
 	if err := ns.Unmarshal(m.Body); err != nil {
 		return nil
 	}
@@ -105,12 +102,12 @@ func (m *Msg) GetNodeStatus() *NodeStatus {
 	return ns
 }
 
-func (m *Msg) GetPodStatusList() *PodStatusList {
-	if m.Kind != MSG_POD {
+func (m *Msg) GetPodStatusList() *PodStatusListMsg {
+	if m.Header.Kind != MSG_POD_STATUS_LIST {
 		return nil
 	}
 
-	psl := new(PodStatusList)
+	psl := new(PodStatusListMsg)
 	if err := psl.Unmarshal(m.Body); err != nil {
 		return nil
 	}
@@ -118,12 +115,12 @@ func (m *Msg) GetPodStatusList() *PodStatusList {
 	return psl
 }
 
-func (m *Msg) GetPodStatus() *PodStatus {
-	if m.Kind != MSG_POD {
+func (m *Msg) GetPodStatus() *PodStatusMsg {
+	if m.Header.Kind != MSG_POD_STATUS {
 		return nil
 	}
 
-	ps := new(PodStatus)
+	ps := new(PodStatusMsg)
 	if err := ps.Unmarshal(m.Body); err != nil {
 		return nil
 	}
@@ -131,12 +128,12 @@ func (m *Msg) GetPodStatus() *PodStatus {
 	return ps
 }
 
-func (m *Msg) GetImageList() *ImageList {
-	if m.Kind != MSG_POD {
+func (m *Msg) GetImageList() *ImageStatusListMsg {
+	if m.Header.Kind != MSG_IMAGE_STATUS_LIST {
 		return nil
 	}
 
-	il := new(ImageList)
+	il := new(ImageStatusListMsg)
 	if err := il.Unmarshal(m.Body); err != nil {
 		return nil
 	}
@@ -144,25 +141,12 @@ func (m *Msg) GetImageList() *ImageList {
 	return il
 }
 
-func (m *Msg) GetMetrics() *Metrics {
-	if m.Kind != MSG_METRICS {
+func (m *Msg) GetCredentialStatus() *CredentialStatusMsg {
+	if m.Header.Kind != MSG_CRED_STATUS {
 		return nil
 	}
 
-	mc := new(Metrics)
-	if err := mc.Unmarshal(m.Body); err != nil {
-		return nil
-	}
-
-	return mc
-}
-
-func (m *Msg) GetCredentialStatus() *CredentialStatus {
-	if m.Kind != MSG_CRED {
-		return nil
-	}
-
-	cs := new(CredentialStatus)
+	cs := new(CredentialStatusMsg)
 	if err := cs.Unmarshal(m.Body); err != nil {
 		return nil
 	}
@@ -170,12 +154,12 @@ func (m *Msg) GetCredentialStatus() *CredentialStatus {
 	return cs
 }
 
-func (m *Msg) GetDeviceStatus() *DeviceStatus {
-	if m.Kind != MSG_DEVICE {
+func (m *Msg) GetDeviceStatus() *DeviceStatusMsg {
+	if m.Header.Kind != MSG_DEVICE_STATUS {
 		return nil
 	}
 
-	ds := new(DeviceStatus)
+	ds := new(DeviceStatusMsg)
 	if err := ds.Unmarshal(m.Body); err != nil {
 		return nil
 	}
@@ -183,12 +167,12 @@ func (m *Msg) GetDeviceStatus() *DeviceStatus {
 	return ds
 }
 
-func (m *Msg) GetDeviceStatusList() *DeviceStatusList {
-	if m.Kind != MSG_DEVICE {
+func (m *Msg) GetDeviceStatusList() *DeviceStatusListMsg {
+	if m.Header.Kind != MSG_DEVICE_STATUS_LIST {
 		return nil
 	}
 
-	dsl := new(DeviceStatusList)
+	dsl := new(DeviceStatusListMsg)
 	if err := dsl.Unmarshal(m.Body); err != nil {
 		return nil
 	}
@@ -196,30 +180,30 @@ func (m *Msg) GetDeviceStatusList() *DeviceStatusList {
 	return dsl
 }
 
-func (m *Error) Error() string {
+func (m *ErrorMsg) Error() string {
 	if m == nil {
 		return "<nil>"
 	}
 	return m.GetKind().String() + "/" + m.GetDescription()
 }
 
-func (m *Error) IsCommon() bool {
+func (m *ErrorMsg) IsCommon() bool {
 	return m.isKind(ERR_COMMON)
 }
 
-func (m *Error) IsNotFound() bool {
+func (m *ErrorMsg) IsNotFound() bool {
 	return m.isKind(ERR_NOT_FOUND)
 }
 
-func (m *Error) IsAlreadyExists() bool {
+func (m *ErrorMsg) IsAlreadyExists() bool {
 	return m.isKind(ERR_ALREADY_EXISTS)
 }
 
-func (m *Error) IsNotSupported() bool {
+func (m *ErrorMsg) IsNotSupported() bool {
 	return m.isKind(ERR_NOT_SUPPORTED)
 }
 
-func (m *Error) isKind(kind Error_Kind) bool {
+func (m *ErrorMsg) isKind(kind ErrorMsg_Kind) bool {
 	if m == nil {
 		return false
 	}
@@ -227,32 +211,32 @@ func (m *Error) isKind(kind Error_Kind) bool {
 	return m.Kind == kind
 }
 
-func (s *PodStatus_ContainerStatus) GetState() PodStatus_State {
+func (s *ContainerStatus) GetState() PodStatusMsg_State {
 	if s == nil {
-		return STATE_UNKNOWN
+		return POD_STATE_UNKNOWN
 	}
 
 	createdAt, startedAt, finishedAt := s.GetTimeCreatedAt(), s.GetTimeStartedAt(), s.GetTimeFinishedAt()
 
 	if !startedAt.After(finishedAt) {
 		if s.ExitCode != 0 {
-			return STATE_FAILED
+			return POD_STATE_FAILED
 		}
 
-		return STATE_SUCCEEDED
+		return POD_STATE_SUCCEEDED
 	}
 
 	if !startedAt.IsZero() {
-		return STATE_RUNNING
+		return POD_STATE_RUNNING
 	}
 
 	if !createdAt.IsZero() {
-		return STATE_PENDING
+		return POD_STATE_PENDING
 	}
 
 	if s.ContainerId == "" {
-		return STATE_UNKNOWN
+		return POD_STATE_UNKNOWN
 	}
 
-	return STATE_PENDING
+	return POD_STATE_PENDING
 }

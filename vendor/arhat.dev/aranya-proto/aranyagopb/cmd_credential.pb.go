@@ -11,7 +11,6 @@ import (
 	math "math"
 	math_bits "math/bits"
 	reflect "reflect"
-	strconv "strconv"
 	strings "strings"
 )
 
@@ -26,45 +25,20 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type CredentialCmd_Action int32
-
-const (
-	_INVALID_CREDENTIAL_ACTION CredentialCmd_Action = 0
-	UPDATE_STORAGE_CREDENTIAL  CredentialCmd_Action = 1
-)
-
-var CredentialCmd_Action_name = map[int32]string{
-	0: "_INVALID_CREDENTIAL_ACTION",
-	1: "UPDATE_STORAGE_CREDENTIAL",
+type CredentialListCmd struct {
 }
 
-var CredentialCmd_Action_value = map[string]int32{
-	"_INVALID_CREDENTIAL_ACTION": 0,
-	"UPDATE_STORAGE_CREDENTIAL":  1,
-}
-
-func (CredentialCmd_Action) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_ca060e42f44d1ee8, []int{0, 0}
-}
-
-type CredentialCmd struct {
-	Action CredentialCmd_Action `protobuf:"varint,1,opt,name=action,proto3,enum=aranya.CredentialCmd_Action" json:"action,omitempty"`
-	// Types that are valid to be assigned to Options:
-	//	*CredentialCmd_Storage
-	Options isCredentialCmd_Options `protobuf_oneof:"options"`
-}
-
-func (m *CredentialCmd) Reset()      { *m = CredentialCmd{} }
-func (*CredentialCmd) ProtoMessage() {}
-func (*CredentialCmd) Descriptor() ([]byte, []int) {
+func (m *CredentialListCmd) Reset()      { *m = CredentialListCmd{} }
+func (*CredentialListCmd) ProtoMessage() {}
+func (*CredentialListCmd) Descriptor() ([]byte, []int) {
 	return fileDescriptor_ca060e42f44d1ee8, []int{0}
 }
-func (m *CredentialCmd) XXX_Unmarshal(b []byte) error {
+func (m *CredentialListCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *CredentialCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *CredentialListCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_CredentialCmd.Marshal(b, m, deterministic)
+		return xxx_messageInfo_CredentialListCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -74,74 +48,33 @@ func (m *CredentialCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return b[:n], nil
 	}
 }
-func (m *CredentialCmd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CredentialCmd.Merge(m, src)
+func (m *CredentialListCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CredentialListCmd.Merge(m, src)
 }
-func (m *CredentialCmd) XXX_Size() int {
+func (m *CredentialListCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *CredentialCmd) XXX_DiscardUnknown() {
-	xxx_messageInfo_CredentialCmd.DiscardUnknown(m)
+func (m *CredentialListCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_CredentialListCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_CredentialCmd proto.InternalMessageInfo
+var xxx_messageInfo_CredentialListCmd proto.InternalMessageInfo
 
-type isCredentialCmd_Options interface {
-	isCredentialCmd_Options()
-	Equal(interface{}) bool
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type CredentialCmd_Storage struct {
-	Storage *StorageCredentialOptions `protobuf:"bytes,2,opt,name=storage,proto3,oneof" json:"storage,omitempty"`
-}
-
-func (*CredentialCmd_Storage) isCredentialCmd_Options() {}
-
-func (m *CredentialCmd) GetOptions() isCredentialCmd_Options {
-	if m != nil {
-		return m.Options
-	}
-	return nil
-}
-
-func (m *CredentialCmd) GetAction() CredentialCmd_Action {
-	if m != nil {
-		return m.Action
-	}
-	return _INVALID_CREDENTIAL_ACTION
-}
-
-func (m *CredentialCmd) GetStorage() *StorageCredentialOptions {
-	if x, ok := m.GetOptions().(*CredentialCmd_Storage); ok {
-		return x.Storage
-	}
-	return nil
-}
-
-// XXX_OneofWrappers is for the internal use of the proto package.
-func (*CredentialCmd) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
-		(*CredentialCmd_Storage)(nil),
-	}
-}
-
-type StorageCredentialOptions struct {
+type CredentialEnsureCmd struct {
 	SshPrivateKey []byte `protobuf:"bytes,1,opt,name=ssh_private_key,json=sshPrivateKey,proto3" json:"ssh_private_key,omitempty"`
 }
 
-func (m *StorageCredentialOptions) Reset()      { *m = StorageCredentialOptions{} }
-func (*StorageCredentialOptions) ProtoMessage() {}
-func (*StorageCredentialOptions) Descriptor() ([]byte, []int) {
+func (m *CredentialEnsureCmd) Reset()      { *m = CredentialEnsureCmd{} }
+func (*CredentialEnsureCmd) ProtoMessage() {}
+func (*CredentialEnsureCmd) Descriptor() ([]byte, []int) {
 	return fileDescriptor_ca060e42f44d1ee8, []int{1}
 }
-func (m *StorageCredentialOptions) XXX_Unmarshal(b []byte) error {
+func (m *CredentialEnsureCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *StorageCredentialOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *CredentialEnsureCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_StorageCredentialOptions.Marshal(b, m, deterministic)
+		return xxx_messageInfo_CredentialEnsureCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -151,73 +84,94 @@ func (m *StorageCredentialOptions) XXX_Marshal(b []byte, deterministic bool) ([]
 		return b[:n], nil
 	}
 }
-func (m *StorageCredentialOptions) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_StorageCredentialOptions.Merge(m, src)
+func (m *CredentialEnsureCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CredentialEnsureCmd.Merge(m, src)
 }
-func (m *StorageCredentialOptions) XXX_Size() int {
+func (m *CredentialEnsureCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *StorageCredentialOptions) XXX_DiscardUnknown() {
-	xxx_messageInfo_StorageCredentialOptions.DiscardUnknown(m)
+func (m *CredentialEnsureCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_CredentialEnsureCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_StorageCredentialOptions proto.InternalMessageInfo
+var xxx_messageInfo_CredentialEnsureCmd proto.InternalMessageInfo
 
-func (m *StorageCredentialOptions) GetSshPrivateKey() []byte {
+func (m *CredentialEnsureCmd) GetSshPrivateKey() []byte {
 	if m != nil {
 		return m.SshPrivateKey
 	}
 	return nil
 }
 
+type CredentialDeleteCmd struct {
+}
+
+func (m *CredentialDeleteCmd) Reset()      { *m = CredentialDeleteCmd{} }
+func (*CredentialDeleteCmd) ProtoMessage() {}
+func (*CredentialDeleteCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca060e42f44d1ee8, []int{2}
+}
+func (m *CredentialDeleteCmd) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CredentialDeleteCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CredentialDeleteCmd.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CredentialDeleteCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CredentialDeleteCmd.Merge(m, src)
+}
+func (m *CredentialDeleteCmd) XXX_Size() int {
+	return m.Size()
+}
+func (m *CredentialDeleteCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_CredentialDeleteCmd.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CredentialDeleteCmd proto.InternalMessageInfo
+
 func init() {
-	proto.RegisterEnum("aranya.CredentialCmd_Action", CredentialCmd_Action_name, CredentialCmd_Action_value)
-	proto.RegisterType((*CredentialCmd)(nil), "aranya.CredentialCmd")
-	proto.RegisterType((*StorageCredentialOptions)(nil), "aranya.StorageCredentialOptions")
+	proto.RegisterType((*CredentialListCmd)(nil), "aranya.CredentialListCmd")
+	proto.RegisterType((*CredentialEnsureCmd)(nil), "aranya.CredentialEnsureCmd")
+	proto.RegisterType((*CredentialDeleteCmd)(nil), "aranya.CredentialDeleteCmd")
 }
 
 func init() { proto.RegisterFile("cmd_credential.proto", fileDescriptor_ca060e42f44d1ee8) }
 
 var fileDescriptor_ca060e42f44d1ee8 = []byte{
-	// 324 bytes of a gzipped FileDescriptorProto
+	// 215 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x49, 0xce, 0x4d, 0x89,
 	0x4f, 0x2e, 0x4a, 0x4d, 0x49, 0xcd, 0x2b, 0xc9, 0x4c, 0xcc, 0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9,
-	0x17, 0x62, 0x4b, 0x2c, 0x4a, 0xcc, 0xab, 0x4c, 0x54, 0xba, 0xce, 0xc8, 0xc5, 0xeb, 0x0c, 0x97,
-	0x74, 0xce, 0x4d, 0x11, 0x32, 0xe1, 0x62, 0x4b, 0x4c, 0x2e, 0xc9, 0xcc, 0xcf, 0x93, 0x60, 0x54,
-	0x60, 0xd4, 0xe0, 0x33, 0x92, 0xd1, 0x83, 0x28, 0xd5, 0x43, 0x51, 0xa6, 0xe7, 0x08, 0x56, 0x13,
-	0x04, 0x55, 0x2b, 0x64, 0xc3, 0xc5, 0x5e, 0x5c, 0x92, 0x5f, 0x94, 0x98, 0x9e, 0x2a, 0xc1, 0xa4,
-	0xc0, 0xa8, 0xc1, 0x6d, 0xa4, 0x00, 0xd3, 0x16, 0x0c, 0x11, 0x46, 0xe8, 0xf6, 0x2f, 0x00, 0xe9,
-	0x28, 0xf6, 0x60, 0x08, 0x82, 0x69, 0x51, 0x72, 0xe7, 0x62, 0x83, 0x98, 0x27, 0x24, 0xc7, 0x25,
-	0x15, 0xef, 0xe9, 0x17, 0xe6, 0xe8, 0xe3, 0xe9, 0x12, 0xef, 0x1c, 0xe4, 0xea, 0xe2, 0xea, 0x17,
-	0xe2, 0xe9, 0xe8, 0x13, 0xef, 0xe8, 0x1c, 0xe2, 0xe9, 0xef, 0x27, 0xc0, 0x20, 0x24, 0xcb, 0x25,
-	0x19, 0x1a, 0xe0, 0xe2, 0x18, 0xe2, 0x1a, 0x1f, 0x1c, 0xe2, 0x1f, 0xe4, 0xe8, 0xee, 0x8a, 0xa4,
-	0x4a, 0x80, 0xd1, 0x89, 0x93, 0x8b, 0x3d, 0x1f, 0x62, 0xbc, 0x92, 0x13, 0x97, 0x04, 0x2e, 0xab,
-	0x85, 0xd4, 0xb8, 0xf8, 0x8b, 0x8b, 0x33, 0xe2, 0x0b, 0x8a, 0x32, 0xcb, 0x12, 0x4b, 0x52, 0xe3,
-	0xb3, 0x53, 0x2b, 0xc1, 0x9e, 0xe5, 0x09, 0xe2, 0x2d, 0x2e, 0xce, 0x08, 0x80, 0x88, 0x7a, 0xa7,
-	0x56, 0x3a, 0x85, 0x5f, 0x78, 0x28, 0xc7, 0x70, 0xe3, 0xa1, 0x1c, 0xc3, 0x87, 0x87, 0x72, 0x8c,
-	0x0d, 0x8f, 0xe4, 0x18, 0x57, 0x3c, 0x92, 0x63, 0x3c, 0xf1, 0x48, 0x8e, 0xf1, 0xc2, 0x23, 0x39,
-	0xc6, 0x07, 0x8f, 0xe4, 0x18, 0x5f, 0x3c, 0x92, 0x63, 0xf8, 0xf0, 0x48, 0x8e, 0x71, 0xc2, 0x63,
-	0x39, 0x86, 0x0b, 0x8f, 0xe5, 0x18, 0x6e, 0x3c, 0x96, 0x63, 0x88, 0x52, 0x4c, 0x2c, 0xca, 0x48,
-	0x2c, 0xd1, 0x4b, 0x49, 0x2d, 0xd3, 0x87, 0x84, 0x81, 0x2e, 0x38, 0xcc, 0xa1, 0x9c, 0xf4, 0xfc,
-	0x82, 0xa4, 0x24, 0x36, 0xb0, 0x88, 0x31, 0x20, 0x00, 0x00, 0xff, 0xff, 0xa0, 0x90, 0xd2, 0x3b,
-	0x9d, 0x01, 0x00, 0x00,
+	0x17, 0x62, 0x4b, 0x2c, 0x4a, 0xcc, 0xab, 0x4c, 0x54, 0x12, 0xe6, 0x12, 0x74, 0x86, 0xcb, 0xf9,
+	0x64, 0x16, 0x97, 0x38, 0xe7, 0xa6, 0x28, 0xd9, 0x72, 0x09, 0x23, 0x04, 0x5d, 0xf3, 0x8a, 0x4b,
+	0x8b, 0x52, 0x9d, 0x73, 0x53, 0x84, 0xd4, 0xb8, 0xf8, 0x8b, 0x8b, 0x33, 0xe2, 0x0b, 0x8a, 0x32,
+	0xcb, 0x12, 0x4b, 0x52, 0xe3, 0xb3, 0x53, 0x2b, 0x25, 0x18, 0x15, 0x18, 0x35, 0x78, 0x82, 0x78,
+	0x8b, 0x8b, 0x33, 0x02, 0x20, 0xa2, 0xde, 0xa9, 0x95, 0x4a, 0xa2, 0xc8, 0xda, 0x5d, 0x52, 0x73,
+	0x52, 0x4b, 0x40, 0xda, 0x9d, 0xc2, 0x2f, 0x3c, 0x94, 0x63, 0xb8, 0xf1, 0x50, 0x8e, 0xe1, 0xc3,
+	0x43, 0x39, 0xc6, 0x86, 0x47, 0x72, 0x8c, 0x2b, 0x1e, 0xc9, 0x31, 0x9e, 0x78, 0x24, 0xc7, 0x78,
+	0xe1, 0x91, 0x1c, 0xe3, 0x83, 0x47, 0x72, 0x8c, 0x2f, 0x1e, 0xc9, 0x31, 0x7c, 0x78, 0x24, 0xc7,
+	0x38, 0xe1, 0xb1, 0x1c, 0xc3, 0x85, 0xc7, 0x72, 0x0c, 0x37, 0x1e, 0xcb, 0x31, 0x44, 0x29, 0x26,
+	0x16, 0x65, 0x24, 0x96, 0xe8, 0xa5, 0xa4, 0x96, 0xe9, 0x43, 0x9c, 0xac, 0x0b, 0xf6, 0x00, 0x94,
+	0x93, 0x9e, 0x5f, 0x90, 0x94, 0xc4, 0x06, 0x16, 0x31, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0x1d,
+	0x4a, 0xdc, 0xd3, 0xea, 0x00, 0x00, 0x00,
 }
 
-func (x CredentialCmd_Action) String() string {
-	s, ok := CredentialCmd_Action_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (this *CredentialCmd) Equal(that interface{}) bool {
+func (this *CredentialListCmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*CredentialCmd)
+	that1, ok := that.(*CredentialListCmd)
 	if !ok {
-		that2, ok := that.(CredentialCmd)
+		that2, ok := that.(CredentialListCmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -229,52 +183,16 @@ func (this *CredentialCmd) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Action != that1.Action {
-		return false
-	}
-	if that1.Options == nil {
-		if this.Options != nil {
-			return false
-		}
-	} else if this.Options == nil {
-		return false
-	} else if !this.Options.Equal(that1.Options) {
-		return false
-	}
 	return true
 }
-func (this *CredentialCmd_Storage) Equal(that interface{}) bool {
+func (this *CredentialEnsureCmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*CredentialCmd_Storage)
+	that1, ok := that.(*CredentialEnsureCmd)
 	if !ok {
-		that2, ok := that.(CredentialCmd_Storage)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Storage.Equal(that1.Storage) {
-		return false
-	}
-	return true
-}
-func (this *StorageCredentialOptions) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*StorageCredentialOptions)
-	if !ok {
-		that2, ok := that.(StorageCredentialOptions)
+		that2, ok := that.(CredentialEnsureCmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -291,34 +209,52 @@ func (this *StorageCredentialOptions) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *CredentialCmd) GoString() string {
+func (this *CredentialDeleteCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*CredentialDeleteCmd)
+	if !ok {
+		that2, ok := that.(CredentialDeleteCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	return true
+}
+func (this *CredentialListCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 6)
-	s = append(s, "&aranyagopb.CredentialCmd{")
-	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
-	if this.Options != nil {
-		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
-	}
+	s := make([]string, 0, 4)
+	s = append(s, "&aranyagopb.CredentialListCmd{")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *CredentialCmd_Storage) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&aranyagopb.CredentialCmd_Storage{` +
-		`Storage:` + fmt.Sprintf("%#v", this.Storage) + `}`}, ", ")
-	return s
-}
-func (this *StorageCredentialOptions) GoString() string {
+func (this *CredentialEnsureCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 5)
-	s = append(s, "&aranyagopb.StorageCredentialOptions{")
+	s = append(s, "&aranyagopb.CredentialEnsureCmd{")
 	s = append(s, "SshPrivateKey: "+fmt.Sprintf("%#v", this.SshPrivateKey)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *CredentialDeleteCmd) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 4)
+	s = append(s, "&aranyagopb.CredentialDeleteCmd{")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -330,7 +266,7 @@ func valueToGoStringCmdCredential(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func (m *CredentialCmd) Marshal() (dAtA []byte, err error) {
+func (m *CredentialListCmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -340,55 +276,20 @@ func (m *CredentialCmd) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *CredentialCmd) MarshalTo(dAtA []byte) (int, error) {
+func (m *CredentialListCmd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *CredentialCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *CredentialListCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Options != nil {
-		{
-			size := m.Options.Size()
-			i -= size
-			if _, err := m.Options.MarshalTo(dAtA[i:]); err != nil {
-				return 0, err
-			}
-		}
-	}
-	if m.Action != 0 {
-		i = encodeVarintCmdCredential(dAtA, i, uint64(m.Action))
-		i--
-		dAtA[i] = 0x8
-	}
 	return len(dAtA) - i, nil
 }
 
-func (m *CredentialCmd_Storage) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *CredentialCmd_Storage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.Storage != nil {
-		{
-			size, err := m.Storage.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintCmdCredential(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	return len(dAtA) - i, nil
-}
-func (m *StorageCredentialOptions) Marshal() (dAtA []byte, err error) {
+func (m *CredentialEnsureCmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -398,12 +299,12 @@ func (m *StorageCredentialOptions) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *StorageCredentialOptions) MarshalTo(dAtA []byte) (int, error) {
+func (m *CredentialEnsureCmd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *StorageCredentialOptions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *CredentialEnsureCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -418,6 +319,29 @@ func (m *StorageCredentialOptions) MarshalToSizedBuffer(dAtA []byte) (int, error
 	return len(dAtA) - i, nil
 }
 
+func (m *CredentialDeleteCmd) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CredentialDeleteCmd) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CredentialDeleteCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintCmdCredential(dAtA []byte, offset int, v uint64) int {
 	offset -= sovCmdCredential(v)
 	base := offset
@@ -429,34 +353,16 @@ func encodeVarintCmdCredential(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *CredentialCmd) Size() (n int) {
+func (m *CredentialListCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.Action != 0 {
-		n += 1 + sovCmdCredential(uint64(m.Action))
-	}
-	if m.Options != nil {
-		n += m.Options.Size()
-	}
 	return n
 }
 
-func (m *CredentialCmd_Storage) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Storage != nil {
-		l = m.Storage.Size()
-		n += 1 + l + sovCmdCredential(uint64(l))
-	}
-	return n
-}
-func (m *StorageCredentialOptions) Size() (n int) {
+func (m *CredentialEnsureCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -469,39 +375,45 @@ func (m *StorageCredentialOptions) Size() (n int) {
 	return n
 }
 
+func (m *CredentialDeleteCmd) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
 func sovCmdCredential(x uint64) (n int) {
 	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozCmdCredential(x uint64) (n int) {
 	return sovCmdCredential(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (this *CredentialCmd) String() string {
+func (this *CredentialListCmd) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&CredentialCmd{`,
-		`Action:` + fmt.Sprintf("%v", this.Action) + `,`,
-		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
+	s := strings.Join([]string{`&CredentialListCmd{`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *CredentialCmd_Storage) String() string {
+func (this *CredentialEnsureCmd) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&CredentialCmd_Storage{`,
-		`Storage:` + strings.Replace(fmt.Sprintf("%v", this.Storage), "StorageCredentialOptions", "StorageCredentialOptions", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *StorageCredentialOptions) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&StorageCredentialOptions{`,
+	s := strings.Join([]string{`&CredentialEnsureCmd{`,
 		`SshPrivateKey:` + fmt.Sprintf("%v", this.SshPrivateKey) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *CredentialDeleteCmd) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&CredentialDeleteCmd{`,
 		`}`,
 	}, "")
 	return s
@@ -514,7 +426,7 @@ func valueToStringCmdCredential(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
-func (m *CredentialCmd) Unmarshal(dAtA []byte) error {
+func (m *CredentialListCmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -537,66 +449,12 @@ func (m *CredentialCmd) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: CredentialCmd: wiretype end group for non-group")
+			return fmt.Errorf("proto: CredentialListCmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: CredentialCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: CredentialListCmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Action", wireType)
-			}
-			m.Action = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdCredential
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Action |= CredentialCmd_Action(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Storage", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdCredential
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthCmdCredential
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdCredential
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &StorageCredentialOptions{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Options = &CredentialCmd_Storage{v}
-			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCmdCredential(dAtA[iNdEx:])
@@ -621,7 +479,7 @@ func (m *CredentialCmd) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *StorageCredentialOptions) Unmarshal(dAtA []byte) error {
+func (m *CredentialEnsureCmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -644,10 +502,10 @@ func (m *StorageCredentialOptions) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: StorageCredentialOptions: wiretype end group for non-group")
+			return fmt.Errorf("proto: CredentialEnsureCmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: StorageCredentialOptions: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: CredentialEnsureCmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -684,6 +542,59 @@ func (m *StorageCredentialOptions) Unmarshal(dAtA []byte) error {
 				m.SshPrivateKey = []byte{}
 			}
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCmdCredential(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCmdCredential
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCmdCredential
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CredentialDeleteCmd) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCmdCredential
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CredentialDeleteCmd: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CredentialDeleteCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCmdCredential(dAtA[iNdEx:])

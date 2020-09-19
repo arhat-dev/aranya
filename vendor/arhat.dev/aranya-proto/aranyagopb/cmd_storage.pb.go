@@ -12,7 +12,6 @@ import (
 	math "math"
 	math_bits "math/bits"
 	reflect "reflect"
-	strconv "strconv"
 	strings "strings"
 )
 
@@ -27,48 +26,20 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type StorageCmd_Action int32
-
-const (
-	_INVALID_STORAGE_ACTION StorageCmd_Action = 0
-	MOUNT_REMOTE_VOLUME     StorageCmd_Action = 1
-	UNMOUNT_REMOTE_VOLUME   StorageCmd_Action = 2
-)
-
-var StorageCmd_Action_name = map[int32]string{
-	0: "_INVALID_STORAGE_ACTION",
-	1: "MOUNT_REMOTE_VOLUME",
-	2: "UNMOUNT_REMOTE_VOLUME",
+type StorageListCmd struct {
 }
 
-var StorageCmd_Action_value = map[string]int32{
-	"_INVALID_STORAGE_ACTION": 0,
-	"MOUNT_REMOTE_VOLUME":     1,
-	"UNMOUNT_REMOTE_VOLUME":   2,
-}
-
-func (StorageCmd_Action) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_afee32c77d5f0ea9, []int{0, 0}
-}
-
-type StorageCmd struct {
-	Action StorageCmd_Action `protobuf:"varint,1,opt,name=action,proto3,enum=aranya.StorageCmd_Action" json:"action,omitempty"`
-	// Types that are valid to be assigned to Options:
-	//	*StorageCmd_Mount
-	Options isStorageCmd_Options `protobuf_oneof:"options"`
-}
-
-func (m *StorageCmd) Reset()      { *m = StorageCmd{} }
-func (*StorageCmd) ProtoMessage() {}
-func (*StorageCmd) Descriptor() ([]byte, []int) {
+func (m *StorageListCmd) Reset()      { *m = StorageListCmd{} }
+func (*StorageListCmd) ProtoMessage() {}
+func (*StorageListCmd) Descriptor() ([]byte, []int) {
 	return fileDescriptor_afee32c77d5f0ea9, []int{0}
 }
-func (m *StorageCmd) XXX_Unmarshal(b []byte) error {
+func (m *StorageListCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *StorageCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *StorageListCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_StorageCmd.Marshal(b, m, deterministic)
+		return xxx_messageInfo_StorageListCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -78,75 +49,34 @@ func (m *StorageCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *StorageCmd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_StorageCmd.Merge(m, src)
+func (m *StorageListCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StorageListCmd.Merge(m, src)
 }
-func (m *StorageCmd) XXX_Size() int {
+func (m *StorageListCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *StorageCmd) XXX_DiscardUnknown() {
-	xxx_messageInfo_StorageCmd.DiscardUnknown(m)
+func (m *StorageListCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_StorageListCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_StorageCmd proto.InternalMessageInfo
+var xxx_messageInfo_StorageListCmd proto.InternalMessageInfo
 
-type isStorageCmd_Options interface {
-	isStorageCmd_Options()
-	Equal(interface{}) bool
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type StorageCmd_Mount struct {
-	Mount *RemoteVolumeMountOptions `protobuf:"bytes,2,opt,name=mount,proto3,oneof" json:"mount,omitempty"`
-}
-
-func (*StorageCmd_Mount) isStorageCmd_Options() {}
-
-func (m *StorageCmd) GetOptions() isStorageCmd_Options {
-	if m != nil {
-		return m.Options
-	}
-	return nil
-}
-
-func (m *StorageCmd) GetAction() StorageCmd_Action {
-	if m != nil {
-		return m.Action
-	}
-	return _INVALID_STORAGE_ACTION
-}
-
-func (m *StorageCmd) GetMount() *RemoteVolumeMountOptions {
-	if x, ok := m.GetOptions().(*StorageCmd_Mount); ok {
-		return x.Mount
-	}
-	return nil
-}
-
-// XXX_OneofWrappers is for the internal use of the proto package.
-func (*StorageCmd) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
-		(*StorageCmd_Mount)(nil),
-	}
-}
-
-type RemoteVolumeMountOptions struct {
+type StorageEnsureCmd struct {
 	RemotePath string `protobuf:"bytes,1,opt,name=remote_path,json=remotePath,proto3" json:"remote_path,omitempty"`
 	LocalPath  string `protobuf:"bytes,2,opt,name=local_path,json=localPath,proto3" json:"local_path,omitempty"`
 }
 
-func (m *RemoteVolumeMountOptions) Reset()      { *m = RemoteVolumeMountOptions{} }
-func (*RemoteVolumeMountOptions) ProtoMessage() {}
-func (*RemoteVolumeMountOptions) Descriptor() ([]byte, []int) {
+func (m *StorageEnsureCmd) Reset()      { *m = StorageEnsureCmd{} }
+func (*StorageEnsureCmd) ProtoMessage() {}
+func (*StorageEnsureCmd) Descriptor() ([]byte, []int) {
 	return fileDescriptor_afee32c77d5f0ea9, []int{1}
 }
-func (m *RemoteVolumeMountOptions) XXX_Unmarshal(b []byte) error {
+func (m *StorageEnsureCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *RemoteVolumeMountOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *StorageEnsureCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_RemoteVolumeMountOptions.Marshal(b, m, deterministic)
+		return xxx_messageInfo_StorageEnsureCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -156,26 +86,77 @@ func (m *RemoteVolumeMountOptions) XXX_Marshal(b []byte, deterministic bool) ([]
 		return b[:n], nil
 	}
 }
-func (m *RemoteVolumeMountOptions) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RemoteVolumeMountOptions.Merge(m, src)
+func (m *StorageEnsureCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StorageEnsureCmd.Merge(m, src)
 }
-func (m *RemoteVolumeMountOptions) XXX_Size() int {
+func (m *StorageEnsureCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *RemoteVolumeMountOptions) XXX_DiscardUnknown() {
-	xxx_messageInfo_RemoteVolumeMountOptions.DiscardUnknown(m)
+func (m *StorageEnsureCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_StorageEnsureCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_RemoteVolumeMountOptions proto.InternalMessageInfo
+var xxx_messageInfo_StorageEnsureCmd proto.InternalMessageInfo
 
-func (m *RemoteVolumeMountOptions) GetRemotePath() string {
+func (m *StorageEnsureCmd) GetRemotePath() string {
 	if m != nil {
 		return m.RemotePath
 	}
 	return ""
 }
 
-func (m *RemoteVolumeMountOptions) GetLocalPath() string {
+func (m *StorageEnsureCmd) GetLocalPath() string {
+	if m != nil {
+		return m.LocalPath
+	}
+	return ""
+}
+
+type StorageDeleteCmd struct {
+	RemotePath string `protobuf:"bytes,1,opt,name=remote_path,json=remotePath,proto3" json:"remote_path,omitempty"`
+	LocalPath  string `protobuf:"bytes,2,opt,name=local_path,json=localPath,proto3" json:"local_path,omitempty"`
+}
+
+func (m *StorageDeleteCmd) Reset()      { *m = StorageDeleteCmd{} }
+func (*StorageDeleteCmd) ProtoMessage() {}
+func (*StorageDeleteCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_afee32c77d5f0ea9, []int{2}
+}
+func (m *StorageDeleteCmd) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *StorageDeleteCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_StorageDeleteCmd.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *StorageDeleteCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StorageDeleteCmd.Merge(m, src)
+}
+func (m *StorageDeleteCmd) XXX_Size() int {
+	return m.Size()
+}
+func (m *StorageDeleteCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_StorageDeleteCmd.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_StorageDeleteCmd proto.InternalMessageInfo
+
+func (m *StorageDeleteCmd) GetRemotePath() string {
+	if m != nil {
+		return m.RemotePath
+	}
+	return ""
+}
+
+func (m *StorageDeleteCmd) GetLocalPath() string {
 	if m != nil {
 		return m.LocalPath
 	}
@@ -183,54 +164,39 @@ func (m *RemoteVolumeMountOptions) GetLocalPath() string {
 }
 
 func init() {
-	proto.RegisterEnum("aranya.StorageCmd_Action", StorageCmd_Action_name, StorageCmd_Action_value)
-	proto.RegisterType((*StorageCmd)(nil), "aranya.StorageCmd")
-	proto.RegisterType((*RemoteVolumeMountOptions)(nil), "aranya.RemoteVolumeMountOptions")
+	proto.RegisterType((*StorageListCmd)(nil), "aranya.StorageListCmd")
+	proto.RegisterType((*StorageEnsureCmd)(nil), "aranya.StorageEnsureCmd")
+	proto.RegisterType((*StorageDeleteCmd)(nil), "aranya.StorageDeleteCmd")
 }
 
 func init() { proto.RegisterFile("cmd_storage.proto", fileDescriptor_afee32c77d5f0ea9) }
 
 var fileDescriptor_afee32c77d5f0ea9 = []byte{
-	// 343 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x91, 0xcd, 0x4e, 0xea, 0x40,
-	0x18, 0x86, 0x67, 0x48, 0x4e, 0x4f, 0xf8, 0x48, 0x4e, 0x38, 0x63, 0x0c, 0x10, 0xe3, 0x88, 0xac,
-	0xd8, 0x58, 0x23, 0x6e, 0xdc, 0x16, 0x6c, 0x94, 0x84, 0xb6, 0xa6, 0x14, 0x8c, 0x6c, 0x9a, 0x01,
-	0x1a, 0x30, 0xa1, 0x4c, 0x53, 0x06, 0x13, 0x77, 0x5e, 0x82, 0x97, 0xe1, 0xa5, 0xb8, 0x64, 0xc9,
-	0x4e, 0x19, 0x36, 0x2e, 0xb9, 0x04, 0xc3, 0x0c, 0xc6, 0x8d, 0x2e, 0xe7, 0x7d, 0x9e, 0x77, 0xfe,
-	0x3e, 0xf8, 0x3f, 0x88, 0x87, 0xe1, 0x4c, 0xf0, 0x94, 0x8d, 0x22, 0x33, 0x49, 0xb9, 0xe0, 0xc4,
-	0x60, 0x29, 0x9b, 0x3e, 0xb2, 0xca, 0x1b, 0x06, 0x68, 0x6b, 0xd2, 0x88, 0x87, 0xe4, 0x0c, 0x0c,
-	0x36, 0x10, 0xf7, 0x7c, 0x5a, 0xc4, 0x65, 0x5c, 0xfd, 0x57, 0x2b, 0x99, 0xda, 0x33, 0xbf, 0x1d,
-	0xd3, 0x52, 0x82, 0xbf, 0x13, 0xc9, 0x05, 0xfc, 0x89, 0xf9, 0x7c, 0x2a, 0x8a, 0x99, 0x32, 0xae,
-	0xe6, 0x6a, 0xe5, 0xaf, 0x86, 0x1f, 0xc5, 0x5c, 0x44, 0x5d, 0x3e, 0x99, 0xc7, 0x91, 0xb3, 0x15,
-	0xbc, 0x64, 0xeb, 0xcf, 0xae, 0x91, 0xaf, 0x0b, 0x95, 0x3b, 0x30, 0xf4, 0x5e, 0xe4, 0x00, 0x0a,
-	0x61, 0xd3, 0xed, 0x5a, 0xad, 0xe6, 0x65, 0xd8, 0x0e, 0x3c, 0xdf, 0xba, 0xb2, 0x43, 0xab, 0x11,
-	0x34, 0x3d, 0x37, 0x8f, 0x48, 0x01, 0xf6, 0x1c, 0xaf, 0xe3, 0x06, 0xa1, 0x6f, 0x3b, 0x5e, 0x60,
-	0x87, 0x5d, 0xaf, 0xd5, 0x71, 0xec, 0x3c, 0x26, 0x25, 0xd8, 0xef, 0xb8, 0x3f, 0xa1, 0x4c, 0x3d,
-	0x0b, 0x7f, 0xb9, 0x3e, 0xae, 0xd2, 0x83, 0xe2, 0x6f, 0x57, 0x21, 0x47, 0x90, 0x4b, 0x15, 0x0b,
-	0x13, 0x26, 0xc6, 0xea, 0xcd, 0x59, 0x1f, 0x74, 0x74, 0xc3, 0xc4, 0x98, 0x1c, 0x02, 0x4c, 0xf8,
-	0x80, 0x4d, 0x34, 0xcf, 0x28, 0x9e, 0x55, 0xc9, 0x16, 0xd7, 0x6f, 0x17, 0x2b, 0x8a, 0x96, 0x2b,
-	0x8a, 0x36, 0x2b, 0x8a, 0x9f, 0x24, 0xc5, 0x2f, 0x92, 0xe2, 0x57, 0x49, 0xf1, 0x42, 0x52, 0xfc,
-	0x2e, 0x29, 0xfe, 0x90, 0x14, 0x6d, 0x24, 0xc5, 0xcf, 0x6b, 0x8a, 0x16, 0x6b, 0x8a, 0x96, 0x6b,
-	0x8a, 0x7a, 0xc7, 0x2c, 0x1d, 0x33, 0x61, 0x0e, 0xa3, 0x87, 0x53, 0xfd, 0x57, 0x27, 0x6a, 0x26,
-	0xbb, 0xc5, 0x88, 0x27, 0xfd, 0xbe, 0xa1, 0x92, 0xf3, 0xcf, 0x00, 0x00, 0x00, 0xff, 0xff, 0xbe,
-	0xd1, 0xcc, 0xe3, 0xba, 0x01, 0x00, 0x00,
+	// 223 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x4c, 0xce, 0x4d, 0x89,
+	0x2f, 0x2e, 0xc9, 0x2f, 0x4a, 0x4c, 0x4f, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4b,
+	0x2c, 0x4a, 0xcc, 0xab, 0x4c, 0x54, 0x12, 0xe0, 0xe2, 0x0b, 0x86, 0x48, 0xf8, 0x64, 0x16, 0x97,
+	0x38, 0xe7, 0xa6, 0x28, 0x05, 0x71, 0x09, 0x40, 0x45, 0x5c, 0xf3, 0x8a, 0x4b, 0x8b, 0x52, 0x9d,
+	0x73, 0x53, 0x84, 0xe4, 0xb9, 0xb8, 0x8b, 0x52, 0x73, 0xf3, 0x4b, 0x52, 0xe3, 0x0b, 0x12, 0x4b,
+	0x32, 0x24, 0x18, 0x15, 0x18, 0x35, 0x38, 0x83, 0xb8, 0x20, 0x42, 0x01, 0x89, 0x25, 0x19, 0x42,
+	0xb2, 0x5c, 0x5c, 0x39, 0xf9, 0xc9, 0x89, 0x39, 0x10, 0x79, 0x26, 0xb0, 0x3c, 0x27, 0x58, 0x04,
+	0x24, 0x8d, 0x64, 0xa6, 0x4b, 0x6a, 0x4e, 0x6a, 0x09, 0x35, 0xcc, 0x74, 0x0a, 0xbf, 0xf0, 0x50,
+	0x8e, 0xe1, 0xc6, 0x43, 0x39, 0x86, 0x0f, 0x0f, 0xe5, 0x18, 0x1b, 0x1e, 0xc9, 0x31, 0xae, 0x78,
+	0x24, 0xc7, 0x78, 0xe2, 0x91, 0x1c, 0xe3, 0x85, 0x47, 0x72, 0x8c, 0x0f, 0x1e, 0xc9, 0x31, 0xbe,
+	0x78, 0x24, 0xc7, 0xf0, 0xe1, 0x91, 0x1c, 0xe3, 0x84, 0xc7, 0x72, 0x0c, 0x17, 0x1e, 0xcb, 0x31,
+	0xdc, 0x78, 0x2c, 0xc7, 0x10, 0xa5, 0x98, 0x58, 0x94, 0x91, 0x58, 0xa2, 0x97, 0x92, 0x5a, 0xa6,
+	0x0f, 0x09, 0x01, 0x5d, 0x70, 0x78, 0x40, 0x39, 0xe9, 0xf9, 0x05, 0x49, 0x49, 0x6c, 0x60, 0x11,
+	0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0xc0, 0xda, 0xe0, 0x6a, 0x36, 0x01, 0x00, 0x00,
 }
 
-func (x StorageCmd_Action) String() string {
-	s, ok := StorageCmd_Action_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (this *StorageCmd) Equal(that interface{}) bool {
+func (this *StorageListCmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*StorageCmd)
+	that1, ok := that.(*StorageListCmd)
 	if !ok {
-		that2, ok := that.(StorageCmd)
+		that2, ok := that.(StorageListCmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -242,52 +208,16 @@ func (this *StorageCmd) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Action != that1.Action {
-		return false
-	}
-	if that1.Options == nil {
-		if this.Options != nil {
-			return false
-		}
-	} else if this.Options == nil {
-		return false
-	} else if !this.Options.Equal(that1.Options) {
-		return false
-	}
 	return true
 }
-func (this *StorageCmd_Mount) Equal(that interface{}) bool {
+func (this *StorageEnsureCmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*StorageCmd_Mount)
+	that1, ok := that.(*StorageEnsureCmd)
 	if !ok {
-		that2, ok := that.(StorageCmd_Mount)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Mount.Equal(that1.Mount) {
-		return false
-	}
-	return true
-}
-func (this *RemoteVolumeMountOptions) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RemoteVolumeMountOptions)
-	if !ok {
-		that2, ok := that.(RemoteVolumeMountOptions)
+		that2, ok := that.(StorageEnsureCmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -307,33 +237,59 @@ func (this *RemoteVolumeMountOptions) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *StorageCmd) GoString() string {
+func (this *StorageDeleteCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*StorageDeleteCmd)
+	if !ok {
+		that2, ok := that.(StorageDeleteCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.RemotePath != that1.RemotePath {
+		return false
+	}
+	if this.LocalPath != that1.LocalPath {
+		return false
+	}
+	return true
+}
+func (this *StorageListCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 6)
-	s = append(s, "&aranyagopb.StorageCmd{")
-	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
-	if this.Options != nil {
-		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
-	}
+	s := make([]string, 0, 4)
+	s = append(s, "&aranyagopb.StorageListCmd{")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *StorageCmd_Mount) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&aranyagopb.StorageCmd_Mount{` +
-		`Mount:` + fmt.Sprintf("%#v", this.Mount) + `}`}, ", ")
-	return s
-}
-func (this *RemoteVolumeMountOptions) GoString() string {
+func (this *StorageEnsureCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&aranyagopb.RemoteVolumeMountOptions{")
+	s = append(s, "&aranyagopb.StorageEnsureCmd{")
+	s = append(s, "RemotePath: "+fmt.Sprintf("%#v", this.RemotePath)+",\n")
+	s = append(s, "LocalPath: "+fmt.Sprintf("%#v", this.LocalPath)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *StorageDeleteCmd) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&aranyagopb.StorageDeleteCmd{")
 	s = append(s, "RemotePath: "+fmt.Sprintf("%#v", this.RemotePath)+",\n")
 	s = append(s, "LocalPath: "+fmt.Sprintf("%#v", this.LocalPath)+",\n")
 	s = append(s, "}")
@@ -347,7 +303,7 @@ func valueToGoStringCmdStorage(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func (m *StorageCmd) Marshal() (dAtA []byte, err error) {
+func (m *StorageListCmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -357,55 +313,20 @@ func (m *StorageCmd) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *StorageCmd) MarshalTo(dAtA []byte) (int, error) {
+func (m *StorageListCmd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *StorageCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *StorageListCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Options != nil {
-		{
-			size := m.Options.Size()
-			i -= size
-			if _, err := m.Options.MarshalTo(dAtA[i:]); err != nil {
-				return 0, err
-			}
-		}
-	}
-	if m.Action != 0 {
-		i = encodeVarintCmdStorage(dAtA, i, uint64(m.Action))
-		i--
-		dAtA[i] = 0x8
-	}
 	return len(dAtA) - i, nil
 }
 
-func (m *StorageCmd_Mount) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *StorageCmd_Mount) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.Mount != nil {
-		{
-			size, err := m.Mount.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintCmdStorage(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	return len(dAtA) - i, nil
-}
-func (m *RemoteVolumeMountOptions) Marshal() (dAtA []byte, err error) {
+func (m *StorageEnsureCmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -415,12 +336,49 @@ func (m *RemoteVolumeMountOptions) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *RemoteVolumeMountOptions) MarshalTo(dAtA []byte) (int, error) {
+func (m *StorageEnsureCmd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *RemoteVolumeMountOptions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *StorageEnsureCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.LocalPath) > 0 {
+		i -= len(m.LocalPath)
+		copy(dAtA[i:], m.LocalPath)
+		i = encodeVarintCmdStorage(dAtA, i, uint64(len(m.LocalPath)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.RemotePath) > 0 {
+		i -= len(m.RemotePath)
+		copy(dAtA[i:], m.RemotePath)
+		i = encodeVarintCmdStorage(dAtA, i, uint64(len(m.RemotePath)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *StorageDeleteCmd) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *StorageDeleteCmd) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *StorageDeleteCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -453,34 +411,33 @@ func encodeVarintCmdStorage(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *StorageCmd) Size() (n int) {
+func (m *StorageListCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.Action != 0 {
-		n += 1 + sovCmdStorage(uint64(m.Action))
-	}
-	if m.Options != nil {
-		n += m.Options.Size()
-	}
 	return n
 }
 
-func (m *StorageCmd_Mount) Size() (n int) {
+func (m *StorageEnsureCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.Mount != nil {
-		l = m.Mount.Size()
+	l = len(m.RemotePath)
+	if l > 0 {
+		n += 1 + l + sovCmdStorage(uint64(l))
+	}
+	l = len(m.LocalPath)
+	if l > 0 {
 		n += 1 + l + sovCmdStorage(uint64(l))
 	}
 	return n
 }
-func (m *RemoteVolumeMountOptions) Size() (n int) {
+
+func (m *StorageDeleteCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -503,32 +460,31 @@ func sovCmdStorage(x uint64) (n int) {
 func sozCmdStorage(x uint64) (n int) {
 	return sovCmdStorage(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (this *StorageCmd) String() string {
+func (this *StorageListCmd) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&StorageCmd{`,
-		`Action:` + fmt.Sprintf("%v", this.Action) + `,`,
-		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
+	s := strings.Join([]string{`&StorageListCmd{`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *StorageCmd_Mount) String() string {
+func (this *StorageEnsureCmd) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&StorageCmd_Mount{`,
-		`Mount:` + strings.Replace(fmt.Sprintf("%v", this.Mount), "RemoteVolumeMountOptions", "RemoteVolumeMountOptions", 1) + `,`,
+	s := strings.Join([]string{`&StorageEnsureCmd{`,
+		`RemotePath:` + fmt.Sprintf("%v", this.RemotePath) + `,`,
+		`LocalPath:` + fmt.Sprintf("%v", this.LocalPath) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *RemoteVolumeMountOptions) String() string {
+func (this *StorageDeleteCmd) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&RemoteVolumeMountOptions{`,
+	s := strings.Join([]string{`&StorageDeleteCmd{`,
 		`RemotePath:` + fmt.Sprintf("%v", this.RemotePath) + `,`,
 		`LocalPath:` + fmt.Sprintf("%v", this.LocalPath) + `,`,
 		`}`,
@@ -543,7 +499,7 @@ func valueToStringCmdStorage(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
-func (m *StorageCmd) Unmarshal(dAtA []byte) error {
+func (m *StorageListCmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -566,36 +522,70 @@ func (m *StorageCmd) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: StorageCmd: wiretype end group for non-group")
+			return fmt.Errorf("proto: StorageListCmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: StorageCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: StorageListCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCmdStorage(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCmdStorage
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCmdStorage
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *StorageEnsureCmd) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCmdStorage
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: StorageEnsureCmd: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: StorageEnsureCmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Action", wireType)
-			}
-			m.Action = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdStorage
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Action |= StorageCmd_Action(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Mount", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field RemotePath", wireType)
 			}
-			var msglen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowCmdStorage
@@ -605,26 +595,55 @@ func (m *StorageCmd) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				msglen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if msglen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthCmdStorage
 			}
-			postIndex := iNdEx + msglen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthCmdStorage
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &RemoteVolumeMountOptions{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
+			m.RemotePath = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LocalPath", wireType)
 			}
-			m.Options = &StorageCmd_Mount{v}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdStorage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdStorage
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdStorage
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.LocalPath = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -650,7 +669,7 @@ func (m *StorageCmd) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *RemoteVolumeMountOptions) Unmarshal(dAtA []byte) error {
+func (m *StorageDeleteCmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -673,10 +692,10 @@ func (m *RemoteVolumeMountOptions) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: RemoteVolumeMountOptions: wiretype end group for non-group")
+			return fmt.Errorf("proto: StorageDeleteCmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RemoteVolumeMountOptions: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: StorageDeleteCmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

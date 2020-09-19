@@ -24,21 +24,21 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type CredentialStatus struct {
+type CredentialStatusMsg struct {
 	SshPrivateKeySha256Hex string `protobuf:"bytes,1,opt,name=ssh_private_key_sha256_hex,json=sshPrivateKeySha256Hex,proto3" json:"ssh_private_key_sha256_hex,omitempty"`
 }
 
-func (m *CredentialStatus) Reset()      { *m = CredentialStatus{} }
-func (*CredentialStatus) ProtoMessage() {}
-func (*CredentialStatus) Descriptor() ([]byte, []int) {
+func (m *CredentialStatusMsg) Reset()      { *m = CredentialStatusMsg{} }
+func (*CredentialStatusMsg) ProtoMessage() {}
+func (*CredentialStatusMsg) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8add3ccdb196d302, []int{0}
 }
-func (m *CredentialStatus) XXX_Unmarshal(b []byte) error {
+func (m *CredentialStatusMsg) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *CredentialStatus) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *CredentialStatusMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_CredentialStatus.Marshal(b, m, deterministic)
+		return xxx_messageInfo_CredentialStatusMsg.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -48,19 +48,19 @@ func (m *CredentialStatus) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *CredentialStatus) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CredentialStatus.Merge(m, src)
+func (m *CredentialStatusMsg) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CredentialStatusMsg.Merge(m, src)
 }
-func (m *CredentialStatus) XXX_Size() int {
+func (m *CredentialStatusMsg) XXX_Size() int {
 	return m.Size()
 }
-func (m *CredentialStatus) XXX_DiscardUnknown() {
-	xxx_messageInfo_CredentialStatus.DiscardUnknown(m)
+func (m *CredentialStatusMsg) XXX_DiscardUnknown() {
+	xxx_messageInfo_CredentialStatusMsg.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_CredentialStatus proto.InternalMessageInfo
+var xxx_messageInfo_CredentialStatusMsg proto.InternalMessageInfo
 
-func (m *CredentialStatus) GetSshPrivateKeySha256Hex() string {
+func (m *CredentialStatusMsg) GetSshPrivateKeySha256Hex() string {
 	if m != nil {
 		return m.SshPrivateKeySha256Hex
 	}
@@ -68,36 +68,36 @@ func (m *CredentialStatus) GetSshPrivateKeySha256Hex() string {
 }
 
 func init() {
-	proto.RegisterType((*CredentialStatus)(nil), "aranya.CredentialStatus")
+	proto.RegisterType((*CredentialStatusMsg)(nil), "aranya.CredentialStatusMsg")
 }
 
 func init() { proto.RegisterFile("msg_credential.proto", fileDescriptor_8add3ccdb196d302) }
 
 var fileDescriptor_8add3ccdb196d302 = []byte{
-	// 205 bytes of a gzipped FileDescriptorProto
+	// 208 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0xc9, 0x2d, 0x4e, 0x8f,
 	0x4f, 0x2e, 0x4a, 0x4d, 0x49, 0xcd, 0x2b, 0xc9, 0x4c, 0xcc, 0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9,
-	0x17, 0x62, 0x4b, 0x2c, 0x4a, 0xcc, 0xab, 0x4c, 0x54, 0xf2, 0xe3, 0x12, 0x70, 0x86, 0xcb, 0x05,
-	0x97, 0x24, 0x96, 0x94, 0x16, 0x0b, 0x59, 0x71, 0x49, 0x15, 0x17, 0x67, 0xc4, 0x17, 0x14, 0x65,
-	0x96, 0x25, 0x96, 0xa4, 0xc6, 0x67, 0xa7, 0x56, 0xc6, 0x17, 0x67, 0x24, 0x1a, 0x99, 0x9a, 0xc5,
-	0x67, 0xa4, 0x56, 0x48, 0x30, 0x2a, 0x30, 0x6a, 0x70, 0x06, 0x89, 0x15, 0x17, 0x67, 0x04, 0x40,
-	0x14, 0x78, 0xa7, 0x56, 0x06, 0x83, 0xa5, 0x3d, 0x52, 0x2b, 0x9c, 0xc2, 0x2f, 0x3c, 0x94, 0x63,
-	0xb8, 0xf1, 0x50, 0x8e, 0xe1, 0xc3, 0x43, 0x39, 0xc6, 0x86, 0x47, 0x72, 0x8c, 0x2b, 0x1e, 0xc9,
-	0x31, 0x9e, 0x78, 0x24, 0xc7, 0x78, 0xe1, 0x91, 0x1c, 0xe3, 0x83, 0x47, 0x72, 0x8c, 0x2f, 0x1e,
-	0xc9, 0x31, 0x7c, 0x78, 0x24, 0xc7, 0x38, 0xe1, 0xb1, 0x1c, 0xc3, 0x85, 0xc7, 0x72, 0x0c, 0x37,
-	0x1e, 0xcb, 0x31, 0x44, 0x29, 0x26, 0x16, 0x65, 0x24, 0x96, 0xe8, 0xa5, 0xa4, 0x96, 0xe9, 0x43,
-	0xdc, 0xa5, 0x0b, 0x76, 0x25, 0x94, 0x93, 0x9e, 0x5f, 0x90, 0x94, 0xc4, 0x06, 0x16, 0x31, 0x06,
-	0x04, 0x00, 0x00, 0xff, 0xff, 0xfd, 0x1f, 0x5f, 0x0f, 0xcf, 0x00, 0x00, 0x00,
+	0x17, 0x62, 0x4b, 0x2c, 0x4a, 0xcc, 0xab, 0x4c, 0x54, 0x0a, 0xe4, 0x12, 0x76, 0x86, 0xcb, 0x05,
+	0x97, 0x24, 0x96, 0x94, 0x16, 0xfb, 0x16, 0xa7, 0x0b, 0x59, 0x71, 0x49, 0x15, 0x17, 0x67, 0xc4,
+	0x17, 0x14, 0x65, 0x96, 0x25, 0x96, 0xa4, 0xc6, 0x67, 0xa7, 0x56, 0xc6, 0x17, 0x67, 0x24, 0x1a,
+	0x99, 0x9a, 0xc5, 0x67, 0xa4, 0x56, 0x48, 0x30, 0x2a, 0x30, 0x6a, 0x70, 0x06, 0x89, 0x15, 0x17,
+	0x67, 0x04, 0x40, 0x14, 0x78, 0xa7, 0x56, 0x06, 0x83, 0xa5, 0x3d, 0x52, 0x2b, 0x9c, 0xc2, 0x2f,
+	0x3c, 0x94, 0x63, 0xb8, 0xf1, 0x50, 0x8e, 0xe1, 0xc3, 0x43, 0x39, 0xc6, 0x86, 0x47, 0x72, 0x8c,
+	0x2b, 0x1e, 0xc9, 0x31, 0x9e, 0x78, 0x24, 0xc7, 0x78, 0xe1, 0x91, 0x1c, 0xe3, 0x83, 0x47, 0x72,
+	0x8c, 0x2f, 0x1e, 0xc9, 0x31, 0x7c, 0x78, 0x24, 0xc7, 0x38, 0xe1, 0xb1, 0x1c, 0xc3, 0x85, 0xc7,
+	0x72, 0x0c, 0x37, 0x1e, 0xcb, 0x31, 0x44, 0x29, 0x26, 0x16, 0x65, 0x24, 0x96, 0xe8, 0xa5, 0xa4,
+	0x96, 0xe9, 0x43, 0x9c, 0xa6, 0x0b, 0x76, 0x28, 0x94, 0x93, 0x9e, 0x5f, 0x90, 0x94, 0xc4, 0x06,
+	0x16, 0x31, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0x71, 0xc8, 0x08, 0x58, 0xd2, 0x00, 0x00, 0x00,
 }
 
-func (this *CredentialStatus) Equal(that interface{}) bool {
+func (this *CredentialStatusMsg) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*CredentialStatus)
+	that1, ok := that.(*CredentialStatusMsg)
 	if !ok {
-		that2, ok := that.(CredentialStatus)
+		that2, ok := that.(CredentialStatusMsg)
 		if ok {
 			that1 = &that2
 		} else {
@@ -114,12 +114,12 @@ func (this *CredentialStatus) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *CredentialStatus) GoString() string {
+func (this *CredentialStatusMsg) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 5)
-	s = append(s, "&aranyagopb.CredentialStatus{")
+	s = append(s, "&aranyagopb.CredentialStatusMsg{")
 	s = append(s, "SshPrivateKeySha256Hex: "+fmt.Sprintf("%#v", this.SshPrivateKeySha256Hex)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -132,7 +132,7 @@ func valueToGoStringMsgCredential(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func (m *CredentialStatus) Marshal() (dAtA []byte, err error) {
+func (m *CredentialStatusMsg) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -142,12 +142,12 @@ func (m *CredentialStatus) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *CredentialStatus) MarshalTo(dAtA []byte) (int, error) {
+func (m *CredentialStatusMsg) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *CredentialStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *CredentialStatusMsg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -173,7 +173,7 @@ func encodeVarintMsgCredential(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *CredentialStatus) Size() (n int) {
+func (m *CredentialStatusMsg) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -192,11 +192,11 @@ func sovMsgCredential(x uint64) (n int) {
 func sozMsgCredential(x uint64) (n int) {
 	return sovMsgCredential(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (this *CredentialStatus) String() string {
+func (this *CredentialStatusMsg) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&CredentialStatus{`,
+	s := strings.Join([]string{`&CredentialStatusMsg{`,
 		`SshPrivateKeySha256Hex:` + fmt.Sprintf("%v", this.SshPrivateKeySha256Hex) + `,`,
 		`}`,
 	}, "")
@@ -210,7 +210,7 @@ func valueToStringMsgCredential(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
-func (m *CredentialStatus) Unmarshal(dAtA []byte) error {
+func (m *CredentialStatusMsg) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -233,10 +233,10 @@ func (m *CredentialStatus) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: CredentialStatus: wiretype end group for non-group")
+			return fmt.Errorf("proto: CredentialStatusMsg: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: CredentialStatus: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: CredentialStatusMsg: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

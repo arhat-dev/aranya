@@ -10,7 +10,6 @@ import (
 	math "math"
 	math_bits "math/bits"
 	reflect "reflect"
-	strconv "strconv"
 	strings "strings"
 )
 
@@ -25,45 +24,22 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type NetworkCmd_Action int32
-
-const (
-	_INVALID_NETWORK_ACTION NetworkCmd_Action = 0
-	UPDATE_NETWORK          NetworkCmd_Action = 1
-)
-
-var NetworkCmd_Action_name = map[int32]string{
-	0: "_INVALID_NETWORK_ACTION",
-	1: "UPDATE_NETWORK",
+type NetworkUpdatePodNetworkCmd struct {
+	CidrIpv4 string `protobuf:"bytes,1,opt,name=cidr_ipv4,json=cidrIpv4,proto3" json:"cidr_ipv4,omitempty"`
+	CidrIpv6 string `protobuf:"bytes,2,opt,name=cidr_ipv6,json=cidrIpv6,proto3" json:"cidr_ipv6,omitempty"`
 }
 
-var NetworkCmd_Action_value = map[string]int32{
-	"_INVALID_NETWORK_ACTION": 0,
-	"UPDATE_NETWORK":          1,
-}
-
-func (NetworkCmd_Action) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_c01a4fadacf92e62, []int{0, 0}
-}
-
-type NetworkCmd struct {
-	Action NetworkCmd_Action `protobuf:"varint,1,opt,name=action,proto3,enum=aranya.NetworkCmd_Action" json:"action,omitempty"`
-	// Types that are valid to be assigned to Options:
-	//	*NetworkCmd_NetworkOptions
-	Options isNetworkCmd_Options `protobuf_oneof:"options"`
-}
-
-func (m *NetworkCmd) Reset()      { *m = NetworkCmd{} }
-func (*NetworkCmd) ProtoMessage() {}
-func (*NetworkCmd) Descriptor() ([]byte, []int) {
+func (m *NetworkUpdatePodNetworkCmd) Reset()      { *m = NetworkUpdatePodNetworkCmd{} }
+func (*NetworkUpdatePodNetworkCmd) ProtoMessage() {}
+func (*NetworkUpdatePodNetworkCmd) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c01a4fadacf92e62, []int{0}
 }
-func (m *NetworkCmd) XXX_Unmarshal(b []byte) error {
+func (m *NetworkUpdatePodNetworkCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *NetworkCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *NetworkUpdatePodNetworkCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_NetworkCmd.Marshal(b, m, deterministic)
+		return xxx_messageInfo_NetworkUpdatePodNetworkCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -73,241 +49,62 @@ func (m *NetworkCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *NetworkCmd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_NetworkCmd.Merge(m, src)
+func (m *NetworkUpdatePodNetworkCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NetworkUpdatePodNetworkCmd.Merge(m, src)
 }
-func (m *NetworkCmd) XXX_Size() int {
+func (m *NetworkUpdatePodNetworkCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *NetworkCmd) XXX_DiscardUnknown() {
-	xxx_messageInfo_NetworkCmd.DiscardUnknown(m)
+func (m *NetworkUpdatePodNetworkCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_NetworkUpdatePodNetworkCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_NetworkCmd proto.InternalMessageInfo
+var xxx_messageInfo_NetworkUpdatePodNetworkCmd proto.InternalMessageInfo
 
-type isNetworkCmd_Options interface {
-	isNetworkCmd_Options()
-	Equal(interface{}) bool
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type NetworkCmd_NetworkOptions struct {
-	NetworkOptions *NetworkOptions `protobuf:"bytes,2,opt,name=network_options,json=networkOptions,proto3,oneof" json:"network_options,omitempty"`
-}
-
-func (*NetworkCmd_NetworkOptions) isNetworkCmd_Options() {}
-
-func (m *NetworkCmd) GetOptions() isNetworkCmd_Options {
+func (m *NetworkUpdatePodNetworkCmd) GetCidrIpv4() string {
 	if m != nil {
-		return m.Options
-	}
-	return nil
-}
-
-func (m *NetworkCmd) GetAction() NetworkCmd_Action {
-	if m != nil {
-		return m.Action
-	}
-	return _INVALID_NETWORK_ACTION
-}
-
-func (m *NetworkCmd) GetNetworkOptions() *NetworkOptions {
-	if x, ok := m.GetOptions().(*NetworkCmd_NetworkOptions); ok {
-		return x.NetworkOptions
-	}
-	return nil
-}
-
-// XXX_OneofWrappers is for the internal use of the proto package.
-func (*NetworkCmd) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
-		(*NetworkCmd_NetworkOptions)(nil),
-	}
-}
-
-type NetworkOptions struct {
-	Ipv4PodCidr string     `protobuf:"bytes,1,opt,name=ipv4_pod_cidr,json=ipv4PodCidr,proto3" json:"ipv4_pod_cidr,omitempty"`
-	Ipv6PodCidr string     `protobuf:"bytes,2,opt,name=ipv6_pod_cidr,json=ipv6PodCidr,proto3" json:"ipv6_pod_cidr,omitempty"`
-	Bandwidth   *Bandwidth `protobuf:"bytes,3,opt,name=bandwidth,proto3" json:"bandwidth,omitempty"`
-}
-
-func (m *NetworkOptions) Reset()      { *m = NetworkOptions{} }
-func (*NetworkOptions) ProtoMessage() {}
-func (*NetworkOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c01a4fadacf92e62, []int{1}
-}
-func (m *NetworkOptions) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *NetworkOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_NetworkOptions.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *NetworkOptions) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_NetworkOptions.Merge(m, src)
-}
-func (m *NetworkOptions) XXX_Size() int {
-	return m.Size()
-}
-func (m *NetworkOptions) XXX_DiscardUnknown() {
-	xxx_messageInfo_NetworkOptions.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_NetworkOptions proto.InternalMessageInfo
-
-func (m *NetworkOptions) GetIpv4PodCidr() string {
-	if m != nil {
-		return m.Ipv4PodCidr
+		return m.CidrIpv4
 	}
 	return ""
 }
 
-func (m *NetworkOptions) GetIpv6PodCidr() string {
+func (m *NetworkUpdatePodNetworkCmd) GetCidrIpv6() string {
 	if m != nil {
-		return m.Ipv6PodCidr
+		return m.CidrIpv6
 	}
 	return ""
-}
-
-func (m *NetworkOptions) GetBandwidth() *Bandwidth {
-	if m != nil {
-		return m.Bandwidth
-	}
-	return nil
-}
-
-type Bandwidth struct {
-	// unit: bits/s
-	IngressRate int32 `protobuf:"varint,1,opt,name=ingress_rate,json=ingressRate,proto3" json:"ingress_rate,omitempty"`
-	EgressRate  int32 `protobuf:"varint,2,opt,name=egress_rate,json=egressRate,proto3" json:"egress_rate,omitempty"`
-	// unit: bits
-	IngressBurst int32 `protobuf:"varint,3,opt,name=ingress_burst,json=ingressBurst,proto3" json:"ingress_burst,omitempty"`
-	EgressBurst  int32 `protobuf:"varint,4,opt,name=egress_burst,json=egressBurst,proto3" json:"egress_burst,omitempty"`
-}
-
-func (m *Bandwidth) Reset()      { *m = Bandwidth{} }
-func (*Bandwidth) ProtoMessage() {}
-func (*Bandwidth) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c01a4fadacf92e62, []int{2}
-}
-func (m *Bandwidth) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Bandwidth) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Bandwidth.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Bandwidth) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Bandwidth.Merge(m, src)
-}
-func (m *Bandwidth) XXX_Size() int {
-	return m.Size()
-}
-func (m *Bandwidth) XXX_DiscardUnknown() {
-	xxx_messageInfo_Bandwidth.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Bandwidth proto.InternalMessageInfo
-
-func (m *Bandwidth) GetIngressRate() int32 {
-	if m != nil {
-		return m.IngressRate
-	}
-	return 0
-}
-
-func (m *Bandwidth) GetEgressRate() int32 {
-	if m != nil {
-		return m.EgressRate
-	}
-	return 0
-}
-
-func (m *Bandwidth) GetIngressBurst() int32 {
-	if m != nil {
-		return m.IngressBurst
-	}
-	return 0
-}
-
-func (m *Bandwidth) GetEgressBurst() int32 {
-	if m != nil {
-		return m.EgressBurst
-	}
-	return 0
 }
 
 func init() {
-	proto.RegisterEnum("aranya.NetworkCmd_Action", NetworkCmd_Action_name, NetworkCmd_Action_value)
-	proto.RegisterType((*NetworkCmd)(nil), "aranya.NetworkCmd")
-	proto.RegisterType((*NetworkOptions)(nil), "aranya.NetworkOptions")
-	proto.RegisterType((*Bandwidth)(nil), "aranya.Bandwidth")
+	proto.RegisterType((*NetworkUpdatePodNetworkCmd)(nil), "aranya.NetworkUpdatePodNetworkCmd")
 }
 
 func init() { proto.RegisterFile("cmd_network.proto", fileDescriptor_c01a4fadacf92e62) }
 
 var fileDescriptor_c01a4fadacf92e62 = []byte{
-	// 410 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x5c, 0x92, 0x31, 0x6f, 0xd4, 0x30,
-	0x1c, 0xc5, 0xed, 0x83, 0x1e, 0xba, 0xff, 0xd1, 0xd0, 0x7a, 0x80, 0x43, 0x48, 0xa6, 0x0d, 0x4b,
-	0x17, 0x52, 0x51, 0x50, 0x25, 0xc6, 0xe4, 0x5a, 0x89, 0x13, 0x28, 0x57, 0x59, 0x07, 0x95, 0x58,
-	0x2c, 0xe7, 0x6c, 0xb5, 0x11, 0x6a, 0x1c, 0x39, 0xa6, 0x15, 0x1b, 0x2b, 0x1b, 0x1b, 0x5f, 0x81,
-	0x8f, 0xd2, 0xf1, 0xc6, 0x8e, 0x5c, 0x6e, 0x61, 0xec, 0x47, 0x40, 0x71, 0x92, 0xa6, 0x65, 0xcc,
-	0x7b, 0xbf, 0xbc, 0xf7, 0x7f, 0x92, 0x61, 0x73, 0x7e, 0x26, 0x79, 0xa6, 0xec, 0x85, 0x36, 0x5f,
-	0x82, 0xdc, 0x68, 0xab, 0x49, 0x5f, 0x18, 0x91, 0x7d, 0x13, 0xfe, 0x25, 0x06, 0x88, 0x6b, 0x67,
-	0x7c, 0x26, 0xc9, 0x2b, 0xe8, 0x8b, 0xb9, 0x4d, 0x75, 0x36, 0xc2, 0x5b, 0x78, 0xc7, 0xdb, 0x7b,
-	0x1a, 0xd4, 0x5c, 0xd0, 0x31, 0x41, 0xe8, 0x00, 0xd6, 0x80, 0x24, 0x84, 0x47, 0x4d, 0x34, 0xd7,
-	0x79, 0xa5, 0x14, 0xa3, 0xde, 0x16, 0xde, 0x19, 0xee, 0x3d, 0xfe, 0xef, 0xdf, 0x69, 0xed, 0xbe,
-	0x43, 0xcc, 0xcb, 0xee, 0x28, 0xfe, 0x5b, 0xe8, 0xd7, 0xa1, 0xe4, 0x19, 0x3c, 0xe1, 0x93, 0xf8,
-	0x53, 0xf8, 0x61, 0x72, 0xc0, 0xe3, 0xc3, 0xd9, 0xf1, 0x94, 0xbd, 0xe7, 0xe1, 0x78, 0x36, 0x99,
-	0xc6, 0x1b, 0x88, 0x10, 0xf0, 0x3e, 0x1e, 0x1d, 0x84, 0xb3, 0xc3, 0xd6, 0xda, 0xc0, 0xd1, 0x00,
-	0x1e, 0x34, 0xad, 0xfe, 0x0f, 0x0c, 0xde, 0xdd, 0x2a, 0xe2, 0xc3, 0x7a, 0x9a, 0x9f, 0xbf, 0xe1,
-	0xb9, 0x96, 0x7c, 0x9e, 0x4a, 0xe3, 0x56, 0x0d, 0xd8, 0xb0, 0x12, 0x8f, 0xb4, 0x1c, 0xa7, 0xd2,
-	0x34, 0xcc, 0x7e, 0xc7, 0xf4, 0x6e, 0x98, 0xfd, 0x96, 0xd9, 0x85, 0x41, 0x22, 0x32, 0x79, 0x91,
-	0x4a, 0x7b, 0x3a, 0xba, 0xe7, 0xd6, 0x6d, 0xb6, 0xeb, 0xa2, 0xd6, 0x60, 0x1d, 0xe3, 0xff, 0xc2,
-	0x30, 0xb8, 0x31, 0xc8, 0x36, 0x3c, 0x4c, 0xb3, 0x13, 0xa3, 0x8a, 0x82, 0x1b, 0x61, 0x95, 0xbb,
-	0x62, 0x8d, 0x0d, 0x1b, 0x8d, 0x09, 0xab, 0xc8, 0x73, 0x18, 0xaa, 0x5b, 0x44, 0xcf, 0x11, 0xa0,
-	0x3a, 0xe0, 0x05, 0xac, 0xb7, 0x19, 0xc9, 0x57, 0x53, 0x58, 0x77, 0xc6, 0x1a, 0x6b, 0x83, 0xa3,
-	0x4a, 0xab, 0x8a, 0xd4, 0x6d, 0xe6, 0x7e, 0x5d, 0xa4, 0x3a, 0x24, 0x3a, 0x5e, 0x2c, 0x29, 0xba,
-	0x5a, 0x52, 0x74, 0xbd, 0xa4, 0xf8, 0x7b, 0x49, 0xf1, 0xef, 0x92, 0xe2, 0xcb, 0x92, 0xe2, 0x45,
-	0x49, 0xf1, 0x9f, 0x92, 0xe2, 0xbf, 0x25, 0x45, 0xd7, 0x25, 0xc5, 0x3f, 0x57, 0x14, 0x2d, 0x56,
-	0x14, 0x5d, 0xad, 0x28, 0xfa, 0xbc, 0x2d, 0xcc, 0xa9, 0xb0, 0x81, 0x54, 0xe7, 0xbb, 0xf5, 0xec,
-	0x97, 0xee, 0x19, 0x35, 0x1f, 0x27, 0x3a, 0x4f, 0x92, 0xbe, 0x53, 0x5e, 0xff, 0x0b, 0x00, 0x00,
-	0xff, 0xff, 0xea, 0xd1, 0x40, 0xd4, 0x6d, 0x02, 0x00, 0x00,
+	// 192 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x4c, 0xce, 0x4d, 0x89,
+	0xcf, 0x4b, 0x2d, 0x29, 0xcf, 0x2f, 0xca, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4b,
+	0x2c, 0x4a, 0xcc, 0xab, 0x4c, 0x54, 0x0a, 0xe3, 0x92, 0xf2, 0x83, 0x48, 0x84, 0x16, 0xa4, 0x24,
+	0x96, 0xa4, 0x06, 0xe4, 0xa7, 0x40, 0xf9, 0xce, 0xb9, 0x29, 0x42, 0xd2, 0x5c, 0x9c, 0xc9, 0x99,
+	0x29, 0x45, 0xf1, 0x99, 0x05, 0x65, 0x26, 0x12, 0x8c, 0x0a, 0x8c, 0x1a, 0x9c, 0x41, 0x1c, 0x20,
+	0x01, 0xcf, 0x82, 0x32, 0x13, 0x64, 0x49, 0x33, 0x09, 0x26, 0x14, 0x49, 0x33, 0xa7, 0xf0, 0x0b,
+	0x0f, 0xe5, 0x18, 0x6e, 0x3c, 0x94, 0x63, 0xf8, 0xf0, 0x50, 0x8e, 0xb1, 0xe1, 0x91, 0x1c, 0xe3,
+	0x8a, 0x47, 0x72, 0x8c, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24, 0xc7, 0xf8, 0xe0, 0x91, 0x1c,
+	0xe3, 0x8b, 0x47, 0x72, 0x0c, 0x1f, 0x1e, 0xc9, 0x31, 0x4e, 0x78, 0x2c, 0xc7, 0x70, 0xe1, 0xb1,
+	0x1c, 0xc3, 0x8d, 0xc7, 0x72, 0x0c, 0x51, 0x8a, 0x89, 0x45, 0x19, 0x89, 0x25, 0x7a, 0x29, 0xa9,
+	0x65, 0xfa, 0x10, 0xf7, 0xe9, 0x82, 0x5d, 0x0b, 0xe5, 0xa4, 0xe7, 0x17, 0x24, 0x25, 0xb1, 0x81,
+	0x45, 0x8c, 0x01, 0x01, 0x00, 0x00, 0xff, 0xff, 0xdd, 0x15, 0x6d, 0x8b, 0xd4, 0x00, 0x00, 0x00,
 }
 
-func (x NetworkCmd_Action) String() string {
-	s, ok := NetworkCmd_Action_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (this *NetworkCmd) Equal(that interface{}) bool {
+func (this *NetworkUpdatePodNetworkCmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*NetworkCmd)
+	that1, ok := that.(*NetworkUpdatePodNetworkCmd)
 	if !ok {
-		that2, ok := that.(NetworkCmd)
+		that2, ok := that.(NetworkUpdatePodNetworkCmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -319,152 +116,22 @@ func (this *NetworkCmd) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Action != that1.Action {
+	if this.CidrIpv4 != that1.CidrIpv4 {
 		return false
 	}
-	if that1.Options == nil {
-		if this.Options != nil {
-			return false
-		}
-	} else if this.Options == nil {
-		return false
-	} else if !this.Options.Equal(that1.Options) {
+	if this.CidrIpv6 != that1.CidrIpv6 {
 		return false
 	}
 	return true
 }
-func (this *NetworkCmd_NetworkOptions) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*NetworkCmd_NetworkOptions)
-	if !ok {
-		that2, ok := that.(NetworkCmd_NetworkOptions)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.NetworkOptions.Equal(that1.NetworkOptions) {
-		return false
-	}
-	return true
-}
-func (this *NetworkOptions) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*NetworkOptions)
-	if !ok {
-		that2, ok := that.(NetworkOptions)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Ipv4PodCidr != that1.Ipv4PodCidr {
-		return false
-	}
-	if this.Ipv6PodCidr != that1.Ipv6PodCidr {
-		return false
-	}
-	if !this.Bandwidth.Equal(that1.Bandwidth) {
-		return false
-	}
-	return true
-}
-func (this *Bandwidth) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Bandwidth)
-	if !ok {
-		that2, ok := that.(Bandwidth)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.IngressRate != that1.IngressRate {
-		return false
-	}
-	if this.EgressRate != that1.EgressRate {
-		return false
-	}
-	if this.IngressBurst != that1.IngressBurst {
-		return false
-	}
-	if this.EgressBurst != that1.EgressBurst {
-		return false
-	}
-	return true
-}
-func (this *NetworkCmd) GoString() string {
+func (this *NetworkUpdatePodNetworkCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&aranyagopb.NetworkCmd{")
-	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
-	if this.Options != nil {
-		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *NetworkCmd_NetworkOptions) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&aranyagopb.NetworkCmd_NetworkOptions{` +
-		`NetworkOptions:` + fmt.Sprintf("%#v", this.NetworkOptions) + `}`}, ", ")
-	return s
-}
-func (this *NetworkOptions) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&aranyagopb.NetworkOptions{")
-	s = append(s, "Ipv4PodCidr: "+fmt.Sprintf("%#v", this.Ipv4PodCidr)+",\n")
-	s = append(s, "Ipv6PodCidr: "+fmt.Sprintf("%#v", this.Ipv6PodCidr)+",\n")
-	if this.Bandwidth != nil {
-		s = append(s, "Bandwidth: "+fmt.Sprintf("%#v", this.Bandwidth)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Bandwidth) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&aranyagopb.Bandwidth{")
-	s = append(s, "IngressRate: "+fmt.Sprintf("%#v", this.IngressRate)+",\n")
-	s = append(s, "EgressRate: "+fmt.Sprintf("%#v", this.EgressRate)+",\n")
-	s = append(s, "IngressBurst: "+fmt.Sprintf("%#v", this.IngressBurst)+",\n")
-	s = append(s, "EgressBurst: "+fmt.Sprintf("%#v", this.EgressBurst)+",\n")
+	s = append(s, "&aranyagopb.NetworkUpdatePodNetworkCmd{")
+	s = append(s, "CidrIpv4: "+fmt.Sprintf("%#v", this.CidrIpv4)+",\n")
+	s = append(s, "CidrIpv6: "+fmt.Sprintf("%#v", this.CidrIpv6)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -476,7 +143,7 @@ func valueToGoStringCmdNetwork(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func (m *NetworkCmd) Marshal() (dAtA []byte, err error) {
+func (m *NetworkUpdatePodNetworkCmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -486,142 +153,29 @@ func (m *NetworkCmd) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *NetworkCmd) MarshalTo(dAtA []byte) (int, error) {
+func (m *NetworkUpdatePodNetworkCmd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *NetworkCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *NetworkUpdatePodNetworkCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Options != nil {
-		{
-			size := m.Options.Size()
-			i -= size
-			if _, err := m.Options.MarshalTo(dAtA[i:]); err != nil {
-				return 0, err
-			}
-		}
-	}
-	if m.Action != 0 {
-		i = encodeVarintCmdNetwork(dAtA, i, uint64(m.Action))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *NetworkCmd_NetworkOptions) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *NetworkCmd_NetworkOptions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.NetworkOptions != nil {
-		{
-			size, err := m.NetworkOptions.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintCmdNetwork(dAtA, i, uint64(size))
-		}
+	if len(m.CidrIpv6) > 0 {
+		i -= len(m.CidrIpv6)
+		copy(dAtA[i:], m.CidrIpv6)
+		i = encodeVarintCmdNetwork(dAtA, i, uint64(len(m.CidrIpv6)))
 		i--
 		dAtA[i] = 0x12
 	}
-	return len(dAtA) - i, nil
-}
-func (m *NetworkOptions) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *NetworkOptions) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *NetworkOptions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Bandwidth != nil {
-		{
-			size, err := m.Bandwidth.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintCmdNetwork(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.Ipv6PodCidr) > 0 {
-		i -= len(m.Ipv6PodCidr)
-		copy(dAtA[i:], m.Ipv6PodCidr)
-		i = encodeVarintCmdNetwork(dAtA, i, uint64(len(m.Ipv6PodCidr)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Ipv4PodCidr) > 0 {
-		i -= len(m.Ipv4PodCidr)
-		copy(dAtA[i:], m.Ipv4PodCidr)
-		i = encodeVarintCmdNetwork(dAtA, i, uint64(len(m.Ipv4PodCidr)))
+	if len(m.CidrIpv4) > 0 {
+		i -= len(m.CidrIpv4)
+		copy(dAtA[i:], m.CidrIpv4)
+		i = encodeVarintCmdNetwork(dAtA, i, uint64(len(m.CidrIpv4)))
 		i--
 		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *Bandwidth) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Bandwidth) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Bandwidth) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.EgressBurst != 0 {
-		i = encodeVarintCmdNetwork(dAtA, i, uint64(m.EgressBurst))
-		i--
-		dAtA[i] = 0x20
-	}
-	if m.IngressBurst != 0 {
-		i = encodeVarintCmdNetwork(dAtA, i, uint64(m.IngressBurst))
-		i--
-		dAtA[i] = 0x18
-	}
-	if m.EgressRate != 0 {
-		i = encodeVarintCmdNetwork(dAtA, i, uint64(m.EgressRate))
-		i--
-		dAtA[i] = 0x10
-	}
-	if m.IngressRate != 0 {
-		i = encodeVarintCmdNetwork(dAtA, i, uint64(m.IngressRate))
-		i--
-		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -637,71 +191,19 @@ func encodeVarintCmdNetwork(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *NetworkCmd) Size() (n int) {
+func (m *NetworkUpdatePodNetworkCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.Action != 0 {
-		n += 1 + sovCmdNetwork(uint64(m.Action))
-	}
-	if m.Options != nil {
-		n += m.Options.Size()
-	}
-	return n
-}
-
-func (m *NetworkCmd_NetworkOptions) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.NetworkOptions != nil {
-		l = m.NetworkOptions.Size()
-		n += 1 + l + sovCmdNetwork(uint64(l))
-	}
-	return n
-}
-func (m *NetworkOptions) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Ipv4PodCidr)
+	l = len(m.CidrIpv4)
 	if l > 0 {
 		n += 1 + l + sovCmdNetwork(uint64(l))
 	}
-	l = len(m.Ipv6PodCidr)
+	l = len(m.CidrIpv6)
 	if l > 0 {
 		n += 1 + l + sovCmdNetwork(uint64(l))
-	}
-	if m.Bandwidth != nil {
-		l = m.Bandwidth.Size()
-		n += 1 + l + sovCmdNetwork(uint64(l))
-	}
-	return n
-}
-
-func (m *Bandwidth) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.IngressRate != 0 {
-		n += 1 + sovCmdNetwork(uint64(m.IngressRate))
-	}
-	if m.EgressRate != 0 {
-		n += 1 + sovCmdNetwork(uint64(m.EgressRate))
-	}
-	if m.IngressBurst != 0 {
-		n += 1 + sovCmdNetwork(uint64(m.IngressBurst))
-	}
-	if m.EgressBurst != 0 {
-		n += 1 + sovCmdNetwork(uint64(m.EgressBurst))
 	}
 	return n
 }
@@ -712,48 +214,13 @@ func sovCmdNetwork(x uint64) (n int) {
 func sozCmdNetwork(x uint64) (n int) {
 	return sovCmdNetwork(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (this *NetworkCmd) String() string {
+func (this *NetworkUpdatePodNetworkCmd) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&NetworkCmd{`,
-		`Action:` + fmt.Sprintf("%v", this.Action) + `,`,
-		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *NetworkCmd_NetworkOptions) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&NetworkCmd_NetworkOptions{`,
-		`NetworkOptions:` + strings.Replace(fmt.Sprintf("%v", this.NetworkOptions), "NetworkOptions", "NetworkOptions", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *NetworkOptions) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&NetworkOptions{`,
-		`Ipv4PodCidr:` + fmt.Sprintf("%v", this.Ipv4PodCidr) + `,`,
-		`Ipv6PodCidr:` + fmt.Sprintf("%v", this.Ipv6PodCidr) + `,`,
-		`Bandwidth:` + strings.Replace(this.Bandwidth.String(), "Bandwidth", "Bandwidth", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Bandwidth) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Bandwidth{`,
-		`IngressRate:` + fmt.Sprintf("%v", this.IngressRate) + `,`,
-		`EgressRate:` + fmt.Sprintf("%v", this.EgressRate) + `,`,
-		`IngressBurst:` + fmt.Sprintf("%v", this.IngressBurst) + `,`,
-		`EgressBurst:` + fmt.Sprintf("%v", this.EgressBurst) + `,`,
+	s := strings.Join([]string{`&NetworkUpdatePodNetworkCmd{`,
+		`CidrIpv4:` + fmt.Sprintf("%v", this.CidrIpv4) + `,`,
+		`CidrIpv6:` + fmt.Sprintf("%v", this.CidrIpv6) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -766,7 +233,7 @@ func valueToStringCmdNetwork(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
-func (m *NetworkCmd) Unmarshal(dAtA []byte) error {
+func (m *NetworkUpdatePodNetworkCmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -789,122 +256,15 @@ func (m *NetworkCmd) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: NetworkCmd: wiretype end group for non-group")
+			return fmt.Errorf("proto: NetworkUpdatePodNetworkCmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: NetworkCmd: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Action", wireType)
-			}
-			m.Action = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdNetwork
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Action |= NetworkCmd_Action(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NetworkOptions", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdNetwork
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthCmdNetwork
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdNetwork
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &NetworkOptions{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Options = &NetworkCmd_NetworkOptions{v}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipCmdNetwork(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdNetwork
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthCmdNetwork
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *NetworkOptions) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowCmdNetwork
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: NetworkOptions: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: NetworkOptions: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: NetworkUpdatePodNetworkCmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Ipv4PodCidr", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CidrIpv4", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -932,11 +292,11 @@ func (m *NetworkOptions) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Ipv4PodCidr = string(dAtA[iNdEx:postIndex])
+			m.CidrIpv4 = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Ipv6PodCidr", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CidrIpv6", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -964,173 +324,8 @@ func (m *NetworkOptions) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Ipv6PodCidr = string(dAtA[iNdEx:postIndex])
+			m.CidrIpv6 = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Bandwidth", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdNetwork
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthCmdNetwork
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdNetwork
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Bandwidth == nil {
-				m.Bandwidth = &Bandwidth{}
-			}
-			if err := m.Bandwidth.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipCmdNetwork(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdNetwork
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthCmdNetwork
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Bandwidth) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowCmdNetwork
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Bandwidth: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Bandwidth: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IngressRate", wireType)
-			}
-			m.IngressRate = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdNetwork
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.IngressRate |= int32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EgressRate", wireType)
-			}
-			m.EgressRate = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdNetwork
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.EgressRate |= int32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IngressBurst", wireType)
-			}
-			m.IngressBurst = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdNetwork
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.IngressBurst |= int32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EgressBurst", wireType)
-			}
-			m.EgressBurst = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdNetwork
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.EgressBurst |= int32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCmdNetwork(dAtA[iNdEx:])

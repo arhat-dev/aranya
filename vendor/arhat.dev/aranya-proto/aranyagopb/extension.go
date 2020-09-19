@@ -57,17 +57,17 @@ func (v *MountOptions) Ensure(dir string, dataMap map[string][]byte) (mountPath 
 	return dir, nil
 }
 
-func (s *PodStatus_ContainerStatus) GetTimeCreatedAt() time.Time {
+func (s *ContainerStatus) GetTimeCreatedAt() time.Time {
 	t, _ := time.Parse(aranyagoconst.TimeLayout, s.CreatedAt)
 	return t
 }
 
-func (s *PodStatus_ContainerStatus) GetTimeStartedAt() time.Time {
+func (s *ContainerStatus) GetTimeStartedAt() time.Time {
 	t, _ := time.Parse(aranyagoconst.TimeLayout, s.StartedAt)
 	return t
 }
 
-func (s *PodStatus_ContainerStatus) GetTimeFinishedAt() time.Time {
+func (s *ContainerStatus) GetTimeFinishedAt() time.Time {
 	t, _ := time.Parse(aranyagoconst.TimeLayout, s.FinishedAt)
 	return t
 }

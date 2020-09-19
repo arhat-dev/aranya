@@ -22,66 +22,41 @@ import (
 	"math"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-
 	"arhat.dev/aranya-proto/aranyagopb/aranyagoconst"
 )
 
 var (
-	EmptyInputCmdSize int
+	EmptyCmdSize int
 )
 
 func init() {
-	emptyInputCmd := newCmd(CMD_POD_OPERATION, math.MaxUint64, &PodOperationCmd{
-		Action: WRITE_TO_CONTAINER,
-		Options: &PodOperationCmd_InputOptions{
-			InputOptions: &InputOptions{
-				Data:      make([]byte, 0),
-				Completed: true,
-				Seq:       math.MaxUint64,
-			},
+	emptyBody, _ := (&Empty{}).Marshal()
+	emptyCmd := &Cmd{
+		Header: &Header{
+			Kind:      math.MaxInt32,
+			Sid:       math.MaxUint64,
+			Seq:       math.MaxUint64,
+			SubSeq:    math.MaxUint64,
+			Completed: true,
 		},
-	})
-
-	EmptyInputCmdSize = emptyInputCmd.Size()
-}
-
-func NewCmd(sid uint64, cmd proto.Marshaler) *Cmd {
-	var kind CmdType
-	switch cmd.(type) {
-	case *RejectCmd:
-		kind = CMD_REJECTION
-	case *NodeCmd:
-		kind = CMD_NODE
-	case *StorageCmd:
-		kind = CMD_STORAGE
-	case *PodCmd:
-		kind = CMD_POD
-	case *PodOperationCmd:
-		kind = CMD_POD_OPERATION
-	case *NetworkCmd:
-		kind = CMD_NETWORK
-	case *CredentialCmd:
-		kind = CMD_CRED
-	case *SessionCmd:
-		kind = CMD_SESSION
-	case *DeviceCmd:
-		kind = CMD_DEVICE
-	case *MetricsCmd:
-		kind = CMD_METRICS
-	default:
-		return nil
+		Body: emptyBody,
 	}
 
-	return newCmd(kind, sid, cmd)
+	EmptyCmdSize = emptyCmd.Size()
+	_ = EmptyCmdSize
 }
 
-func newCmd(kind CmdType, sid uint64, cmd proto.Marshaler) *Cmd {
-	body, _ := cmd.Marshal()
+// NewCmd to create cmd object to be marshaled and sent to agent
+func NewCmd(kind Kind, sid, seq, subSeq uint64, completed bool, payload []byte) *Cmd {
 	return &Cmd{
-		Kind:      kind,
-		SessionId: sid,
-		Body:      body,
+		Header: &Header{
+			Kind:      kind,
+			Sid:       sid,
+			Seq:       seq,
+			SubSeq:    subSeq,
+			Completed: completed,
+		},
+		Body: payload,
 	}
 }
 
@@ -92,226 +67,148 @@ func NewRejectCmd(reason RejectCmd_Reason, message string) *RejectCmd {
 	}
 }
 
-func NewNodeCmd(action NodeCmd_Action) *NodeCmd {
-	return &NodeCmd{
-		Action: action,
+func NewNodeCmd(k NodeInfoGetCmd_Kind) *NodeInfoGetCmd {
+	return &NodeInfoGetCmd{
+		Kind: k,
 	}
 }
 
-func NewStorageCredentialUpdateCmd(sshPrivateKey []byte) *CredentialCmd {
-	return &CredentialCmd{
-		Action: UPDATE_STORAGE_CREDENTIAL,
-		Options: &CredentialCmd_Storage{
-			Storage: &StorageCredentialOptions{
-				SshPrivateKey: sshPrivateKey,
-			},
-		},
+func NewCredentialEnsureCmd(sshPrivateKey []byte) *CredentialEnsureCmd {
+	return &CredentialEnsureCmd{
+		SshPrivateKey: sshPrivateKey,
 	}
 }
 
-func newPodCmd(action PodCmd_Action, options isPodCmd_Options) *PodCmd {
-	return &PodCmd{
-		Action:  action,
-		Options: options,
+func NewPodDeleteCmd(podUID string, graceTime time.Duration, preStopHooks map[string]*ActionMethod) *PodDeleteCmd {
+	return &PodDeleteCmd{
+		PodUid:      podUID,
+		GraceTime:   int64(graceTime),
+		HookPreStop: preStopHooks,
 	}
 }
 
-func NewPodImageEnsureCmd(options *ImageEnsureOptions) *PodCmd {
-	return newPodCmd(ENSURE_IMAGES, &PodCmd_ImageEnsureOptions{
-		ImageEnsureOptions: options,
-	})
-}
-
-func NewPodCreateCmd(options *CreateOptions) *PodCmd {
-	return newPodCmd(CREATE_CONTAINERS, &PodCmd_CreateOptions{
-		CreateOptions: options,
-	})
-}
-
-func NewPodDeleteCmd(podUID string, graceTime time.Duration, preStopHooks map[string]*ActionMethod) *PodCmd {
-	return newPodCmd(DELETE_POD, &PodCmd_DeleteOptions{
-		DeleteOptions: &DeleteOptions{
-			PodUid:      podUID,
-			GraceTime:   int64(graceTime),
-			HookPreStop: preStopHooks,
-		},
-	})
-}
-
-func NewPodContainerDeleteCmd(podUID string, containers []string) *PodCmd {
-	return newPodCmd(DELETE_CONTAINERS, &PodCmd_DeleteOptions{
-		DeleteOptions: &DeleteOptions{
-			PodUid:     podUID,
-			Containers: containers,
-		},
-	})
-}
-
-func NewPodListCmd(namespace, name string, all bool) *PodCmd {
-	return newPodCmd(LIST_PODS, &PodCmd_ListOptions{
-		ListOptions: &ListOptions{
-			Namespace: namespace,
-			Name:      name,
-			All:       all,
-		},
-	})
-}
-
-func newPodOperationCmd(action PodOperationCmd_Action, options isPodOperationCmd_Options) *PodOperationCmd {
-	return &PodOperationCmd{
-		Action:  action,
-		Options: options,
+func NewPodContainerDeleteCmd(podUID string, containers []string) *PodDeleteCmd {
+	return &PodDeleteCmd{
+		PodUid:     podUID,
+		Containers: containers,
 	}
 }
 
-func NewPodExecCmd(
+func NewPodListCmd(namespace, name string, all bool) *PodListCmd {
+	return &PodListCmd{
+		Namespace: namespace,
+		Name:      name,
+		All:       all,
+	}
+}
+
+func NewPodContainerExecCmd(
 	podUID, container string,
 	command []string,
 	stdin, stdout, stderr, tty bool,
 	env map[string]string,
-) *PodOperationCmd {
-	return newPodOperationCmd(EXEC_IN_CONTAINER, &PodOperationCmd_ExecOptions{
-		ExecOptions: &ExecOptions{
-			PodUid:    podUID,
-			Container: container,
-			Command:   command,
-			Stdin:     stdin,
-			Stderr:    stderr,
-			Stdout:    stdout,
-			Tty:       tty,
-			Envs:      env,
-		},
-	})
+) *ContainerExecOrAttachCmd {
+	return &ContainerExecOrAttachCmd{
+		PodUid:    podUID,
+		Container: container,
+		Command:   command,
+		Stdin:     stdin,
+		Stderr:    stderr,
+		Stdout:    stdout,
+		Tty:       tty,
+		Envs:      env,
+	}
 }
 
-func NewPodAttachCmd(podUID, container string, stdin, stdout, stderr, tty bool) *PodOperationCmd {
-	return newPodOperationCmd(ATTACH_TO_CONTAINER, &PodOperationCmd_ExecOptions{
-		ExecOptions: &ExecOptions{
-			PodUid:    podUID,
-			Container: container,
-			Stdin:     stdin,
-			Stderr:    stderr,
-			Stdout:    stdout,
-			Tty:       tty,
-		},
-	})
+func NewPodContainerAttachCmd(podUID, container string, stdin, stdout, stderr, tty bool) *ContainerExecOrAttachCmd {
+	return &ContainerExecOrAttachCmd{
+		PodUid:    podUID,
+		Container: container,
+		Stdin:     stdin,
+		Stderr:    stderr,
+		Stdout:    stdout,
+		Tty:       tty,
+	}
 }
 
-func NewHostLogCmd(path string) *PodOperationCmd {
-	return newPodOperationCmd(RETRIEVE_CONTAINER_LOG, &PodOperationCmd_LogOptions{
-		LogOptions: &LogOptions{
-			Path: path,
-		},
-	})
+func NewHostLogCmd(path string) *ContainerLogsCmd {
+	return &ContainerLogsCmd{
+		Path: path,
+	}
 }
 
-func NewPodLogCmd(
+func NewPodContainerLogCmd(
 	podUID, container string,
 	follow, timestamp, previous bool,
 	since time.Time, tailLines, bytesLimit int64,
-) *PodOperationCmd {
-	return newPodOperationCmd(RETRIEVE_CONTAINER_LOG, &PodOperationCmd_LogOptions{
-		LogOptions: &LogOptions{
-			PodUid:     podUID,
-			Container:  container,
-			Follow:     follow,
-			Timestamp:  timestamp,
-			Since:      since.Format(aranyagoconst.TimeLayout),
-			TailLines:  tailLines,
-			BytesLimit: bytesLimit,
-			Previous:   previous,
-		},
-	})
-}
-
-func NewPodPortForwardCmd(podUID string, port int32, protocol string) *PodOperationCmd {
-	return newPodOperationCmd(PORT_FORWARD_TO_CONTAINER, &PodOperationCmd_PortForwardOptions{
-		PortForwardOptions: &PortForwardOptions{
-			PodUid:   podUID,
-			Port:     port,
-			Protocol: protocol,
-		},
-	})
-}
-
-func NewPodInputCmd(completed bool, data []byte) *PodOperationCmd {
-	return newPodOperationCmd(WRITE_TO_CONTAINER, &PodOperationCmd_InputOptions{
-		InputOptions: &InputOptions{
-			Data:      data,
-			Completed: completed,
-		},
-	})
-}
-
-func NewPodResizeCmd(cols uint16, rows uint16) *PodOperationCmd {
-	return newPodOperationCmd(RESIZE_CONTAINER_TTY, &PodOperationCmd_ResizeOptions{
-		ResizeOptions: &TtyResizeOptions{
-			Cols: uint32(cols),
-			Rows: uint32(rows),
-		},
-	})
-}
-
-func NewSessionCloseCmd(sessionToClose uint64) *SessionCmd {
-	return &SessionCmd{
-		Action:  CLOSE_SESSION,
-		Options: &SessionCmd_SessionId{SessionId: sessionToClose},
+) *ContainerLogsCmd {
+	return &ContainerLogsCmd{
+		PodUid:     podUID,
+		Container:  container,
+		Follow:     follow,
+		Timestamp:  timestamp,
+		Since:      since.Format(aranyagoconst.TimeLayout),
+		TailLines:  tailLines,
+		BytesLimit: bytesLimit,
+		Previous:   previous,
 	}
 }
 
-func NewMetricsCollectCmd(action MetricsCmd_Action) *MetricsCmd {
-	return &MetricsCmd{
-		Action: action,
+func NewPodPortForwardCmd(podUID string, port int32, protocol string) *PodPortForwardCmd {
+	return &PodPortForwardCmd{
+		PodUid:   podUID,
+		Port:     port,
+		Protocol: protocol,
 	}
 }
 
-func NewMetricsConfigureCmd(action MetricsCmd_Action, config *MetricsConfigOptions) *MetricsCmd {
-	return &MetricsCmd{
-		Action:  action,
-		Options: &MetricsCmd_Config{Config: config},
+func NewPodContainerTerminalResizeCmd(cols uint16, rows uint16) *ContainerTerminalResizeCmd {
+	return &ContainerTerminalResizeCmd{
+		Cols: uint32(cols),
+		Rows: uint32(rows),
 	}
 }
 
-func newNetworkCmd(action NetworkCmd_Action, options *NetworkCmd_NetworkOptions) *NetworkCmd {
-	return &NetworkCmd{
-		Action:  action,
-		Options: options,
+func NewSessionCloseCmd(sessionToClose uint64) *SessionCloseCmd {
+	return &SessionCloseCmd{Sid: sessionToClose}
+}
+
+func NewMetricsCollectCmd(t MetricsTarget) *MetricsCollectCmd {
+	return &MetricsCollectCmd{
+		Target: t,
 	}
 }
 
-func NewPodNetworkUpdateCmd(ipv4PodCIDR, ipv6PodCIDR string) *NetworkCmd {
-	return newNetworkCmd(UPDATE_NETWORK, &NetworkCmd_NetworkOptions{
-		NetworkOptions: &NetworkOptions{
-			Ipv4PodCidr: ipv4PodCIDR,
-			Ipv6PodCidr: ipv6PodCIDR,
-		},
-	})
+func NewMetricsConfigCmd(t MetricsTarget, collect, extraArgs []string) *MetricsConfigCmd {
+	return &MetricsConfigCmd{Target: t, Collect: collect, ExtraArgs: extraArgs}
 }
 
-func newDeviceCmd(action DeviceCmd_Action, options *DeviceCmd_DeviceSpec, id string) *DeviceCmd {
-	var opt isDeviceCmd_Options
-	if options == nil {
-		opt = &DeviceCmd_DeviceId{DeviceId: id}
-	} else {
-		opt = options
-	}
-
-	return &DeviceCmd{
-		Action:  action,
-		Options: opt,
+func NewNetworkUpdatePodNetCmd(ipv4PodCIDR, ipv6PodCIDR string) *NetworkUpdatePodNetworkCmd {
+	return &NetworkUpdatePodNetworkCmd{
+		CidrIpv4: ipv4PodCIDR,
+		CidrIpv6: ipv6PodCIDR,
 	}
 }
 
-func NewDeviceListCmd() *DeviceCmd {
-	return newDeviceCmd(LIST_DEVICES, nil, "")
+func NewDeviceListCmd() *DeviceListCmd {
+	return &DeviceListCmd{}
 }
 
-func NewDeviceRemoveCmd(id string) *DeviceCmd {
-	return newDeviceCmd(REMOVE_DEVICE, nil, id)
+func NewDeviceEnsureCmd(
+	deviceID string,
+	deviceConnectivity, uploadConnectivity *DeviceConnectivity,
+	deviceOperations []*DeviceOperation,
+	deviceMetrics []*DeviceMetrics,
+) *DeviceEnsureCmd {
+	return &DeviceEnsureCmd{
+		DeviceId:           deviceID,
+		DeviceConnectivity: deviceConnectivity,
+		UploadConnectivity: uploadConnectivity,
+		DeviceOperations:   deviceOperations,
+		DeviceMetrics:      deviceMetrics,
+	}
 }
 
-func NewDeviceEnsureCmd(deviceSpec *Device) *DeviceCmd {
-	return newDeviceCmd(ENSURE_DEVICE, &DeviceCmd_DeviceSpec{
-		DeviceSpec: deviceSpec,
-	}, "")
+func NewDeviceDeleteCmd(ids ...string) *DeviceDeleteCmd {
+	return &DeviceDeleteCmd{DeviceIds: ids}
 }
