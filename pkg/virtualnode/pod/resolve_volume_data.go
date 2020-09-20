@@ -3,9 +3,8 @@ package pod
 import (
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"arhat.dev/aranya-proto/aranyagopb"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // ResolveVolumeData resolves volume data for pod from ConfigMap and Secret

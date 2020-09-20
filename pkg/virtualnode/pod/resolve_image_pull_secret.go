@@ -3,12 +3,11 @@ package pod
 import (
 	"fmt"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/credentialprovider"
 	"k8s.io/kubernetes/pkg/credentialprovider/secrets"
 	"k8s.io/kubernetes/pkg/util/parsers"
-
-	"arhat.dev/aranya-proto/aranyagopb"
 )
 
 func (m *Manager) resolveImagePullAuthConfig(pod *corev1.Pod) (map[string]*aranyagopb.AuthConfig, error) {

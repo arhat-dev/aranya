@@ -295,7 +295,7 @@ func (w *logWriter) write(msg *logMessage) error {
 }
 
 // newLogOptions convert the v1.PodLogOptions to CRI internal LogOptions.
-func newLogOptions(apiOpts *aranyagopb.LogOptions) *LogOptions {
+func newLogOptions(apiOpts *aranyagopb.ContainerLogsCmd) *LogOptions {
 	opts := &LogOptions{
 		tail:      apiOpts.TailLines,  // -1 by default which means read all logs.
 		bytes:     apiOpts.BytesLimit, // -1 by default which means read all logs.
@@ -311,7 +311,7 @@ func newLogOptions(apiOpts *aranyagopb.LogOptions) *LogOptions {
 // ReadLogs read the container log and redirect into stdout and stderr.
 // Note that containerID is only needed when following the log, or else
 // just pass in empty string "".
-func ReadLogs(ctx context.Context, path string, options *aranyagopb.LogOptions, stdout, stderr io.Writer) error {
+func ReadLogs(ctx context.Context, path string, options *aranyagopb.ContainerLogsCmd, stdout, stderr io.Writer) error {
 	var (
 		err    error
 		opts   = newLogOptions(options)

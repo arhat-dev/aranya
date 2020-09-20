@@ -21,13 +21,12 @@ import (
 	"fmt"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-
-	"arhat.dev/aranya-proto/aranyagopb"
 
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
@@ -36,7 +35,7 @@ import (
 // UpdateMirrorPod update Kubernetes pod object status according to device pod status
 func (m *Manager) UpdateMirrorPod(
 	pod *corev1.Pod,
-	devicePodStatus *aranyagopb.PodStatus,
+	devicePodStatus *aranyagopb.PodStatusMsg,
 	forInitContainers bool,
 ) error {
 	logger := m.Log.WithFields(log.String("type", "cloud"), log.String("action", "update"))
@@ -181,12 +180,11 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 	}
 
 	// pull images if contains non virtual images
-	if len(imgOpts.ImagePull) > 0 {
-		podImageEnsureCmd := aranyagopb.NewPodImageEnsureCmd(imgOpts)
-		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, podImageEnsureCmd)
+	if len(imgOpts.Images) > 0 {
+		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_IMAGE_ENSURE, imgOpts)
 		if err2 != nil {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
-				"FailedToPostImageEnsureCmd", err.Error())
+				"FailedToPostImageEnsureCmd", err2.Error())
 			return err2
 		}
 		m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
@@ -252,9 +250,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 			}
 		} else {
 			// normal init containers
-
-			initCreateCmd := aranyagopb.NewPodCreateCmd(initOpts)
-			msgCh, _, err3 := m.ConnectivityManager.PostCmd(0, initCreateCmd)
+			msgCh, _, err3 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_POD_ENSURE, initOpts)
 			if err3 != nil {
 				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 					"PostCreateInitCmdError", err3.Error())
@@ -321,8 +317,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 		}
 	} else {
 		// create work containers
-		workCreateCmd := aranyagopb.NewPodCreateCmd(workOpts)
-		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, workCreateCmd)
+		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_POD_ENSURE, workOpts)
 		if err2 != nil {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 				"PostCreateWorkCmdError", err2.Error())
@@ -399,7 +394,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 
 	// post cmd anyway, check pod cache when processing message
 	podDeleteCmd := aranyagopb.NewPodDeleteCmd(string(podUID), graceTime, preStopHooks)
-	msgCh, _, err := m.ConnectivityManager.PostCmd(0, podDeleteCmd)
+	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_POD_DELETE, podDeleteCmd)
 	if err != nil {
 		if hasPodObj {
 			m.options.EventRecorder.Event(podToDelete, corev1.EventTypeNormal, "PostDeleteCmdError", err.Error())
@@ -443,7 +438,9 @@ func (m *Manager) SyncDevicePods() error {
 	logger := m.Log.WithFields(log.String("type", "device"), log.String("action", "sync"))
 
 	logger.I("syncing device pods")
-	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.NewPodListCmd("", "", true))
+	msgCh, _, err := m.ConnectivityManager.PostCmd(
+		0, aranyagopb.CMD_POD_LIST, aranyagopb.NewPodListCmd("", "", true),
+	)
 	if err != nil {
 		logger.I("failed to post pod list cmd", log.Error(err))
 		return err

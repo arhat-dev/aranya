@@ -25,12 +25,12 @@ import (
 	"sync"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/aranya-proto/aranyagopb/aranyagoconst"
 	"arhat.dev/pkg/log"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 
-	"arhat.dev/aranya-proto/aranyagopb"
-	"arhat.dev/aranya-proto/aranyagopb/aranyagoconst"
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 )
 
@@ -114,13 +114,17 @@ type Manager interface {
 	// GlobalMessages message with no session attached
 	GlobalMessages() <-chan *aranyagopb.Msg
 
+	// PostData
+	// nolint:lll
+	PostData(sid uint64, kind aranyagopb.Kind, seq uint64, completed bool, data []byte) (msgCh <-chan interface{}, realSID, lastSeq uint64, err error)
+
 	// PostCmd send a command to remote device with timeout
 	// return a channel for messages to be received in the session
-	PostCmd(sid uint64, cmd proto.Marshaler) (msgCh <-chan interface{}, realSID uint64, err error)
+	PostCmd(sid uint64, kind aranyagopb.Kind, cmd proto.Marshaler) (msgCh <-chan interface{}, realSID uint64, err error)
 
-	// MaxDataSize of this kind connectivity method, used to reduce message overhead
+	// MaxPayloadSize of this kind connectivity method, used to reduce message overhead
 	// when handling date streams for port-forward and command execution
-	MaxDataSize() int
+	MaxPayloadSize() int
 
 	// OnConnected called after device connected and finished
 	//   - node sync initialization
@@ -188,7 +192,7 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) *ba
 		config:   config,
 		sessions: sessions,
 
-		maxDataSize:      maxDataSize - aranyagopb.EmptyInputCmdSize,
+		maxDataSize:      maxDataSize - aranyagopb.EmptyMsgSize,
 		log:              log.Log.WithName(fmt.Sprintf("conn.%s", name)),
 		sendCmd:          nil,
 		globalMsgChan:    make(chan *aranyagopb.Msg, 1),
@@ -204,7 +208,7 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) *ba
 	}
 }
 
-func (m *baseManager) MaxDataSize() int {
+func (m *baseManager) MaxPayloadSize() int {
 	return m.maxDataSize
 }
 
@@ -303,11 +307,11 @@ func (m *baseManager) onRecvMsg(msg *aranyagopb.Msg) {
 	}
 
 	// nolint:gocritic
-	switch msg.Kind {
+	switch msg.Header.Kind {
 	case aranyagopb.MSG_ERROR:
 		if msg.GetError().GetKind() == aranyagopb.ERR_TIMEOUT {
 			// close session with best effort
-			_, _, _ = m.PostCmd(0, aranyagopb.NewSessionCloseCmd(msg.SessionId))
+			_, _, _ = m.PostCmd(0, aranyagopb.CMD_SESSION_CLOSE, aranyagopb.NewSessionCloseCmd(msg.Header.Sid))
 		}
 	}
 }
@@ -346,7 +350,9 @@ func (m *baseManager) OnDisconnected(finalize func() (id string, all bool)) {
 	m.connected = make(chan struct{})
 }
 
-func (m *baseManager) PostCmd(sid uint64, cmd proto.Marshaler) (msgCh <-chan interface{}, realSID uint64, err error) {
+func (m *baseManager) PostData(
+	sid uint64, kind aranyagopb.Kind, seq uint64, completed bool, data []byte,
+) (msgCh <-chan interface{}, realSID, lastSeq uint64, err error) {
 	m.mu.RLock()
 	defer func() {
 		if m.log.Enabled(log.LevelVerbose) {
@@ -359,50 +365,38 @@ func (m *baseManager) PostCmd(sid uint64, cmd proto.Marshaler) (msgCh <-chan int
 	}()
 
 	if m.stopped {
-		return nil, 0, ErrManagerClosed
+		return nil, 0, seq, ErrManagerClosed
 	}
 
 	var (
 		sessionMustExist bool
-		expectSeqData    bool
 		recordSession    = true
 		timeout          = m.config.UnarySessionTimeout
 	)
 
 	// session id should not be empty if it's a input or resize command
-	switch c := cmd.(type) {
-	case *aranyagopb.SessionCmd:
+	switch kind {
+	case aranyagopb.CMD_SESSION_CLOSE:
 		recordSession = false
-		// nolint:gocritic
-		switch c.Action {
-		case aranyagopb.CLOSE_SESSION:
-			defer m.sessions.Delete(sid)
-		}
-	case *aranyagopb.PodOperationCmd:
-		switch c.Action {
-		case aranyagopb.PORT_FORWARD_TO_CONTAINER,
-			aranyagopb.EXEC_IN_CONTAINER,
-			aranyagopb.ATTACH_TO_CONTAINER,
-			aranyagopb.RETRIEVE_CONTAINER_LOG:
-			// we don't control stream session timeout here
-			// it is controlled by pod manager
-			expectSeqData = true
-			timeout = 0
-		case aranyagopb.RESIZE_CONTAINER_TTY,
-			aranyagopb.WRITE_TO_CONTAINER:
-			timeout = 0
-			sessionMustExist = true
 
-			if sid == 0 {
-				// session must present, but got empty
-				return nil, 0, fmt.Errorf("invalid zero session id")
-			}
+		defer m.sessions.Delete(sid)
+	case aranyagopb.CMD_POD_CTR_EXEC, aranyagopb.CMD_POD_CTR_ATTACH,
+		aranyagopb.CMD_POD_CTR_LOGS, aranyagopb.CMD_POD_PORT_FORWARD:
+
+		timeout = 0
+	case aranyagopb.CMD_POD_CTR_TTY_RESIZE:
+		timeout = 0
+		sessionMustExist = true
+
+		if sid == 0 {
+			// session must present, but got empty
+			return nil, 0, seq, fmt.Errorf("invalid zero sid")
 		}
 	}
 
 	if recordSession {
 		var realSid uint64
-		realSid, msgCh = m.sessions.Add(sid, cmd, timeout, expectSeqData)
+		realSid, msgCh = m.sessions.Add(sid, timeout)
 		defer func() {
 			if err != nil {
 				m.sessions.Delete(sid)
@@ -410,17 +404,40 @@ func (m *baseManager) PostCmd(sid uint64, cmd proto.Marshaler) (msgCh <-chan int
 		}()
 
 		if sessionMustExist && sid != realSid {
-			return nil, 0, fmt.Errorf("existing session id not match")
+			return nil, 0, seq, fmt.Errorf("failed to find session from sid")
 		}
 
 		sid = realSid
 	}
 
-	if err = m.sendCmd(aranyagopb.NewCmd(sid, cmd)); err != nil {
-		return nil, 0, err
+	n := m.MaxPayloadSize()
+	for len(data) > n {
+		err = m.sendCmd(aranyagopb.NewCmd(kind, sid, seq, 0, false, data[:n]))
+		if err != nil {
+			return nil, 0, seq, fmt.Errorf("failed to post cmd chunk: %w", err)
+		}
+		seq++
+		data = data[n:]
 	}
 
-	return msgCh, realSID, nil
+	err = m.sendCmd(aranyagopb.NewCmd(kind, sid, seq, 0, completed, data))
+	if err != nil {
+		return nil, 0, seq, fmt.Errorf("failed to post cmd chunk: %w", err)
+	}
+
+	return msgCh, realSID, seq, nil
+}
+
+func (m *baseManager) PostCmd(
+	sid uint64, kind aranyagopb.Kind, cmd proto.Marshaler,
+) (msgCh <-chan interface{}, realSID uint64, err error) {
+	data, err := cmd.Marshal()
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to marshal cmd: %w", err)
+	}
+
+	msgCh, realSID, _, err = m.PostData(sid, kind, 0, true, data)
+	return
 }
 
 func (m *baseManager) onClose(closeManager func()) {

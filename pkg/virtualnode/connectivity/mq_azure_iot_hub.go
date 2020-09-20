@@ -27,6 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/backoff"
 	"arhat.dev/pkg/log"
 	"github.com/Azure/azure-amqp-common-go/v3/cbs"
@@ -35,8 +36,6 @@ import (
 	"github.com/Azure/azure-amqp-common-go/v3/uuid"
 	eventhub "github.com/Azure/azure-event-hubs-go/v3"
 	amqp "github.com/Azure/go-amqp"
-
-	"arhat.dev/aranya-proto/aranyagopb"
 )
 
 func newAzureIoTHubClient(parent *MessageQueueManager) (*azureIoTHubClient, error) {
@@ -63,6 +62,9 @@ func newAzureIoTHubClient(parent *MessageQueueManager) (*azureIoTHubClient, erro
 		pollInterval = time.Minute
 	}
 
+	onlineMsgBytes, _ := aranyagopb.NewOnlineStateMsg(opts.Config.DeviceID).Marshal()
+	offlineMsgBytes, _ := aranyagopb.NewOfflineStateMsg(opts.Config.DeviceID).Marshal()
+
 	clientCtx, exit := context.WithCancel(parent.ctx)
 	client := &azureIoTHubClient{
 		log:  parent.log,
@@ -79,8 +81,8 @@ func newAzureIoTHubClient(parent *MessageQueueManager) (*azureIoTHubClient, erro
 		rejectAgent: func() {
 			parent.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "iot hub connection lost")
 		},
-		onlineMsg:  aranyagopb.NewOnlineMsg(opts.Config.DeviceID),
-		offlineMsg: aranyagopb.NewOfflineMsg(opts.Config.DeviceID),
+		onlineMsg:  aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, 0, true, onlineMsgBytes),
+		offlineMsg: aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, 0, true, offlineMsgBytes),
 
 		recvOpts:        recvOpts,
 		senderStore:     new(atomic.Value),

@@ -18,21 +18,22 @@ package pod
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/iohelper"
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/apimachinery/pkg/util/httpstream/spdy"
 	"k8s.io/apiserver/pkg/util/wsstream"
 	api "k8s.io/kubernetes/pkg/apis/core"
 	kubeletpf "k8s.io/kubernetes/pkg/kubelet/server/portforward"
-
-	"arhat.dev/aranya-proto/aranyagopb"
 
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
@@ -237,12 +238,13 @@ func (m *Manager) handleNewHTTPStream(wg *sync.WaitGroup, s *stream, hs httpstre
 
 func (m *Manager) doPortForward(s *stream) {
 	pfCmd := aranyagopb.NewPodPortForwardCmd(s.podUID, s.port, s.protocol)
-	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, pfCmd)
+	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_POD_PORT_FORWARD, pfCmd)
 	if err != nil {
 		s.writeErr(fmt.Sprintf("failed to create port-forward session: %v", err))
 		return
 	}
 
+	var seq uint64
 	go func() {
 		timer := time.NewTimer(0)
 		if !timer.Stop() {
@@ -257,13 +259,13 @@ func (m *Manager) doPortForward(s *stream) {
 				}
 			}
 
-			_, _, err := m.ConnectivityManager.PostCmd(sid, aranyagopb.NewPodInputCmd(true, nil))
-			if err != nil {
-				s.writeErr(fmt.Sprintf("failed to post port-forward read close cmd: %v", err))
+			_, _, _, err2 := m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
+			if err2 != nil {
+				s.writeErr(fmt.Sprintf("failed to post port-forward read close cmd: %v", err2))
 			}
 		}()
 
-		r := iohelper.NewTimeoutReader(s.data, m.ConnectivityManager.MaxDataSize())
+		r := iohelper.NewTimeoutReader(s.data, m.ConnectivityManager.MaxPayloadSize())
 		go r.StartBackgroundReading()
 
 		for r.WaitUntilHasData(m.Context().Done()) {
@@ -273,10 +275,12 @@ func (m *Manager) doPortForward(s *stream) {
 				<-timer.C
 			}
 
-			inputCmd := aranyagopb.NewPodInputCmd(false, data)
-			_, _, err := m.ConnectivityManager.PostCmd(sid, inputCmd)
-			if err != nil {
-				s.writeErr(err.Error())
+			_, _, lastSeq, err2 := m.ConnectivityManager.PostData(
+				sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
+			)
+			atomic.StoreUint64(&seq, lastSeq+1)
+			if err2 != nil {
+				s.writeErr(err2.Error())
 			}
 		}
 	}()
@@ -289,15 +293,9 @@ func (m *Manager) doPortForward(s *stream) {
 		}
 
 		return false
-	}, func(dataMsg *aranyagopb.Data) (exit bool) {
-		if dataMsg.Kind == aranyagopb.DATA_ERROR {
-			msgErr := new(aranyagopb.Error)
-			_ = msgErr.Unmarshal(dataMsg.Data)
-			s.writeErr(msgErr.Error())
-			return true
-		}
-
-		if _, err := s.data.Write(dataMsg.Data); err != nil && err != io.EOF {
+	}, func(dataMsg *connectivity.Data) (exit bool) {
+		_, err2 := s.data.Write(dataMsg.Payload)
+		if err2 != nil && !errors.Is(err, io.EOF) {
 			s.writeErr(err.Error())
 			return true
 		}

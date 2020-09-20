@@ -15,4 +15,4 @@ limitations under the License.
 */
 
 // Package pod
-package pod // import "arhat.dev/aranya/pkg/virtualnode/pod"
+package pod

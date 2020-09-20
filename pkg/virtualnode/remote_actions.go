@@ -19,20 +19,21 @@ package virtualnode
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 // generate in cluster node cache for remote device
-func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeCmd_Action) error {
-	msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(0, aranyagopb.NewNodeCmd(action))
+func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeInfoGetCmd_Kind) error {
+	msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(
+		0, aranyagopb.CMD_NODE_INFO_GET, aranyagopb.NewNodeCmd(action),
+	)
 	if err != nil {
 		return err
 	}
@@ -61,17 +62,18 @@ func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeCmd_Action) er
 }
 
 func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
-	logger := vn.log.WithFields(log.String("from", "global"))
+	sid := msg.Header.Sid
+	logger := vn.log.WithFields(log.String("source", "global"), log.Uint64("sid", sid))
 
-	switch msg.Kind {
+	switch msg.Header.Kind {
 	case aranyagopb.MSG_STATE:
 		s := msg.GetState()
 		if s == nil {
 			// TODO: handle invalid msg
 			return
 		}
-		switch s.Action {
-		case aranyagopb.ONLINE:
+		switch s.Kind {
+		case aranyagopb.STATE_ONLINE:
 			logger.I("device connected", log.String("id", s.DeviceId))
 
 			vn.opt.ConnectivityManager.OnConnected(func() (id string) {
@@ -91,14 +93,14 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 
 				return s.DeviceId
 			})
-		case aranyagopb.OFFLINE:
+		case aranyagopb.STATE_OFFLINE:
 			logger.I("device disconnected", log.String("id", s.DeviceId))
 
 			vn.opt.ConnectivityManager.OnDisconnected(func() (id string, all bool) {
 				return s.DeviceId, false
 			})
 		}
-	case aranyagopb.MSG_NODE:
+	case aranyagopb.MSG_NODE_STATUS:
 		ns := msg.GetNodeStatus()
 		if ns == nil {
 			// TODO: handle invalid msg
@@ -113,46 +115,33 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 		if err != nil {
 			logger.I("failed to sync mirror node status", log.Error(err))
 		}
-	case aranyagopb.MSG_METRICS:
-		m := msg.GetMetrics()
-		if m == nil {
-			// TODO: handle invalid msg
-			return
-		}
+	case aranyagopb.MSG_NETWORK_STATUS:
+	case aranyagopb.MSG_DEVICE_STATUS:
 
-		logger.V("received global metrics")
-
-		switch m.Kind {
-		case aranyagopb.METRICS_CONTAINER, aranyagopb.METRICS_NODE:
-			if err := vn.metricsManager.UpdateMetrics(m); err != nil {
-				logger.I("failed to update metrics")
-			}
-		}
-	case aranyagopb.MSG_NETWORK:
-	case aranyagopb.MSG_DEVICE:
-	case aranyagopb.MSG_STORAGE:
+	case aranyagopb.MSG_STORAGE_STATUS:
 		if ss := msg.GetStorageStatus(); ss != nil {
 			logger.V("received global storage status")
-		} else if ssl := msg.GetStorageStatusList(); ssl != nil {
+		}
+	case aranyagopb.MSG_STORAGE_STATUS_LIST:
+		if ssl := msg.GetStorageStatusList(); ssl != nil {
 			logger.V("received global storage status list")
-		} else {
-			// TODO: handle invalid msg
-			return
 		}
 	case aranyagopb.MSG_ERROR:
 		logger.D("received global error", log.Error(msg.GetError()))
-	case aranyagopb.MSG_DATA:
+	case aranyagopb.MSG_DATA_DEFAULT, aranyagopb.MSG_DATA_STDERR:
 		data := msg.GetData()
 		if data == nil {
 			// TODO: handle invalid msg
 			return
 		}
 
-		logger.D("received orphan data", log.Uint64("sid", msg.SessionId), log.Binary("data", data.Data))
+		logger.D("received orphan data", log.Binary("data", data))
 		// close previous session, best effort
-		_, _, _ = vn.opt.ConnectivityManager.PostCmd(0, aranyagopb.NewSessionCloseCmd(msg.SessionId))
-	case aranyagopb.MSG_CRED:
-	case aranyagopb.MSG_POD:
+		_, _, _ = vn.opt.ConnectivityManager.PostCmd(
+			0, aranyagopb.CMD_SESSION_CLOSE, aranyagopb.NewSessionCloseCmd(msg.Header.Sid),
+		)
+	case aranyagopb.MSG_CRED_STATUS:
+	case aranyagopb.MSG_POD_STATUS:
 		if ps := msg.GetPodStatus(); ps != nil {
 			logger.V("received global pod status")
 
@@ -160,7 +149,9 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 			if err != nil {
 				logger.I("failed to update pod status", log.Error(err))
 			}
-		} else if psl := msg.GetPodStatusList(); psl != nil {
+		}
+	case aranyagopb.MSG_POD_STATUS_LIST:
+		if psl := msg.GetPodStatusList(); psl != nil {
 			logger.V("received global pod status list")
 
 			for _, status := range psl.Pods {
@@ -169,9 +160,6 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 					logger.I("failed to update pod status", log.Error(err))
 				}
 			}
-		} else {
-			// TODO: handle invalid msg
-			return
 		}
 	default:
 		// we don't know how to handle this kind of messages, discard
@@ -179,7 +167,7 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 	}
 }
 
-func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatus) {
+func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg) {
 	if sysInfo := msg.GetSystemInfo(); sysInfo != nil {
 		vn.nodeStatusCache.UpdateSystemInfo(&corev1.NodeSystemInfo{
 			OperatingSystem: sysInfo.GetOs(),
@@ -222,16 +210,14 @@ func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatus) {
 	for _, info := range msg.GetExtInfo() {
 		var (
 			target, oldTarget map[string]string
-			key               string
+			key               = info.TargetKey
 		)
 
-		switch {
-		case strings.HasPrefix(info.ApplyTo, "metadata.labels['") && strings.HasSuffix(info.ApplyTo, "']"):
-			key = strings.TrimSuffix(strings.TrimPrefix(info.ApplyTo, "metadata.labels['"), "']")
-			target, oldTarget = labels, oldLabels
-		case strings.HasPrefix(info.ApplyTo, "metadata.annotations['") && strings.HasSuffix(info.ApplyTo, "']"):
-			key = strings.TrimSuffix(strings.TrimPrefix(info.ApplyTo, "metadata.annotations['"), "']")
+		switch info.Target {
+		case aranyagopb.NODE_EXT_INFO_TARGET_ANNOTATION:
 			target, oldTarget = annotations, oldAnnotations
+		case aranyagopb.NODE_EXT_INFO_TARGET_LABEL:
+			target, oldTarget = labels, oldLabels
 		default:
 			// TODO: report unsupported
 			return

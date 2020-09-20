@@ -20,13 +20,13 @@ import (
 	"context"
 	"net"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
 	"go.uber.org/multierr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/constant"
 )
 
@@ -82,7 +82,8 @@ func (m *GRPCManager) Reject(reason aranyagopb.RejectCmd_Reason, message string)
 	m.onReject(func() {
 		// best effort
 		for _, syncSrv := range m.clientSessions {
-			_ = syncSrv.Send(aranyagopb.NewCmd(0, aranyagopb.NewRejectCmd(reason, message)))
+			data, _ := aranyagopb.NewRejectCmd(reason, message).Marshal()
+			_ = syncSrv.Send(aranyagopb.NewCmd(aranyagopb.CMD_REJECT, 0, 0, 0, true, data))
 		}
 	})
 }
@@ -138,15 +139,15 @@ func (m *GRPCManager) Sync(server aranyagopb.Connectivity_SyncServer) error {
 				return nil
 			}
 
-			if msg.Kind == aranyagopb.MSG_STATE {
+			if msg.Header.Kind == aranyagopb.MSG_STATE {
 				s := msg.GetState()
 				if s == nil {
 					m.Reject(aranyagopb.REJECTION_INVALID_PROTO, "invalid protocol")
 					return nil
 				}
 
-				switch s.Action {
-				case aranyagopb.ONLINE:
+				switch s.Kind {
+				case aranyagopb.STATE_ONLINE:
 					if alreadyOnline {
 						// online message MUST not be received more than once
 						m.Reject(aranyagopb.REJECTION_ALREADY_CONNECTED, "client has sent online message once")
@@ -162,7 +163,7 @@ func (m *GRPCManager) Sync(server aranyagopb.Connectivity_SyncServer) error {
 					m.mu.Lock()
 					m.clientSessions[onlineID] = server
 					m.mu.Unlock()
-				case aranyagopb.OFFLINE:
+				case aranyagopb.STATE_OFFLINE:
 					// received offline message
 					return nil
 				}

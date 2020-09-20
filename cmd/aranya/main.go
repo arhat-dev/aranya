@@ -22,14 +22,14 @@ import (
 	"os"
 	"time"
 
-	"arhat.dev/aranya/cmd/aranya/pkg"
+	"arhat.dev/aranya/pkg/cmd"
 	"arhat.dev/aranya/pkg/version"
 )
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	cmd := pkg.NewAranyaCmd()
+	cmd := cmd.NewAranyaCmd()
 	cmd.AddCommand(version.NewVersionCmd())
 
 	err := cmd.Execute()

@@ -22,12 +22,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.uber.org/multierr"
-
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/backoff"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
+	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +38,6 @@ import (
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/csi"
 
-	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/cache"
@@ -268,8 +267,8 @@ func (m *Manager) Close() {
 
 // nolint:unused
 func (m *Manager) updateDeviceNetwork() error {
-	cmd := aranyagopb.NewPodNetworkUpdateCmd(m.netMgr.GetPodCIDR(false), m.netMgr.GetPodCIDR(true))
-	msgCh, _, err := m.ConnectivityManager.PostCmd(0, cmd)
+	cmd := aranyagopb.NewNetworkUpdatePodNetCmd(m.netMgr.GetPodCIDR(false), m.netMgr.GetPodCIDR(true))
+	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_NET_UPDATE_POD_NET, cmd)
 	if err != nil {
 		return fmt.Errorf("failed to post network update cmd: %w", err)
 	}

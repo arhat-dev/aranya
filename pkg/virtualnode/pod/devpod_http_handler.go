@@ -20,16 +20,16 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync/atomic"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/iohelper"
 	"arhat.dev/pkg/log"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
 	kubeletrc "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
-
-	"arhat.dev/aranya-proto/aranyagopb"
 
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/logutil"
@@ -93,7 +93,7 @@ func (m *Manager) doGetContainerLogs(
 		since      time.Time
 		tailLines  int64 = -1
 		bytesLimit int64 = -1
-		cmd        *aranyagopb.PodOperationCmd
+		cmd        *aranyagopb.ContainerLogsCmd
 		podLog     string
 		logger     = m.Log.WithFields(log.String("type", "logs"))
 	)
@@ -114,7 +114,7 @@ func (m *Manager) doGetContainerLogs(
 			bytesLimit = *options.LimitBytes
 		}
 
-		cmd = aranyagopb.NewPodLogCmd(
+		cmd = aranyagopb.NewPodContainerLogsCmd(
 			string(uid),
 			options.Container,
 			options.Follow,
@@ -152,7 +152,7 @@ func (m *Manager) doGetContainerLogs(
 				_ = writer.Close()
 			}()
 
-			err := logutil.ReadLogs(m.Context(), podLog, cmd.GetLogOptions(), writer, writer)
+			err := logutil.ReadLogs(m.Context(), podLog, cmd, writer, writer)
 			if err != nil {
 				logger.I("failed to read local pod logs", log.Error(err))
 			}
@@ -161,7 +161,7 @@ func (m *Manager) doGetContainerLogs(
 		return 0, reader, nil
 	}
 
-	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, cmd)
+	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_POD_CTR_LOGS, cmd)
 	if err != nil {
 		logger.I("failed to establish session for logs", log.Error(err))
 		return 0, nil, err
@@ -177,15 +177,8 @@ func (m *Manager) doGetContainerLogs(
 			}
 
 			return true
-		}, func(dataMsg *aranyagopb.Data) (exit bool) {
-			if dataMsg.Kind == aranyagopb.DATA_ERROR {
-				msgErr := new(aranyagopb.Error)
-				_ = msgErr.Unmarshal(dataMsg.Data)
-				logger.I("error happened in pod logs", log.Error(msgErr))
-				return true
-			}
-
-			if _, err := writer.Write(dataMsg.Data); err != nil {
+		}, func(data *connectivity.Data) (exit bool) {
+			if _, err := writer.Write(data.Payload); err != nil {
 				logger.I("failed to write log data", log.Error(err))
 				return true
 			}
@@ -217,12 +210,12 @@ func (m *Manager) doHandleExecInContainer() kubeletrc.Executor {
 		}()
 
 		// kubectl exec has no support for environment variables
-		execCmd := aranyagopb.NewPodExecCmd(
+		execCmd := aranyagopb.NewPodContainerExecCmd(
 			string(uid), container, cmd,
 			stdin != nil, stdout != nil, stderr != nil,
 			tty, nil,
 		)
-		err := m.doServeTerminalStream(execCmd, stdin, stdout, stderr, resize)
+		err := m.doServeTerminalStream(aranyagopb.CMD_POD_CTR_EXEC, execCmd, stdin, stdout, stderr, resize)
 		if err != nil {
 			return err
 		}
@@ -248,8 +241,12 @@ func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
 			}
 		}()
 
-		attachCmd := aranyagopb.NewPodAttachCmd(string(uid), container, stdin != nil, stdout != nil, stderr != nil, tty)
-		err := m.doServeTerminalStream(attachCmd, stdin, stdout, stderr, resize)
+		attachCmd := aranyagopb.NewPodContainerAttachCmd(
+			string(uid), container,
+			stdin != nil, stdout != nil, stderr != nil,
+			tty,
+		)
+		err := m.doServeTerminalStream(aranyagopb.CMD_POD_CTR_ATTACH, attachCmd, stdin, stdout, stderr, resize)
 		if err != nil {
 			return err
 		}
@@ -259,7 +256,8 @@ func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
 }
 
 func (m *Manager) doServeTerminalStream(
-	initialCmd *aranyagopb.PodOperationCmd,
+	kind aranyagopb.Kind,
+	initialCmd *aranyagopb.ContainerExecOrAttachCmd,
 	stdin io.Reader, stdout, stderr io.Writer,
 	resizeCh <-chan remotecommand.TerminalSize,
 ) error {
@@ -269,7 +267,7 @@ func (m *Manager) doServeTerminalStream(
 		return fmt.Errorf("output should not be nil")
 	}
 
-	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, initialCmd)
+	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, kind, initialCmd)
 	if err != nil {
 		logger.I("failed to create session", log.Error(err))
 		return err
@@ -279,7 +277,9 @@ func (m *Manager) doServeTerminalStream(
 
 	defer func() {
 		// best effort
-		_, _, err2 := m.ConnectivityManager.PostCmd(sid, aranyagopb.NewSessionCloseCmd(sid))
+		_, _, err2 := m.ConnectivityManager.PostCmd(
+			sid, aranyagopb.CMD_SESSION_CLOSE, aranyagopb.NewSessionCloseCmd(sid),
+		)
 		if err2 != nil {
 			logger.I("failed to post session close cmd", log.Error(err2))
 		}
@@ -288,8 +288,9 @@ func (m *Manager) doServeTerminalStream(
 	if resizeCh != nil {
 		go func() {
 			for size := range resizeCh {
-				resizeCmd := aranyagopb.NewPodResizeCmd(size.Width, size.Height)
-				if _, _, err2 := m.ConnectivityManager.PostCmd(sid, resizeCmd); err2 != nil {
+				resizeCmd := aranyagopb.NewPodContainerTerminalResizeCmd(size.Width, size.Height)
+				_, _, err2 := m.ConnectivityManager.PostCmd(sid, aranyagopb.CMD_POD_CTR_TTY_RESIZE, resizeCmd)
+				if err2 != nil {
 					logger.I("failed to post resize cmd", log.Error(err2))
 				}
 			}
@@ -297,7 +298,7 @@ func (m *Manager) doServeTerminalStream(
 	}
 
 	if stdin != nil {
-		r := iohelper.NewTimeoutReader(stdin, m.ConnectivityManager.MaxDataSize())
+		r := iohelper.NewTimeoutReader(stdin, m.ConnectivityManager.MaxPayloadSize())
 		go r.StartBackgroundReading()
 
 		readTimeout := constant.DefaultNonInteractiveStreamReadTimeout
@@ -321,10 +322,16 @@ func (m *Manager) doServeTerminalStream(
 			}
 		}()
 
+		var (
+			seq uint64
+		)
+
 		go func() {
 			defer func() {
 				logger.V("closing remote read")
-				_, _, err2 := m.ConnectivityManager.PostCmd(sid, aranyagopb.NewPodInputCmd(true, nil))
+				_, _, _, err2 := m.ConnectivityManager.PostData(
+					sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil,
+				)
 				if err2 != nil {
 					logger.I("failed to post input close cmd", log.Error(err2))
 				}
@@ -339,7 +346,10 @@ func (m *Manager) doServeTerminalStream(
 					<-timer.C
 				}
 
-				_, _, err2 := m.ConnectivityManager.PostCmd(sid, aranyagopb.NewPodInputCmd(false, data))
+				_, _, lastSeq, err2 := m.ConnectivityManager.PostData(
+					sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
+				)
+				atomic.StoreUint64(&seq, lastSeq+1)
 				if err2 != nil {
 					logger.I("failed to post user input", log.Error(err2))
 					return
@@ -353,22 +363,14 @@ func (m *Manager) doServeTerminalStream(
 			err = msgErr
 		}
 		return true
-	}, func(dataMsg *aranyagopb.Data) (exit bool) {
+	}, func(dataMsg *connectivity.Data) (exit bool) {
 		// default send to stdout
 		targetOutput := stdout
-		switch dataMsg.Kind {
-		case aranyagopb.DATA_STDERR:
-			if stderr != nil {
-				targetOutput = stderr
-			}
-		case aranyagopb.DATA_ERROR:
-			msgErr := new(aranyagopb.Error)
-			_ = msgErr.Unmarshal(dataMsg.Data)
-			err = msgErr
-			return true
+		if dataMsg.Kind == aranyagopb.MSG_DATA_STDERR && stderr != nil {
+			targetOutput = stderr
 		}
 
-		_, err = targetOutput.Write(dataMsg.Data)
+		_, err = targetOutput.Write(dataMsg.Payload)
 		if err != nil && err != io.EOF {
 			logger.I("failed to write output", log.Error(err))
 			return true
@@ -377,4 +379,13 @@ func (m *Manager) doServeTerminalStream(
 	}, connectivity.HandleUnknownMessage(logger))
 
 	return err
+}
+
+func nextSeq(p *uint64) uint64 {
+	seq := atomic.LoadUint64(p)
+	for !atomic.CompareAndSwapUint64(p, seq, seq+1) {
+		seq++
+	}
+
+	return seq
 }

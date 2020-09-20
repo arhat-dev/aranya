@@ -17,14 +17,18 @@ limitations under the License.
 package connectivity
 
 import (
-	"arhat.dev/pkg/log"
-
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/pkg/log"
 )
+
+type Data struct {
+	Kind    aranyagopb.Kind
+	Payload []byte
+}
 
 type (
 	MsgHandleFunc        func(msg *aranyagopb.Msg) (exit bool)
-	DataHandleFunc       func(data *aranyagopb.Data) (exit bool)
+	DataHandleFunc       func(data *Data) (exit bool)
 	UnknownMsgHandleFunc func(u interface{}) (exit bool)
 )
 
@@ -42,11 +46,11 @@ func HandleMessages(
 	onUnknown UnknownMsgHandleFunc,
 ) {
 	if onMsg == nil {
-		onMsg = func(msg *aranyagopb.Msg) bool { return false }
+		onMsg = func(*aranyagopb.Msg) bool { return false }
 	}
 
 	if onData == nil {
-		onData = func(data *aranyagopb.Data) bool { return false }
+		onData = func(*Data) bool { return false }
 	}
 
 	if onUnknown == nil {
@@ -62,7 +66,7 @@ func HandleMessages(
 		switch m := msg.(type) {
 		case *aranyagopb.Msg:
 			exit = onMsg(m)
-		case *aranyagopb.Data:
+		case *Data:
 			exit = onData(m)
 		default:
 			exit = onUnknown(msg)

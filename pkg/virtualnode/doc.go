@@ -15,4 +15,4 @@ limitations under the License.
 */
 
 // Package virtualnode the node managed by aranya
-package virtualnode // import "arhat.dev/aranya/pkg/virtualnode"
+package virtualnode

@@ -23,12 +23,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/iohelper"
 	"arhat.dev/pkg/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/constant"
 )
 
@@ -105,13 +105,13 @@ func (m *Manager) updateVirtualPodToRunningPhase() error {
 }
 
 // only return error for log file related errors
-func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.CreateOptions) (*aranyagopb.PodStatus, error) {
+func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.PodEnsureCmd) (*aranyagopb.PodStatusMsg, error) {
 	// defensive, should not happen
 	if opts.PodUid == "" || opts.Namespace == "" || opts.Name == "" {
 		return nil, fmt.Errorf("invalid options: pod uid should not be empty")
 	}
 
-	containerStatus := make(map[string]*aranyagopb.PodStatus_ContainerStatus)
+	containerStatus := make(map[string]*aranyagopb.ContainerStatus)
 
 	// the real log path is different from the one documented here:
 	//    https://github.com/kubernetes/community/blob/master/contributors/design-proposals/node/kubelet-cri-logging.md
@@ -160,8 +160,9 @@ func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.CreateOptions) (*ar
 
 		var err error
 		for _, arg := range ctr.Args {
-			execCmd := aranyagopb.NewPodExecCmd("", constant.VirtualContainerNameHost,
-				append(append([]string{}, cmd...), arg), ctr.Stdin, true, true, ctr.Tty, ctr.Envs)
+			execCmd := aranyagopb.NewPodContainerExecCmd("", constant.VirtualContainerNameHost,
+				append(append([]string{}, cmd...), arg), ctr.Stdin, true, true, ctr.Tty, ctr.Envs,
+			)
 
 			stderrR, stderr := iohelper.Pipe()
 			stdoutR, stdout := iohelper.Pipe()
@@ -201,7 +202,7 @@ func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.CreateOptions) (*ar
 					_, _ = stdout.Close(), stderr.Close()
 				}()
 
-				return m.doServeTerminalStream(execCmd, nil, stdout, stderr, nil)
+				return m.doServeTerminalStream(aranyagopb.CMD_POD_CTR_EXEC, execCmd, nil, stdout, stderr, nil)
 			}()
 
 			if err != nil {
@@ -211,7 +212,7 @@ func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.CreateOptions) (*ar
 
 		finishedAt := time.Now().UTC().Format(constant.TimeLayout)
 
-		ctrStatus := &aranyagopb.PodStatus_ContainerStatus{
+		ctrStatus := &aranyagopb.ContainerStatus{
 			//ContainerId:  "",
 			//ImageId:      "",
 			CreatedAt: createdAt,
@@ -224,7 +225,7 @@ func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.CreateOptions) (*ar
 		if err != nil {
 			ctrStatus.Message = "CommandExecFailed"
 
-			if msgErr, ok := err.(*aranyagopb.Error); ok {
+			if msgErr, ok := err.(*aranyagopb.ErrorMsg); ok {
 				ctrStatus.ExitCode = int32(msgErr.Code)
 				ctrStatus.Reason = msgErr.Description
 			} else {
@@ -240,5 +241,5 @@ func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.CreateOptions) (*ar
 		}
 	}
 
-	return aranyagopb.NewPodStatus(opts.PodUid, "", containerStatus), nil
+	return aranyagopb.NewPodStatusMsg(opts.PodUid, "", containerStatus), nil
 }

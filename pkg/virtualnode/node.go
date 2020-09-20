@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
@@ -33,7 +34,6 @@ import (
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 
-	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/middleware"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"

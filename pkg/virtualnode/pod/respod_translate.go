@@ -23,12 +23,12 @@ import (
 	"strings"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	kubebandwidth "k8s.io/kubernetes/pkg/util/bandwidth"
 
-	"arhat.dev/aranya-proto/aranyagopb"
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 )
@@ -74,12 +74,12 @@ func newContainerCreatingStatus(pod *corev1.Pod) (corev1.PodPhase, []corev1.Cont
 
 func resolveContainerStatus(
 	containers []corev1.Container,
-	devicePodStatus *aranyagopb.PodStatus,
+	devicePodStatus *aranyagopb.PodStatusMsg,
 ) (corev1.PodPhase, []corev1.ContainerStatus) {
 	ctrStatusMap := devicePodStatus.GetContainerStatuses()
 	if ctrStatusMap == nil {
 		// generalize to avoid panic
-		ctrStatusMap = make(map[string]*aranyagopb.PodStatus_ContainerStatus)
+		ctrStatusMap = make(map[string]*aranyagopb.ContainerStatus)
 	}
 
 	podPhase := corev1.PodRunning
@@ -95,22 +95,22 @@ func resolveContainerStatus(
 
 			containerExited := false
 			switch s.GetState() {
-			case aranyagopb.STATE_UNKNOWN:
-			case aranyagopb.STATE_PENDING:
+			case aranyagopb.POD_STATE_UNKNOWN:
+			case aranyagopb.POD_STATE_PENDING:
 				podPhase = corev1.PodPending
 				status.State.Waiting = &corev1.ContainerStateWaiting{
 					Reason:  s.Reason,
 					Message: s.Message,
 				}
-			case aranyagopb.STATE_RUNNING:
+			case aranyagopb.POD_STATE_RUNNING:
 				status.Ready = true
 				status.State.Running = &corev1.ContainerStateRunning{
 					StartedAt: metav1.NewTime(s.GetTimeStartedAt()),
 				}
-			case aranyagopb.STATE_SUCCEEDED:
+			case aranyagopb.POD_STATE_SUCCEEDED:
 				containerExited = true
 				podPhase = corev1.PodSucceeded
-			case aranyagopb.STATE_FAILED:
+			case aranyagopb.POD_STATE_FAILED:
 				containerExited = true
 				podPhase = corev1.PodFailed
 			}
@@ -147,8 +147,8 @@ func (m *Manager) translatePodCreateOptions(
 	volNames map[corev1.UniqueVolumeName]volumeNamePathPair,
 	dnsConfig *aranyaapi.PodDNSConfig,
 ) (
-	_ *aranyagopb.ImageEnsureOptions,
-	initOpts, workOpts *aranyagopb.CreateOptions,
+	_ *aranyagopb.ImageEnsureCmd,
+	initOpts, workOpts *aranyagopb.PodEnsureCmd,
 	initHostExec, workHostExec bool,
 	_ error,
 ) {
@@ -160,7 +160,7 @@ func (m *Manager) translatePodCreateOptions(
 		ports                = make(map[string]*aranyagopb.ContainerPort)
 		sysctls              = make(map[string]string)
 		hostPaths            = make(map[string]string)
-		imagePull            = make(map[string]*aranyagopb.ImagePull)
+		imagePull            = make(map[string]*aranyagopb.ImagePullConfig)
 		volumeDataForWorkCtr = make(map[string]*aranyagopb.NamedData)
 		hostPathsForWorkCtr  = make(map[string]string)
 	)
@@ -234,7 +234,7 @@ func (m *Manager) translatePodCreateOptions(
 			hostExecImageFound++
 		} else {
 			// real image to pull
-			imagePull[ctr.Image] = &aranyagopb.ImagePull{
+			imagePull[ctr.Image] = &aranyagopb.ImagePullConfig{
 				AuthConfig: authConfigs[ctr.Image],
 				PullPolicy: translateImagePullPolicy(ctr.ImagePullPolicy),
 			}
@@ -277,7 +277,7 @@ func (m *Manager) translatePodCreateOptions(
 				hostExecImageFound++
 			} else {
 				// real image to pull
-				imagePull[ctr.Image] = &aranyagopb.ImagePull{
+				imagePull[ctr.Image] = &aranyagopb.ImagePullConfig{
 					AuthConfig: authConfigs[ctr.Image],
 					PullPolicy: translateImagePullPolicy(ctr.ImagePullPolicy),
 				}
@@ -303,7 +303,7 @@ func (m *Manager) translatePodCreateOptions(
 			return nil, nil, nil, false, false, fmt.Errorf("invalid init container images")
 		}
 
-		initOpts = &aranyagopb.CreateOptions{
+		initOpts = &aranyagopb.PodEnsureCmd{
 			PodUid:    string(pod.UID),
 			Namespace: pod.Namespace,
 			Name:      pod.Name,
@@ -324,14 +324,14 @@ func (m *Manager) translatePodCreateOptions(
 			SearchDomains: dnsConfig.Searches,
 			Hosts:         hosts,
 			DnsOptions:    dnsConfig.Options,
-			NetworkOptions: &aranyagopb.NetworkOptions{
-				Ipv4PodCidr: ipv4PodCIDR,
-				Ipv6PodCidr: ipv6PodCIDR,
-				Bandwidth:   bandwidth,
+			Network: &aranyagopb.PodNetworkOptions{
+				CidrIpv4:  ipv4PodCIDR,
+				CidrIpv6:  ipv6PodCIDR,
+				Bandwidth: bandwidth,
 			},
 
-			Containers:     initContainers,
-			WaitContainers: true,
+			Containers: initContainers,
+			Wait:       true,
 
 			Ports: ports,
 
@@ -341,15 +341,15 @@ func (m *Manager) translatePodCreateOptions(
 			Sysctls: sysctls,
 		}
 
-		workOpts = &aranyagopb.CreateOptions{
+		workOpts = &aranyagopb.PodEnsureCmd{
 			PodUid:    string(pod.UID),
 			Namespace: pod.Namespace,
 			Name:      pod.Name,
 
 			RestartPolicy: translateRestartPolicy(pod.Spec.RestartPolicy),
 
-			Containers:     containers,
-			WaitContainers: false,
+			Containers: containers,
+			Wait:       false,
 
 			HostPaths:  hostPathsForWorkCtr,
 			VolumeData: volumeDataForWorkCtr,
@@ -359,7 +359,7 @@ func (m *Manager) translatePodCreateOptions(
 	} else {
 		// need to create pause when creating work containers
 		// require all options applied to pause container
-		workOpts = &aranyagopb.CreateOptions{
+		workOpts = &aranyagopb.PodEnsureCmd{
 			PodUid:    string(pod.UID),
 			Namespace: pod.Namespace,
 			Name:      pod.Name,
@@ -380,14 +380,14 @@ func (m *Manager) translatePodCreateOptions(
 			SearchDomains: dnsConfig.Searches,
 			Hosts:         hosts,
 			DnsOptions:    dnsConfig.Options,
-			NetworkOptions: &aranyagopb.NetworkOptions{
-				Ipv4PodCidr: ipv4PodCIDR,
-				Ipv6PodCidr: ipv6PodCIDR,
-				Bandwidth:   bandwidth,
+			Network: &aranyagopb.PodNetworkOptions{
+				CidrIpv4:  ipv4PodCIDR,
+				CidrIpv6:  ipv6PodCIDR,
+				Bandwidth: bandwidth,
 			},
 
-			Containers:     containers,
-			WaitContainers: false,
+			Containers: containers,
+			Wait:       false,
 
 			Ports: ports,
 
@@ -398,7 +398,7 @@ func (m *Manager) translatePodCreateOptions(
 		}
 	}
 
-	return &aranyagopb.ImageEnsureOptions{ImagePull: imagePull}, initOpts, workOpts, initHostExec, workHostExec, nil
+	return &aranyagopb.ImageEnsureCmd{Images: imagePull}, initOpts, workOpts, initHostExec, workHostExec, nil
 }
 
 func getNamedContainerPorts(ctr *corev1.Container) map[string]int32 {
@@ -594,7 +594,7 @@ func getPortValue(ports map[string]int32, port intstr.IntOrString) int32 {
 func translateContainerSecOpts(
 	podSecOpts *corev1.PodSecurityContext,
 	ctrSecOpts *corev1.SecurityContext,
-) *aranyagopb.SecurityOptions {
+) *aranyagopb.ContainerSecurityOptions {
 	result := resolveCommonSecOpts(podSecOpts, ctrSecOpts)
 	if result == nil || ctrSecOpts == nil {
 		return result
@@ -641,12 +641,12 @@ func translateContainerSecOpts(
 func resolveCommonSecOpts(
 	podSecOpts *corev1.PodSecurityContext,
 	ctrSecOpts *corev1.SecurityContext,
-) *aranyagopb.SecurityOptions {
+) *aranyagopb.ContainerSecurityOptions {
 	if podSecOpts == nil && ctrSecOpts != nil {
 		return nil
 	}
 
-	return &aranyagopb.SecurityOptions{
+	return &aranyagopb.ContainerSecurityOptions{
 		NonRoot: func() bool {
 			switch {
 			case ctrSecOpts != nil && ctrSecOpts.RunAsNonRoot != nil:

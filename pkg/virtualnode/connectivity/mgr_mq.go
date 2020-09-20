@@ -21,9 +21,8 @@ import (
 	"errors"
 	"fmt"
 
-	"arhat.dev/pkg/log"
-
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/pkg/log"
 )
 
 var (
@@ -123,7 +122,8 @@ func (m *MessageQueueManager) Reject(reason aranyagopb.RejectCmd_Reason, message
 	m.onReject(func() {
 		// best effort
 		if m.sendCmd != nil {
-			_ = m.sendCmd(aranyagopb.NewCmd(0, aranyagopb.NewRejectCmd(reason, message)))
+			data, _ := aranyagopb.NewRejectCmd(reason, message).Marshal()
+			_ = m.sendCmd(aranyagopb.NewCmd(aranyagopb.CMD_REJECT, 0, 0, 0, true, data))
 		}
 	})
 }

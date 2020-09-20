@@ -137,7 +137,7 @@ func NewHostLogCmd(path string) *ContainerLogsCmd {
 	}
 }
 
-func NewPodContainerLogCmd(
+func NewPodContainerLogsCmd(
 	podUID, container string,
 	follow, timestamp, previous bool,
 	since time.Time, tailLines, bytesLimit int64,

@@ -1,4 +1,4 @@
-# arhat.dev/aranya-proto v0.0.0-20200918232600-415589a7dc85
+# arhat.dev/aranya-proto v0.0.0-20200920061754-8acfef86f1b3
 ## explicit
 arhat.dev/aranya-proto/aranyagopb
 arhat.dev/aranya-proto/aranyagopb/aranyagoconst
@@ -16,7 +16,6 @@ arhat.dev/pkg/patchhelper
 arhat.dev/pkg/queue
 arhat.dev/pkg/reconcile
 arhat.dev/pkg/textquery
-arhat.dev/pkg/wellknownerrors
 # cloud.google.com/go v0.57.0 => cloud.google.com/go v0.63.0
 cloud.google.com/go
 cloud.google.com/go/compute/metadata

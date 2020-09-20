@@ -20,11 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-
-	"arhat.dev/pkg/queue"
-
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/pkg/queue"
 )
 
 type session struct {
@@ -35,18 +32,9 @@ type session struct {
 	closed bool
 	msgCh  chan interface{}
 
-	seq  uint64
-	seqQ *queue.SeqQueue
-	mu   *sync.Mutex
-}
-
-func (s *session) nextSeq() uint64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	seq := s.seq
-	s.seq++
-	return seq
+	msgBytes []byte
+	seqQ     *queue.SeqQueue
+	mu       *sync.Mutex
 }
 
 func (s *session) deliverMsg(msg *aranyagopb.Msg) bool {
@@ -58,42 +46,57 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) bool {
 		return false
 	}
 
-	var reallyCompleted bool
-	if s.seqQ == nil || msg.Kind != aranyagopb.MSG_DATA {
-		// nolint:gosimple
-		select {
-		case s.msgCh <- msg:
-		}
-		reallyCompleted = msg.Completed
-	} else {
-		dataMsg := new(aranyagopb.Data)
-		_ = dataMsg.Unmarshal(msg.Body)
+	var (
+		sid = msg.Header.Sid
+		seq = msg.Header.Seq
+	)
 
-		if msg.Completed {
-			_ = s.seqQ.SetMaxSeq(dataMsg.Seq)
-		}
+	if msg.Header.Completed {
+		s.seqQ.SetMaxSeq(seq)
+	}
 
-		var out []interface{}
-		out, reallyCompleted = s.seqQ.Offer(dataMsg.Seq, dataMsg.Data)
-		for _, da := range out {
+	dataChunks, complete := s.seqQ.Offer(seq, msg.Body)
+	switch msg.Header.Kind {
+	case aranyagopb.MSG_DATA_DEFAULT,
+		aranyagopb.MSG_DATA_STDERR:
+		for _, ck := range dataChunks {
 			// nolint:gosimple
 			select {
-			case s.msgCh <- da.([]byte):
+			case s.msgCh <- &Data{
+				Kind:    msg.Header.Kind,
+				Payload: ck.([]byte),
+			}:
+				//	TODO: add context cancel
+			}
+		}
+	default:
+		for _, ck := range dataChunks {
+			s.msgBytes = append(s.msgBytes, ck.([]byte)...)
+		}
+
+		if complete {
+			// nolint:gosimple
+			select {
+			// deliver a new message with complete msgBytes
+			case s.msgCh <- aranyagopb.NewMsg(
+				msg.Header.Kind, msg.Header.Sid, msg.Header.Seq, 0, true, s.msgBytes,
+			):
+				//	TODO: add context cancel
 			}
 		}
 	}
 
-	if reallyCompleted {
+	if complete {
 		s.closed = true
 		if s.msgCh != nil {
 			close(s.msgCh)
 			s.msgCh = nil
 		}
 
-		s.parent.tq.Remove(msg.SessionId)
+		s.parent.tq.Remove(sid)
 
 		s.parent.mu.Lock()
-		delete(s.parent.m, msg.SessionId)
+		delete(s.parent.m, sid)
 		s.parent.mu.Unlock()
 	}
 
@@ -161,7 +164,8 @@ func (m *SessionManager) Start(stopCh <-chan struct{}) error {
 				}
 
 				if sid, ok := session.Key.(uint64); ok {
-					m.Dispatch(aranyagopb.NewTimeoutErrorMsg(sid))
+					data, _ := aranyagopb.NewTimeoutErrorMsg(sid).Marshal()
+					m.Dispatch(aranyagopb.NewMsg(aranyagopb.MSG_ERROR, sid, 0, 0, true, data))
 					m.Delete(sid)
 				}
 			case <-stopCh:
@@ -179,9 +183,7 @@ func (m *SessionManager) Start(stopCh <-chan struct{}) error {
 // Add or reuse a session
 func (m *SessionManager) Add(
 	sid uint64,
-	cmd proto.Marshaler,
 	timeout time.Duration,
-	expectSeqData bool,
 ) (realSid uint64, ch chan interface{}) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -191,25 +193,14 @@ func (m *SessionManager) Add(
 	if oldSession, ok := m.m[realSid]; ok {
 		// reuse old channel if valid
 		ch = oldSession.msgCh
-
-		// nolint:gocritic
-		switch c := cmd.(type) {
-		case *aranyagopb.PodOperationCmd:
-			if opts, ok := c.Options.(*aranyagopb.PodOperationCmd_InputOptions); ok {
-				opts.InputOptions.Seq = oldSession.nextSeq()
-			}
-		}
 	} else {
 		// create new channel if invalid
 		session := &session{
 			parent: m,
 			msgCh:  make(chan interface{}, 1),
 			epoch:  m.epoch,
+			seqQ:   queue.NewSeqQueue(),
 			mu:     new(sync.Mutex),
-		}
-
-		if expectSeqData {
-			session.seqQ = queue.NewSeqQueue()
 		}
 
 		ch = session.msgCh
@@ -225,8 +216,9 @@ func (m *SessionManager) Add(
 }
 
 func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
+	sid := msg.Header.Sid
 	m.mu.RLock()
-	session, ok := m.m[msg.SessionId]
+	session, ok := m.m[sid]
 	m.mu.RUnlock()
 
 	// only deliver msg for this epoch or stream message
@@ -234,7 +226,7 @@ func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
 		return session.deliverMsg(msg)
 	}
 
-	m.Delete(msg.SessionId)
+	m.Delete(sid)
 	return false
 }
 

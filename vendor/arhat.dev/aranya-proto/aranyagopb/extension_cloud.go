@@ -68,7 +68,7 @@ func (m *Msg) GetStorageStatusList() *StorageStatusListMsg {
 
 func (m *Msg) GetData() []byte {
 	switch m.Header.Kind {
-	case MSG_DATA_STDOUT, MSG_DATA_STDERR, MSG_DATA_METRICS:
+	case MSG_DATA_DEFAULT, MSG_DATA_STDERR:
 	default:
 		return nil
 	}

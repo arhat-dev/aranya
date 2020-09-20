@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"time"
 
-	"arhat.dev/pkg/log"
-
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/pkg/log"
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	"arhat.dev/aranya/pkg/util/manager"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 type Options struct {
-	Devices map[string]*aranyagopb.Device
+	Devices map[string]*aranyagopb.DeviceEnsureCmd
 }
 
 func NewManager(
@@ -32,7 +33,7 @@ func NewManager(
 type Manager struct {
 	*manager.BaseManager
 
-	requestedDevices map[string]*aranyagopb.Device
+	requestedDevices map[string]*aranyagopb.DeviceEnsureCmd
 }
 
 func (m *Manager) Start() error {
@@ -48,13 +49,13 @@ func (m *Manager) Start() error {
 			}
 
 			var (
-				failedDevices  = make(map[string]*aranyagopb.Device)
-				ensuredDevices = make(map[string]*aranyagopb.Device)
-				deviceToRemove = make(map[string]struct{})
+				failedDevices  = make(map[string]*aranyagopb.DeviceEnsureCmd)
+				ensuredDevices = make(map[string]*aranyagopb.DeviceEnsureCmd)
+				deviceToRemove = sets.NewString()
 				err            error
 			)
 
-			msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.NewDeviceListCmd())
+			msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_DEVICE_LIST, aranyagopb.NewDeviceListCmd())
 			if err != nil {
 				logger.I("failed to post device list cmd", log.Error(err))
 
@@ -74,14 +75,14 @@ func (m *Manager) Start() error {
 				}
 
 				for _, ds := range sl.Devices {
-					if d, ok := m.requestedDevices[ds.Id]; ok {
-						if ds.Id == d.Id && ds.State == aranyagopb.DEVICE_STATE_CONNECTED {
-							ensuredDevices[d.Id] = d
+					if d, ok := m.requestedDevices[ds.DeviceId]; ok {
+						if ds.DeviceId == d.DeviceId && ds.State == aranyagopb.DEVICE_STATE_CONNECTED {
+							ensuredDevices[d.DeviceId] = d
 						} else {
-							failedDevices[d.Id] = d
+							failedDevices[d.DeviceId] = d
 						}
 					} else {
-						deviceToRemove[ds.Id] = struct{}{}
+						deviceToRemove.Insert(ds.DeviceId)
 					}
 				}
 
@@ -143,72 +144,75 @@ func (m *Manager) Close() {
 	m.OnClose(nil)
 }
 
-func (m *Manager) removeDevices(deviceToRemove map[string]struct{}) (remains map[string]struct{}) {
-	var removedDevice []string
-	for deviceID := range deviceToRemove {
-		logger := m.Log.WithFields(log.String("device", deviceID))
+func (m *Manager) removeDevices(deviceToRemove sets.String) sets.String {
+	var (
+		devices = deviceToRemove.UnsortedList()
+	)
 
-		logger.D("removing unwanted devices")
-		msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.NewDeviceRemoveCmd(deviceID))
-		if err != nil {
-			logger.I("failed to post device remove cmd", log.Error(err))
-			continue
-		}
+	logger := m.Log.WithFields(log.Strings("devices", devices))
 
+	logger.D("removing unwanted devices")
+	msgCh, _, err := m.ConnectivityManager.PostCmd(
+		0, aranyagopb.CMD_DEVICE_DELETE, aranyagopb.NewDeviceDeleteCmd(devices...),
+	)
+	if err != nil {
+		logger.I("failed to post device remove cmd", log.Error(err))
+	} else {
 		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 			if msgErr := msg.GetError(); msgErr != nil {
 				logger.I("failed to remove device", log.Error(msgErr))
 				return true
 			}
 
-			status := msg.GetDeviceStatus()
-			if status == nil {
+			dsl := msg.GetDeviceStatusList()
+			if dsl == nil {
 				return true
 			}
 
 			// TODO: update pod status
-			removedDevice = append(removedDevice, status.Id)
+			for _, ds := range dsl.Devices {
+				deviceToRemove = deviceToRemove.Delete(ds.DeviceId)
+			}
+
 			return false
 		}, nil, connectivity.HandleUnknownMessage(logger))
-	}
-
-	for _, id := range removedDevice {
-		delete(deviceToRemove, id)
 	}
 
 	return deviceToRemove
 }
 
 func (m *Manager) ensureDevices(
-	devices map[string]*aranyagopb.Device,
-) (ensuredDevices, failedDevices map[string]*aranyagopb.Device) {
-	failedDevices = make(map[string]*aranyagopb.Device)
-	ensuredDevices = make(map[string]*aranyagopb.Device)
+	devices map[string]*aranyagopb.DeviceEnsureCmd,
+) (ensuredDevices, failedDevices map[string]*aranyagopb.DeviceEnsureCmd) {
+	failedDevices = make(map[string]*aranyagopb.DeviceEnsureCmd)
+	ensuredDevices = make(map[string]*aranyagopb.DeviceEnsureCmd)
 
 	for _, dev := range devices {
 		d := dev
-		if _, ok := ensuredDevices[d.Id]; ok {
+		if _, ok := ensuredDevices[d.DeviceId]; ok {
 			continue
 		}
 
-		logger := m.Log.WithFields(log.String("device", d.Id))
+		logger := m.Log.WithFields(log.String("device", d.DeviceId))
 
-		msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.NewDeviceEnsureCmd(d))
+		msgCh, _, err := m.ConnectivityManager.PostCmd(
+			0, aranyagopb.CMD_DEVICE_ENSURE, d,
+		)
 		if err != nil {
 			logger.I("failed to post device ensure cmd", log.Error(err))
-			failedDevices[d.Id] = devices[d.Id]
+			failedDevices[d.DeviceId] = devices[d.DeviceId]
 		}
 
 		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 			if msgErr := msg.GetError(); msgErr != nil {
 				logger.I("failed to ensure device", log.Error(msgErr))
-				failedDevices[d.Id] = devices[d.Id]
+				failedDevices[d.DeviceId] = devices[d.DeviceId]
 				return true
 			}
 
 			status := msg.GetDeviceStatus()
 			if status == nil {
-				failedDevices[d.Id] = devices[d.Id]
+				failedDevices[d.DeviceId] = devices[d.DeviceId]
 				logger.I("unexpected non device status msg", log.Any("msg", msg))
 				return true
 			}
@@ -218,10 +222,10 @@ func (m *Manager) ensureDevices(
 			case aranyagopb.DEVICE_STATE_UNKNOWN:
 				fallthrough
 			case aranyagopb.DEVICE_STATE_ERRORED:
-				failedDevices[d.Id] = devices[d.Id]
+				failedDevices[d.DeviceId] = devices[d.DeviceId]
 			default:
 				// TODO: update pod status
-				ensuredDevices[d.Id] = devices[d.Id]
+				ensuredDevices[d.DeviceId] = devices[d.DeviceId]
 			}
 
 			return false

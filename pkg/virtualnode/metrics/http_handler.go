@@ -26,13 +26,13 @@ import (
 	"strings"
 	"sync"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/common/expfmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/util/cache"
 )
 
@@ -177,14 +177,14 @@ func (m *Manager) serveMetrics(cache *cache.MetricsCache, resp http.ResponseWrit
 			return
 		}
 
-		m.retrieveDeviceMetrics(aranyagopb.NewMetricsCollectCmd(aranyagopb.COLLECT_NODE_METRICS))
+		m.retrieveDeviceMetrics(aranyagopb.NewMetricsCollectCmd(aranyagopb.METRICS_TARGET_NODE))
 	case m.containerMetricsCache:
 		if !m.options.ContainerMetrics.Enabled || !m.containerMetricsSupported() {
 			http.Error(resp, "container metrics not supported", http.StatusNotImplemented)
 			return
 		}
 
-		m.retrieveDeviceMetrics(aranyagopb.NewMetricsCollectCmd(aranyagopb.COLLECT_CONTAINER_METRICS))
+		m.retrieveDeviceMetrics(aranyagopb.NewMetricsCollectCmd(aranyagopb.METRICS_TARGET_CONTAINER))
 	}
 
 	contentType := expfmt.Negotiate(r.Header)

@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -32,8 +33,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientcodv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
-
-	"arhat.dev/aranya-proto/aranyagopb"
 
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
@@ -144,7 +143,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 	}()
 
 	vn.log.D("syncing device info for the first time")
-	if err := vn.SyncDeviceNodeStatus(aranyagopb.GET_NODE_INFO_ALL); err != nil {
+	if err := vn.SyncDeviceNodeStatus(aranyagopb.NODE_INFO_ALL); err != nil {
 		vn.log.I("failed to sync device node info, reject", log.Error(err))
 		vn.opt.ConnectivityManager.Reject(
 			aranyagopb.REJECTION_NODE_STATUS_SYNC_ERROR, "failed to pass initial node sync")
@@ -154,7 +153,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 	var supportPod bool
 	vn.log.D("syncing device pods for the first time")
 	if err := vn.podManager.SyncDevicePods(); err != nil {
-		if e, ok := err.(*aranyagopb.Error); ok && e.Kind == aranyagopb.ERR_NOT_SUPPORTED {
+		if e, ok := err.(*aranyagopb.ErrorMsg); ok && e.Kind == aranyagopb.ERR_NOT_SUPPORTED {
 			// ignore unsupported error
 			supportPod = false
 			vn.log.I("pod not supported in remote device")
@@ -232,7 +231,8 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 		// send storage credentials when storage enabled
 		vn.log.D("sending storage credentials to device")
 		msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(
-			0, aranyagopb.NewStorageCredentialUpdateCmd(vn.opt.SSHPrivateKey))
+			0, aranyagopb.CMD_CRED_ENSURE, aranyagopb.NewCredentialEnsureCmd(vn.opt.SSHPrivateKey),
+		)
 		if err != nil {
 			vn.log.E("failed to send storage credentials", log.Error(err))
 			vn.opt.ConnectivityManager.Reject(
@@ -263,7 +263,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 		}, nil, connectivity.HandleUnknownMessage(vn.log))
 
 		if err != nil {
-			if e, ok := err.(*aranyagopb.Error); ok && e.Kind == aranyagopb.ERR_NOT_SUPPORTED {
+			if e, ok := err.(*aranyagopb.ErrorMsg); ok && e.Kind == aranyagopb.ERR_NOT_SUPPORTED {
 				vn.log.I("node credentials not supported")
 			} else {
 				vn.log.I("failed to set node credentials", log.Error(err))
@@ -361,7 +361,7 @@ func (m *Manager) consumeForceNodeSync() {
 		case <-vn.opt.ConnectivityManager.Connected():
 			go func() {
 				logger.V("syncing")
-				if err := vn.SyncDeviceNodeStatus(aranyagopb.GET_NODE_INFO_DYN); err != nil {
+				if err := vn.SyncDeviceNodeStatus(aranyagopb.NODE_INFO_DYN); err != nil {
 					logger.I("failed", log.Error(err))
 					vn.opt.ConnectivityManager.Reject(aranyagopb.REJECTION_NODE_STATUS_SYNC_ERROR, err.Error())
 

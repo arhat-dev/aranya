@@ -571,7 +571,7 @@ func (c *Controller) prepareDeviceOptions(
 	vnConfig *conf.VirtualnodeConfig,
 ) (_ *device.Options, err error) {
 	var (
-		devices = make(map[string]*aranyagopb.Device)
+		devices = make(map[string]*aranyagopb.DeviceEnsureCmd)
 		devs    = make(map[string]struct{})
 	)
 
@@ -624,7 +624,7 @@ func (c *Controller) prepareDeviceOptions(
 
 		var deviceMetrics []*aranyagopb.DeviceMetrics
 		for _, m := range d.Metrics {
-			var uploadMethod aranyagopb.DeviceMetrics_DeviceMetricsUploadMethod
+			var uploadMethod aranyagopb.DeviceMetrics_UploadMethod
 			switch m.UploadMethod {
 			case aranyaapi.UploadWithArhatConnectivity:
 				uploadMethod = aranyagopb.UPLOAD_WITH_ARHAT_CONNECTIVITY
@@ -639,23 +639,23 @@ func (c *Controller) prepareDeviceOptions(
 			}
 
 			deviceMetrics = append(deviceMetrics, &aranyagopb.DeviceMetrics{
-				Id:              m.Name,
+				Name:            m.Name,
 				TransportParams: m.TransportParams,
 				UploadMethod:    uploadMethod,
 				UploadParams:    m.UploadParams,
 			})
 		}
 
-		devices[d.Name] = &aranyagopb.Device{
-			Connectivity: &aranyagopb.DeviceConnectivity{
+		devices[d.Name] = &aranyagopb.DeviceEnsureCmd{
+			DeviceConnectivity: &aranyagopb.DeviceConnectivity{
 				Transport: d.Connectivity.Transport,
 				Mode:      mode,
 				Target:    d.Connectivity.Target,
 				Params:    d.Connectivity.Params,
 				//Tls:
 			},
-			Operations:         operations,
-			Metrics:            deviceMetrics,
+			DeviceOperations:   operations,
+			DeviceMetrics:      deviceMetrics,
 			UploadConnectivity: uploadConnectivity,
 		}
 	}
