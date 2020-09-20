@@ -29,7 +29,7 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
-// generate in cluster node cache for remote device
+// generate in cluster node cache for remote node
 func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeInfoGetCmd_Kind) error {
 	msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(
 		0, aranyagopb.CMD_NODE_INFO_GET, aranyagopb.NewNodeCmd(action),
@@ -55,7 +55,7 @@ func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeInfoGetCmd_Kin
 	}, nil, connectivity.HandleUnknownMessage(vn.log))
 
 	if err != nil {
-		return fmt.Errorf("failed to sync device node status: %w", err)
+		return fmt.Errorf("failed to sync node status: %w", err)
 	}
 
 	return nil
@@ -74,18 +74,18 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 		}
 		switch s.Kind {
 		case aranyagopb.STATE_ONLINE:
-			logger.I("device connected", log.String("id", s.DeviceId))
+			logger.I("node connected", log.String("id", s.DeviceId))
 
 			vn.opt.ConnectivityManager.OnConnected(func() (id string) {
 				// initialize node and setup node/pod sync
-				logger.D("processing device online message")
+				logger.D("processing node online message")
 				if !vn.opt.VirtualnodeManager.OnVirtualNodeConnected(vn) {
 					// initialization failed (rejected)
-					logger.I("device failed to pass initial online check")
+					logger.I("node failed to pass initial online check")
 					return ""
 				}
 
-				logger.D("initialized device")
+				logger.D("initialized node")
 
 				if s.DeviceId == "" {
 					return "default"
@@ -94,7 +94,7 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 				return s.DeviceId
 			})
 		case aranyagopb.STATE_OFFLINE:
-			logger.I("device disconnected", log.String("id", s.DeviceId))
+			logger.I("node disconnected", log.String("id", s.DeviceId))
 
 			vn.opt.ConnectivityManager.OnDisconnected(func() (id string, all bool) {
 				return s.DeviceId, false

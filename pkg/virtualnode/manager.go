@@ -142,23 +142,23 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 		}
 	}()
 
-	vn.log.D("syncing device info for the first time")
+	vn.log.D("syncing node info for the first time")
 	if err := vn.SyncDeviceNodeStatus(aranyagopb.NODE_INFO_ALL); err != nil {
-		vn.log.I("failed to sync device node info, reject", log.Error(err))
+		vn.log.I("failed to sync node info, reject", log.Error(err))
 		vn.opt.ConnectivityManager.Reject(
 			aranyagopb.REJECTION_NODE_STATUS_SYNC_ERROR, "failed to pass initial node sync")
 		return false
 	}
 
 	var supportPod bool
-	vn.log.D("syncing device pods for the first time")
+	vn.log.D("syncing pods for the first time")
 	if err := vn.podManager.SyncDevicePods(); err != nil {
 		if e, ok := err.(*aranyagopb.ErrorMsg); ok && e.Kind == aranyagopb.ERR_NOT_SUPPORTED {
 			// ignore unsupported error
 			supportPod = false
-			vn.log.I("pod not supported in remote device")
+			vn.log.I("pod not supported in remote node")
 		} else {
-			vn.log.I("failed to sync device pods", log.Error(err))
+			vn.log.I("failed to sync pods", log.Error(err))
 			vn.opt.ConnectivityManager.Reject(
 				aranyagopb.REJECTION_POD_STATUS_SYNC_ERROR, "failed to pass initial pod sync")
 			return false
@@ -229,7 +229,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 
 	if vn.storageManager != nil {
 		// send storage credentials when storage enabled
-		vn.log.D("sending storage credentials to device")
+		vn.log.D("sending credentials to node")
 		msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(
 			0, aranyagopb.CMD_CRED_ENSURE, aranyagopb.NewCredentialEnsureCmd(vn.opt.SSHPrivateKey),
 		)
