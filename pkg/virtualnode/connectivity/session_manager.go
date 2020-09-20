@@ -52,6 +52,11 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) bool {
 	)
 
 	dataChunks, complete := s.seqQ.Offer(seq, msg.Body)
+
+	if msg.Header.Completed {
+		complete = s.seqQ.SetMaxSeq(seq)
+	}
+
 	switch msg.Header.Kind {
 	case aranyagopb.MSG_DATA_DEFAULT,
 		aranyagopb.MSG_DATA_STDERR:
@@ -80,10 +85,6 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) bool {
 				//	TODO: add context cancel
 			}
 		}
-	}
-
-	if msg.Header.Completed {
-		complete = s.seqQ.SetMaxSeq(seq)
 	}
 
 	if complete {
