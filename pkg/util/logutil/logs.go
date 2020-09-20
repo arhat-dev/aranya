@@ -29,10 +29,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
 	"github.com/fsnotify/fsnotify"
 
-	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya/pkg/constant"
 )
 

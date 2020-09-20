@@ -25,6 +25,7 @@ import (
 	"reflect"
 	"strings"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
@@ -36,7 +37,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 
-	"arhat.dev/aranya-proto/aranyagopb"
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
