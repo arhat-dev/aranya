@@ -216,6 +216,11 @@ func (m *SessionManager) Add(
 }
 
 func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
+	if msg.Header == nil {
+		// ignore invalid Msgs
+		return true
+	}
+
 	sid := msg.Header.Sid
 	m.mu.RLock()
 	session, ok := m.m[sid]
