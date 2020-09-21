@@ -48,7 +48,7 @@ github.com/Azure/azure-event-hubs-go/v3/persist
 ## explicit
 github.com/Azure/azure-sdk-for-go/services/eventhub/mgmt/2017-04-01/eventhub
 github.com/Azure/azure-sdk-for-go/version
-# github.com/Azure/go-amqp v0.12.6 => github.com/Azure/go-amqp v0.12.6
+# github.com/Azure/go-amqp v0.12.8 => github.com/Azure/go-amqp v0.12.8
 ## explicit
 github.com/Azure/go-amqp
 github.com/Azure/go-amqp/internal/testconn
@@ -1150,7 +1150,7 @@ sigs.k8s.io/yaml
 # k8s.io/metrics => github.com/kubernetes/metrics v0.18.8
 # k8s.io/sample-apiserver => github.com/kubernetes/sample-apiserver v0.18.8
 # k8s.io/utils => github.com/kubernetes/utils v0.0.0-20200821003339-5e75c0163111
-# github.com/Azure/go-amqp => github.com/Azure/go-amqp v0.12.6
+# github.com/Azure/go-amqp => github.com/Azure/go-amqp v0.12.8
 # github.com/Azure/go-autorest => github.com/Azure/go-autorest v14.2.0+incompatible
 # github.com/Azure/go-autorest/autorest => github.com/Azure/go-autorest/autorest v0.11.3
 # github.com/Azure/go-autorest/autorest/adal => github.com/Azure/go-autorest/autorest/adal v0.9.1
