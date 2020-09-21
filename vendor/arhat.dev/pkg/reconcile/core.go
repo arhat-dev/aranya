@@ -3,6 +3,7 @@ package reconcile
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"arhat.dev/pkg/backoff"
@@ -66,10 +67,20 @@ func (c *Core) Start() error {
 }
 
 func (c *Core) ReconcileUntil(stop <-chan struct{}) {
-	c.jobQ.Resume()
-	defer c.jobQ.Pause()
+	wg := new(sync.WaitGroup)
 
+	c.jobQ.Resume()
+	defer func() {
+		c.jobQ.Pause()
+
+		// wait for job pause
+		wg.Wait()
+	}()
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
 		for {
 			job, more := c.jobQ.Acquire()
 			if !more {

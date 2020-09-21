@@ -1,7 +1,7 @@
 arhat.dev/aranya-proto v0.0.0-20200921173915-1c2ff9206e7d h1:KUlfcO/guYqPcviqRmXLXCTMEj821fvXOjWBfgORWrA=
 arhat.dev/aranya-proto v0.0.0-20200921173915-1c2ff9206e7d/go.mod h1:QlunwdBmLcxoun2SGW6fuJGW2yiuX8G4S5ta3xxSzag=
-arhat.dev/pkg v0.0.0-20200921064408-1ce21b25d5e9 h1:cdhiuQrQAWuSGCds0HAuoR0R5yUaGp5wbVIuEIwq6uA=
-arhat.dev/pkg v0.0.0-20200921064408-1ce21b25d5e9/go.mod h1:a5qmenmejj79BYY2Xe8RaHwJA/HChEYWuzbqdmqnYc4=
+arhat.dev/pkg v0.0.0-20200921200943-4d1cfb82d420 h1:P1XEgBmA5V55WbpryFQOd8+xB4JkzoqBAzr30LEltlQ=
+arhat.dev/pkg v0.0.0-20200921200943-4d1cfb82d420/go.mod h1:a5qmenmejj79BYY2Xe8RaHwJA/HChEYWuzbqdmqnYc4=
 bitbucket.org/bertimus9/systemstat v0.0.0-20180207000608-0eeff89b0690/go.mod h1:Ulb78X89vxKYgdL24HMTiXYHlyHEvruOj1ZPlqeNEZM=
 cloud.google.com/go v0.63.0 h1:A+DfAZQ/eWca7gvu42CS6FNSDX4R8cghF+XfWLn4R6g=
 cloud.google.com/go v0.63.0/go.mod h1:GmezbQc7T2snqkEXWfZ0sy0VfkB/ivI2DdtJL2DEmlg=
