@@ -17,6 +17,7 @@ limitations under the License.
 package connectivity
 
 import (
+	"bytes"
 	"sync"
 	"time"
 
@@ -39,15 +40,13 @@ type session struct {
 	closed bool
 	msgCh  chan interface{}
 
-	msgBytes []byte
-	seqQ     *queue.SeqQueue
-	mu       *sync.RWMutex
+	msgBuffer *bytes.Buffer
+	seqQ      *queue.SeqQueue
+	mu        *sync.RWMutex
 }
 
 func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+	s.mu.RLock()
 	if s.closed {
 		// session closed, no message shall be delivered
 		return false, true
@@ -66,8 +65,8 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 	}
 
 	switch kind {
-	case aranyagopb.MSG_DATA_DEFAULT,
-		aranyagopb.MSG_DATA_STDERR:
+	case aranyagopb.MSG_DATA_DEFAULT, aranyagopb.MSG_DATA_STDERR:
+		// stream data
 		for _, ck := range dataChunks {
 			// nolint:gosimple
 			select {
@@ -78,9 +77,21 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 				//	TODO: add context cancel
 			}
 		}
+
+		s.mu.RUnlock()
+		if complete {
+			s.mu.Lock()
+		}
 	default:
+		s.mu.RUnlock()
+		s.mu.Lock()
+		if s.msgBuffer == nil {
+			s.msgBuffer = new(bytes.Buffer)
+		}
+
+		// normal msg
 		for _, ck := range dataChunks {
-			s.msgBytes = append(s.msgBytes, ck.([]byte)...)
+			s.msgBuffer.Write(ck.([]byte))
 		}
 
 		if complete {
@@ -88,19 +99,27 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 			select {
 			// deliver a new message with complete msgBytes
 			case s.msgCh <- aranyagopb.NewMsg(
-				kind, sid, seq, 0, true, s.msgBytes,
+				kind, sid, seq, 0, true, s.msgBuffer.Bytes(),
 			):
 				//	TODO: add context cancel
 			}
+		} else {
+			s.mu.Unlock()
 		}
 	}
 
 	if complete {
 		s.closed = true
+		if s.msgBuffer != nil {
+			s.msgBuffer.Reset()
+		}
+
 		if s.msgCh != nil {
 			close(s.msgCh)
 			s.msgCh = nil
 		}
+
+		s.mu.Unlock()
 	}
 
 	return true, complete
@@ -225,8 +244,8 @@ func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
 
 	if ok {
 		// only deliver msg for this epoch or it is stream message
-		session.mu.RLock()
-		if session.epoch == m.epoch || len(session.msgBytes) == 0 {
+		session.mu.RLock() // protect session.msgBuffer
+		if session.epoch == m.epoch || session.msgBuffer == nil {
 			session.mu.RUnlock()
 			delivered, complete := session.deliverMsg(msg)
 
@@ -261,7 +280,7 @@ func (m *SessionManager) Cleanup() {
 	allSid := make([]uint64, len(m.m))
 	i := 0
 	for sid, session := range m.m {
-		if len(session.msgBytes) == 0 {
+		if session.msgBuffer == nil {
 			// do not close streams
 			continue
 		}
