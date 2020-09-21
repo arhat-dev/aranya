@@ -124,7 +124,9 @@ func TestSession_deliverMsg(t *testing.T) {
 
 			msg := <-msgCh
 			assert.IsType(t, &aranyagopb.Msg{}, msg)
-			assert.Nil(t, s.msgCh)
+
+			_, more := <-msgCh
+			assert.False(t, more)
 		})
 	}
 }
