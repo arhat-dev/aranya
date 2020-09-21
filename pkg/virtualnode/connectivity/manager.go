@@ -352,7 +352,7 @@ func (m *baseManager) OnDisconnected(finalize func() (id string, all bool)) {
 
 func (m *baseManager) PostData(
 	sid uint64, kind aranyagopb.Kind, seq uint64, completed bool, data []byte,
-) (msgCh <-chan interface{}, realSID, lastSeq uint64, err error) {
+) (msgCh <-chan interface{}, realSid, lastSeq uint64, err error) {
 	m.mu.RLock()
 	defer func() {
 		if m.log.Enabled(log.LevelVerbose) {
@@ -384,7 +384,7 @@ func (m *baseManager) PostData(
 		aranyagopb.CMD_POD_CTR_LOGS, aranyagopb.CMD_POD_PORT_FORWARD:
 
 		timeout = 0
-	case aranyagopb.CMD_POD_CTR_TTY_RESIZE:
+	case aranyagopb.CMD_POD_CTR_TTY_RESIZE, aranyagopb.CMD_DATA_UPSTREAM:
 		timeout = 0
 		sessionMustExist = true
 
@@ -395,7 +395,6 @@ func (m *baseManager) PostData(
 	}
 
 	if recordSession {
-		var realSid uint64
 		realSid, msgCh = m.sessions.Add(sid, timeout)
 		defer func() {
 			if err != nil {
@@ -425,7 +424,7 @@ func (m *baseManager) PostData(
 		return nil, 0, seq, fmt.Errorf("failed to post cmd chunk: %w", err)
 	}
 
-	return msgCh, realSID, seq, nil
+	return msgCh, realSid, seq, nil
 }
 
 func (m *baseManager) PostCmd(
