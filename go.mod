@@ -35,6 +35,7 @@ replace (
 	google.golang.org/appengine => google.golang.org/appengine v1.6.6
 	google.golang.org/grpc => github.com/grpc/grpc-go v1.29.1
 	gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.2.8
+	vbom.ml/util => github.com/fvbommel/util v0.0.2
 )
 
 // prometheus related
