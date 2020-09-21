@@ -223,19 +223,21 @@ func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
 	session, ok := m.m[sid]
 	m.mu.RUnlock()
 
-	// only deliver msg for this epoch or stream message
-	session.mu.RLock()
-	if ok && (session.epoch == m.epoch || len(session.msgBytes) == 0) {
-		session.mu.RUnlock()
-		delivered, complete := session.deliverMsg(msg)
+	if ok {
+		// only deliver msg for this epoch or it is stream message
+		session.mu.RLock()
+		if session.epoch == m.epoch || len(session.msgBytes) == 0 {
+			session.mu.RUnlock()
+			delivered, complete := session.deliverMsg(msg)
 
-		if complete {
-			m.Delete(sid)
+			if complete {
+				m.Delete(sid)
+			}
+			return delivered
 		}
-		return delivered
-	}
 
-	session.mu.RUnlock()
+		session.mu.RUnlock()
+	}
 
 	m.Delete(sid)
 	return false
