@@ -77,7 +77,7 @@ spec:
       #
       # unsupported collectors are:
       #   1) on linux: (none)
-      #   2) on darwin: boottime,meminfo,diskstats,filesystem,loadavg
+      #   2) on darwin: boottime,cpu,filesystem,diskstats,loadavg,meminfo,netdev,uname,ntp,time
       #   3) on windows: (none)
       collect:
       - time
@@ -88,8 +88,8 @@ spec:
       extraArgs:
       # example for unix-like (node_exporter)
       # - --collector.
-      # example for windows (wmi_exporter)
-      # - --collector.service.services-where="Name='wmi_exporter'"
+      # example for windows (windows_exporter)
+      # - --collector.service.services-where="Name='windows_exporter'"
 
     fieldHooks:
     # field hook to update annotation/label value according
@@ -350,10 +350,16 @@ status:
    - `perf`
 
 2. Darwin:
+   - `boottime`
    - `cpu`
+   - `filesystem`
+   - `diskstats`
+   - `loadavg`
+   - `meminfo`
    - `netdev`
    - `uname`
-   - `textfile`
+   - `ntp`
+   - `time`
 
 3. Windows:
    - `ad`
@@ -361,7 +367,10 @@ status:
    - `cpu`
    - `cs`
    - `container`
+   - `dhcp`
    - `dns`
+   - `exchange`
+   - `fsrmquota`
    - `hyperv`
    - `iis`
    - `logical_disk`
@@ -380,9 +389,11 @@ status:
    - `net`
    - `os`
    - `process`
+   - `remote_fx`
    - `service`
    - `system`
    - `tcp`
    - `thermalzone`
+   - `terminal_services`
    - `textfile`
    - `vmware`
