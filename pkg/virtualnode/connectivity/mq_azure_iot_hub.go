@@ -81,8 +81,8 @@ func newAzureIoTHubClient(parent *MessageQueueManager) (*azureIoTHubClient, erro
 		rejectAgent: func() {
 			parent.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "iot hub connection lost")
 		},
-		onlineMsg:  aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, 0, true, onlineMsgBytes),
-		offlineMsg: aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, 0, true, offlineMsgBytes),
+		onlineMsg:  aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, true, onlineMsgBytes),
+		offlineMsg: aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, true, offlineMsgBytes),
 
 		recvOpts:        recvOpts,
 		senderStore:     new(atomic.Value),

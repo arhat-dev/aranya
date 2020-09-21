@@ -83,7 +83,7 @@ func (m *GRPCManager) Reject(reason aranyagopb.RejectCmd_Reason, message string)
 		// best effort
 		for _, syncSrv := range m.clientSessions {
 			data, _ := aranyagopb.NewRejectCmd(reason, message).Marshal()
-			_ = syncSrv.Send(aranyagopb.NewCmd(aranyagopb.CMD_REJECT, 0, 0, 0, true, data))
+			_ = syncSrv.Send(aranyagopb.NewCmd(aranyagopb.CMD_REJECT, 0, 0, true, data))
 		}
 	})
 }

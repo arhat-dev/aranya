@@ -84,8 +84,8 @@ func newGCPIoTCoreClient(parent *MessageQueueManager) (*gcpIoTCoreClient, error)
 		rejectAgent: func() {
 			parent.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "gcp iot core connection lost")
 		},
-		onlineMsg:  aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, 0, true, onlineMsgBytes),
-		offlineMsg: aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, 0, true, offlineMsgBytes),
+		onlineMsg:  aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, true, onlineMsgBytes),
+		offlineMsg: aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, true, offlineMsgBytes),
 	}
 
 	return client, nil

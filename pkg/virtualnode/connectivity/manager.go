@@ -411,7 +411,7 @@ func (m *baseManager) PostData(
 
 	n := m.MaxPayloadSize()
 	for len(data) > n {
-		err = m.sendCmd(aranyagopb.NewCmd(kind, sid, seq, 0, false, data[:n]))
+		err = m.sendCmd(aranyagopb.NewCmd(kind, sid, seq, false, data[:n]))
 		if err != nil {
 			return nil, 0, seq, fmt.Errorf("failed to post cmd chunk: %w", err)
 		}
@@ -419,7 +419,7 @@ func (m *baseManager) PostData(
 		data = data[n:]
 	}
 
-	err = m.sendCmd(aranyagopb.NewCmd(kind, sid, seq, 0, completed, data))
+	err = m.sendCmd(aranyagopb.NewCmd(kind, sid, seq, completed, data))
 	if err != nil {
 		return nil, 0, seq, fmt.Errorf("failed to post cmd chunk: %w", err)
 	}

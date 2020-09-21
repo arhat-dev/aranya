@@ -123,7 +123,7 @@ func (m *MessageQueueManager) Reject(reason aranyagopb.RejectCmd_Reason, message
 		// best effort
 		if m.sendCmd != nil {
 			data, _ := aranyagopb.NewRejectCmd(reason, message).Marshal()
-			_ = m.sendCmd(aranyagopb.NewCmd(aranyagopb.CMD_REJECT, 0, 0, 0, true, data))
+			_ = m.sendCmd(aranyagopb.NewCmd(aranyagopb.CMD_REJECT, 0, 0, true, data))
 		}
 	})
 }

@@ -32,7 +32,6 @@ func init() {
 			Kind:      math.MaxInt32,
 			Sid:       math.MaxUint64,
 			Seq:       math.MaxUint64,
-			SubSeq:    math.MaxUint32,
 			Completed: true,
 		},
 		Body: emptyBody,
@@ -42,13 +41,12 @@ func init() {
 	_ = EmptyMsgSize
 }
 
-func NewMsg(kind Kind, sid, seq, subSeq uint64, completed bool, payload []byte) *Msg {
+func NewMsg(kind Kind, sid, seq uint64, completed bool, payload []byte) *Msg {
 	return &Msg{
 		Header: &Header{
 			Kind:      kind,
 			Sid:       sid,
 			Seq:       seq,
-			SubSeq:    subSeq,
 			Completed: completed,
 		},
 		Body: payload,

@@ -36,7 +36,6 @@ func init() {
 			Kind:      math.MaxInt32,
 			Sid:       math.MaxUint64,
 			Seq:       math.MaxUint64,
-			SubSeq:    math.MaxUint64,
 			Completed: true,
 		},
 		Body: emptyBody,
@@ -47,13 +46,12 @@ func init() {
 }
 
 // NewCmd to create cmd object to be marshaled and sent to agent
-func NewCmd(kind Kind, sid, seq, subSeq uint64, completed bool, payload []byte) *Cmd {
+func NewCmd(kind Kind, sid, seq uint64, completed bool, payload []byte) *Cmd {
 	return &Cmd{
 		Header: &Header{
 			Kind:      kind,
 			Sid:       sid,
 			Seq:       seq,
-			SubSeq:    subSeq,
 			Completed: completed,
 		},
 		Body: payload,

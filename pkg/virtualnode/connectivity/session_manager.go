@@ -99,7 +99,7 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 			select {
 			// deliver a new message with complete msgBytes
 			case s.msgCh <- aranyagopb.NewMsg(
-				kind, sid, seq, 0, true, s.msgBuffer.Bytes(),
+				kind, sid, seq, true, s.msgBuffer.Bytes(),
 			):
 				//	TODO: add context cancel
 			}
@@ -187,7 +187,7 @@ func (m *SessionManager) Start(stopCh <-chan struct{}) error {
 
 				if sid, ok := session.Key.(uint64); ok {
 					data, _ := aranyagopb.NewTimeoutErrorMsg(sid).Marshal()
-					m.Dispatch(aranyagopb.NewMsg(aranyagopb.MSG_ERROR, sid, 0, 0, true, data))
+					m.Dispatch(aranyagopb.NewMsg(aranyagopb.MSG_ERROR, sid, 0, true, data))
 					m.Delete(sid)
 				}
 			case <-stopCh:
