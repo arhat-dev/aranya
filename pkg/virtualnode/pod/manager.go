@@ -247,10 +247,16 @@ func (m *Manager) Start() error {
 			case <-m.ConnectivityManager.Connected():
 				// we are good to go, ensure virtual pod running
 				// (best effort)
-				_ = m.updateVirtualPodToRunningPhase()
+				m.Log.D("ensuring virtual pod running phase")
+				for err = m.updateVirtualPodToRunningPhase(); err != nil; err = m.updateVirtualPodToRunningPhase() {
+					m.Log.I("failed to update virtual pod to running phase", log.Error(err))
+					time.Sleep(time.Second)
+				}
 			case <-m.Context().Done():
 				return nil
 			}
+
+			m.Log.D("reconciling pods")
 
 			// reconcile until lost device connection
 			m.devPodRec.ReconcileUntil(m.ConnectivityManager.Disconnected())
