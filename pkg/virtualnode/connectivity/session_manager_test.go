@@ -101,7 +101,7 @@ func TestSession_deliverMsg(t *testing.T) {
 	for i, serial := range seqSeries {
 		t.Run(fmt.Sprintf("serial %d", i), func(t *testing.T) {
 			s := newSession(1)
-
+			msgCh := s.msgCh
 			go func() {
 				for j, seq := range serial {
 					ck := msgDataChunks[seq]
@@ -122,7 +122,7 @@ func TestSession_deliverMsg(t *testing.T) {
 				}
 			}()
 
-			msg := <-s.msgCh
+			msg := <-msgCh
 			assert.IsType(t, &aranyagopb.Msg{}, msg)
 			assert.Nil(t, s.msgCh)
 		})

@@ -7,6 +7,7 @@ ignore: |
   cicd/deploy/charts/**/templates/
   cicd/deploy/charts/**/crds/
   cicd/deploy/kube/
+  private
 
 rules:
   braces:
