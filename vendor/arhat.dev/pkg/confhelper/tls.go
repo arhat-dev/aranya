@@ -90,7 +90,7 @@ var cipherSuites = map[string]uint16{
 	"TLS_PSK_WITH_AES_128_GCM_SHA256": 0x00a8,
 }
 
-//nolint:maligned
+// nolint:maligned
 type TLSConfig struct {
 	Enabled            bool   `json:"enabled" yaml:"enabled"`
 	CaCert             string `json:"caCert" yaml:"caCert"`

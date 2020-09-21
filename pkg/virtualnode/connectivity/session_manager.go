@@ -24,9 +24,16 @@ import (
 	"arhat.dev/pkg/queue"
 )
 
-type session struct {
-	parent *SessionManager
+func newSession(epoch uint64) *session {
+	return &session{
+		msgCh: make(chan interface{}, 1),
+		epoch: epoch,
+		seqQ:  queue.NewSeqQueue(),
+		mu:    new(sync.RWMutex),
+	}
+}
 
+type session struct {
 	epoch uint64
 
 	closed bool
@@ -34,21 +41,22 @@ type session struct {
 
 	msgBytes []byte
 	seqQ     *queue.SeqQueue
-	mu       *sync.Mutex
+	mu       *sync.RWMutex
 }
 
-func (s *session) deliverMsg(msg *aranyagopb.Msg) bool {
+func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if s.closed {
 		// session closed, no message shall be delivered
-		return false
+		return false, true
 	}
 
 	var (
-		sid = msg.Header.Sid
-		seq = msg.Header.Seq
+		sid  = msg.Header.Sid
+		seq  = msg.Header.Seq
+		kind = msg.Header.Kind
 	)
 
 	dataChunks, complete := s.seqQ.Offer(seq, msg.Body)
@@ -57,14 +65,14 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) bool {
 		complete = s.seqQ.SetMaxSeq(seq)
 	}
 
-	switch msg.Header.Kind {
+	switch kind {
 	case aranyagopb.MSG_DATA_DEFAULT,
 		aranyagopb.MSG_DATA_STDERR:
 		for _, ck := range dataChunks {
 			// nolint:gosimple
 			select {
 			case s.msgCh <- &Data{
-				Kind:    msg.Header.Kind,
+				Kind:    kind,
 				Payload: ck.([]byte),
 			}:
 				//	TODO: add context cancel
@@ -80,7 +88,7 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) bool {
 			select {
 			// deliver a new message with complete msgBytes
 			case s.msgCh <- aranyagopb.NewMsg(
-				msg.Header.Kind, msg.Header.Sid, msg.Header.Seq, 0, true, s.msgBytes,
+				kind, sid, seq, 0, true, s.msgBytes,
 			):
 				//	TODO: add context cancel
 			}
@@ -93,15 +101,9 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) bool {
 			close(s.msgCh)
 			s.msgCh = nil
 		}
-
-		s.parent.tq.Remove(sid)
-
-		s.parent.mu.Lock()
-		delete(s.parent.m, sid)
-		s.parent.mu.Unlock()
 	}
 
-	return true
+	return true, complete
 }
 
 func (s *session) close() {
@@ -196,13 +198,7 @@ func (m *SessionManager) Add(
 		ch = oldSession.msgCh
 	} else {
 		// create new channel if invalid
-		session := &session{
-			parent: m,
-			msgCh:  make(chan interface{}, 1),
-			epoch:  m.epoch,
-			seqQ:   queue.NewSeqQueue(),
-			mu:     new(sync.Mutex),
-		}
+		session := newSession(m.epoch)
 
 		ch = session.msgCh
 		realSid = m.nextSid()
@@ -228,9 +224,18 @@ func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
 	m.mu.RUnlock()
 
 	// only deliver msg for this epoch or stream message
-	if ok && (session.epoch == m.epoch || session.seqQ != nil) {
-		return session.deliverMsg(msg)
+	session.mu.RLock()
+	if ok && (session.epoch == m.epoch || len(session.msgBytes) == 0) {
+		session.mu.RUnlock()
+		delivered, complete := session.deliverMsg(msg)
+
+		if complete {
+			m.Delete(sid)
+		}
+		return delivered
 	}
+
+	session.mu.RUnlock()
 
 	m.Delete(sid)
 	return false
@@ -254,7 +259,7 @@ func (m *SessionManager) Cleanup() {
 	allSid := make([]uint64, len(m.m))
 	i := 0
 	for sid, session := range m.m {
-		if session.seqQ != nil {
+		if len(session.msgBytes) == 0 {
 			// do not close streams
 			continue
 		}
