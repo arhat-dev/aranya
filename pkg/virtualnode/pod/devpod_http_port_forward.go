@@ -190,7 +190,7 @@ func (m *Manager) handleHTTPStreams(
 				streamPairs[reqID] = p
 			}
 
-			err := m.handleNewHTTPStream(wg, p, s)
+			err = m.handleNewHTTPStream(wg, p, s)
 			if err != nil {
 				p.writeErr(err.Error())
 			}
@@ -295,8 +295,8 @@ func (m *Manager) doPortForward(s *stream) {
 		return false
 	}, func(dataMsg *connectivity.Data) (exit bool) {
 		_, err2 := s.data.Write(dataMsg.Payload)
-		if err2 != nil && !errors.Is(err, io.EOF) {
-			s.writeErr(err.Error())
+		if err2 != nil && !errors.Is(err2, io.EOF) {
+			s.writeErr(err2.Error())
 			return true
 		}
 
