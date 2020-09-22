@@ -3,6 +3,7 @@ package confhelper
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -90,12 +91,26 @@ var cipherSuites = map[string]uint16{
 	"TLS_PSK_WITH_AES_128_GCM_SHA256": 0x00a8,
 }
 
+type TLSPreSharedKeyConfig struct {
+	// map server hint(s) to pre shared key(s)
+	// column separated base64 encoded key value pairs
+	ServerHintMapping []string `json:"serverHintMapping" yaml:"serverHintMapping"`
+	// the client hint provided to server, base64 encoded value
+	IdentityHint string `json:"identityHint" yaml:"identityHint"`
+}
+
 // nolint:maligned
 type TLSConfig struct {
-	Enabled            bool   `json:"enabled" yaml:"enabled"`
-	CaCert             string `json:"caCert" yaml:"caCert"`
-	Cert               string `json:"cert" yaml:"cert"`
-	Key                string `json:"key" yaml:"key"`
+	Enabled bool `json:"enabled" yaml:"enabled"`
+
+	CaCert string `json:"caCert" yaml:"caCert"`
+	Cert   string `json:"cert" yaml:"cert"`
+	Key    string `json:"key" yaml:"key"`
+
+	CaCertData string `json:"caCertData" yaml:"caCertData"`
+	CertData   string `json:"certData" yaml:"certData"`
+	KeyData    string `json:"keyData" yaml:"keyData"`
+
 	ServerName         string `json:"serverName" yaml:"serverName"`
 	InsecureSkipVerify bool   `json:"insecureSkipVerify" yaml:"insecureSkipVerify"`
 	// write tls session shared key to this file
@@ -104,13 +119,8 @@ type TLSConfig struct {
 
 	// options for dtls
 	AllowInsecureHashes bool `json:"allowInsecureHashes" yaml:"allowInsecureHashes"`
-	PreSharedKey        struct {
-		// map server hint(s) to pre shared key(s)
-		// column separated base64 encoded key value pairs
-		ServerHintMapping []string `json:"serverHintMapping" yaml:"serverHintMapping"`
-		// the client hint provided to server, base64 encoded value
-		IdentityHint string `json:"identityHint" yaml:"identityHint"`
-	} `json:"preSharedKey" yaml:"preSharedKey"`
+
+	PreSharedKey TLSPreSharedKeyConfig `json:"preSharedKey" yaml:"preSharedKey"`
 }
 
 type oneTimeWriter struct {
@@ -153,11 +163,15 @@ func (c TLSConfig) GetTLSConfig() (_ *tls.Config, err error) {
 		}
 	}
 
-	if c.CaCert != "" {
+	if c.CaCert != "" || c.CaCertData != "" {
 		var caBytes []byte
-		caBytes, err = ioutil.ReadFile(c.CaCert)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read caCert: %w", err)
+		if c.CaCert != "" {
+			caBytes, err = ioutil.ReadFile(c.CaCert)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read caCert: %w", err)
+			}
+		} else {
+			caBytes = []byte(c.CaCertData)
 		}
 
 		tlsConfig.RootCAs = x509.NewCertPool()
@@ -186,12 +200,36 @@ func (c TLSConfig) GetTLSConfig() (_ *tls.Config, err error) {
 		tlsConfig.KeyLogWriter = &oneTimeWriter{file: c.KeyLogFile}
 	}
 
-	if c.Cert != "" && c.Key != "" {
-		cert, err := tls.LoadX509KeyPair(c.Cert, c.Key)
+	var certBytes, keyBytes []byte
+	if c.Cert != "" {
+		certBytes, err = ioutil.ReadFile(c.Cert)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load x509 key pair: %w", err)
+			return nil, fmt.Errorf("failed to load cert: %w", err)
 		}
+	} else if c.CertData != "" {
+		certBytes, err = base64.StdEncoding.DecodeString(c.CertData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode cert data (base64): %w", err)
+		}
+	}
 
+	if c.Key != "" {
+		keyBytes, err = ioutil.ReadFile(c.Key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load key: %w", err)
+		}
+	} else {
+		keyBytes, err = base64.StdEncoding.DecodeString(c.KeyData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode key data (base64): %w", err)
+		}
+	}
+
+	if len(keyBytes) != 0 && len(certBytes) != 0 {
+		cert, err := tls.X509KeyPair(certBytes, keyBytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create x509 pair: %w", err)
+		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
 
