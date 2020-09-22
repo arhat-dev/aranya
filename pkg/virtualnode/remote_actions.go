@@ -44,13 +44,13 @@ func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeInfoGetCmd_Kin
 			return true
 		}
 
-		deviceNodeStatus := msg.GetNodeStatus()
-		if deviceNodeStatus == nil {
+		ns := msg.GetNodeStatus()
+		if ns == nil {
 			vn.log.I("unexpected non node status msg", log.Any("msg", msg))
 			return true
 		}
 
-		vn.updateNodeCache(deviceNodeStatus)
+		vn.updateNodeCache(ns)
 		return false
 	}, nil, connectivity.HandleUnknownMessage(vn.log))
 

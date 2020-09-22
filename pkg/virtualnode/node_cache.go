@@ -92,7 +92,7 @@ func (n *NodeCache) RetrieveExtInfo() (labels, annotations map[string]string) {
 	}
 
 	for k, v := range n.extAnnotations {
-		labels[k] = v
+		annotations[k] = v
 	}
 
 	return
