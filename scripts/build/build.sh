@@ -43,7 +43,7 @@ CMD=$(printf "%s" "$@" | tr '-' '_' | tr '.'  ' ')
 GOOS="$(printf "%s" "$@" | cut -d. -f2 || true)"
 ARCH="$(printf "%s" "$@" | cut -d. -f3 || true)"
 
-if [ -z "${GOOS}" ] || [ "${GOOS}" = "$(printf "%s" "${COMP}" | tr '-' '_')" ]; then
+if [ -z "${GOOS}" ] || [ "${GOOS}" = "$(printf "%s" "${COMP}")" ]; then
   # fallback to goos and goarch values
   GOOS="$(go env GOHOSTOS)"
   ARCH="$(go env GOHOSTARCH)"
