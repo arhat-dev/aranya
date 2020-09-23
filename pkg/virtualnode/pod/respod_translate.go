@@ -142,7 +142,7 @@ func (m *Manager) translatePodCreateOptions(
 	pod *corev1.Pod,
 	ipv4PodCIDR, ipv6PodCIDR string,
 	envs map[string]map[string]string,
-	authConfigs map[string]*aranyagopb.AuthConfig,
+	authConfigs map[string]*aranyagopb.ImageAuthConfig,
 	volumeData map[string]*aranyagopb.NamedData,
 	volNames map[corev1.UniqueVolumeName]volumeNamePathPair,
 	dnsConfig *aranyaapi.PodDNSConfig,
@@ -157,10 +157,10 @@ func (m *Manager) translatePodCreateOptions(
 		bandwidth            *aranyagopb.Bandwidth
 		hosts                = make(map[string]string)
 		containers           = make([]*aranyagopb.ContainerSpec, len(pod.Spec.Containers))
-		ports                = make(map[string]*aranyagopb.ContainerPort)
+		ports                = make(map[string]*aranyagopb.ContainerPortSpec)
 		sysctls              = make(map[string]string)
 		hostPaths            = make(map[string]string)
-		imagePull            = make(map[string]*aranyagopb.ImagePullConfig)
+		imagePull            = make(map[string]*aranyagopb.ImagePullSpec)
 		volumeDataForWorkCtr = make(map[string]*aranyagopb.NamedData)
 		hostPathsForWorkCtr  = make(map[string]string)
 	)
@@ -225,7 +225,7 @@ func (m *Manager) translatePodCreateOptions(
 
 	hostExecImageFound := 0
 	for i, ctr := range pod.Spec.Containers {
-		var containerPorts map[string]*aranyagopb.ContainerPort
+		var containerPorts map[string]*aranyagopb.ContainerPortSpec
 		containers[i], containerPorts = translateContainerSpec(pod, envs, &pod.Spec.Containers[i])
 
 		// check if is virtual image
@@ -234,7 +234,7 @@ func (m *Manager) translatePodCreateOptions(
 			hostExecImageFound++
 		} else {
 			// real image to pull
-			imagePull[ctr.Image] = &aranyagopb.ImagePullConfig{
+			imagePull[ctr.Image] = &aranyagopb.ImagePullSpec{
 				AuthConfig: authConfigs[ctr.Image],
 				PullPolicy: translateImagePullPolicy(ctr.ImagePullPolicy),
 			}
@@ -269,7 +269,7 @@ func (m *Manager) translatePodCreateOptions(
 		)
 
 		for i, ctr := range pod.Spec.InitContainers {
-			var containerPorts map[string]*aranyagopb.ContainerPort
+			var containerPorts map[string]*aranyagopb.ContainerPortSpec
 			initContainers[i], containerPorts = translateContainerSpec(pod, envs, &pod.Spec.InitContainers[i])
 
 			if ctr.Image == constant.VirtualImageNameHostExec {
@@ -277,7 +277,7 @@ func (m *Manager) translatePodCreateOptions(
 				hostExecImageFound++
 			} else {
 				// real image to pull
-				imagePull[ctr.Image] = &aranyagopb.ImagePullConfig{
+				imagePull[ctr.Image] = &aranyagopb.ImagePullSpec{
 					AuthConfig: authConfigs[ctr.Image],
 					PullPolicy: translateImagePullPolicy(ctr.ImagePullPolicy),
 				}
@@ -320,25 +320,27 @@ func (m *Manager) translatePodCreateOptions(
 			SharePid:    sharePid,
 
 			// network options
-			NameServers:   dnsConfig.Servers,
-			SearchDomains: dnsConfig.Searches,
-			Hosts:         hosts,
-			DnsOptions:    dnsConfig.Options,
-			Network: &aranyagopb.PodNetworkOptions{
-				CidrIpv4:  ipv4PodCIDR,
-				CidrIpv6:  ipv6PodCIDR,
-				Bandwidth: bandwidth,
+			Network: &aranyagopb.PodNetworkSpec{
+				CidrIpv4:      ipv4PodCIDR,
+				CidrIpv6:      ipv6PodCIDR,
+				Bandwidth:     bandwidth,
+				NameServers:   dnsConfig.Servers,
+				SearchDomains: dnsConfig.Searches,
+				Hosts:         hosts,
+				Ports:         ports,
+				DnsOptions:    dnsConfig.Options,
 			},
 
 			Containers: initContainers,
 			Wait:       true,
 
-			Ports: ports,
-
-			HostPaths:  hostPathsForInitCtr,
-			VolumeData: volumeDataForInitCtr,
-
-			Sysctls: sysctls,
+			Volumes: &aranyagopb.PodVolumeSpec{
+				HostPaths:  hostPathsForInitCtr,
+				VolumeData: volumeDataForInitCtr,
+			},
+			Security: &aranyagopb.PodSecuritySpec{
+				Sysctls: sysctls,
+			},
 		}
 
 		workOpts = &aranyagopb.PodEnsureCmd{
@@ -351,10 +353,14 @@ func (m *Manager) translatePodCreateOptions(
 			Containers: containers,
 			Wait:       false,
 
-			HostPaths:  hostPathsForWorkCtr,
-			VolumeData: volumeDataForWorkCtr,
+			Volumes: &aranyagopb.PodVolumeSpec{
+				HostPaths:  hostPathsForWorkCtr,
+				VolumeData: volumeDataForWorkCtr,
+			},
 
-			Sysctls: sysctls,
+			Security: &aranyagopb.PodSecuritySpec{
+				Sysctls: sysctls,
+			},
 		}
 	} else {
 		// need to create pause when creating work containers
@@ -376,25 +382,27 @@ func (m *Manager) translatePodCreateOptions(
 			SharePid:    sharePid,
 
 			// network options
-			NameServers:   dnsConfig.Servers,
-			SearchDomains: dnsConfig.Searches,
-			Hosts:         hosts,
-			DnsOptions:    dnsConfig.Options,
-			Network: &aranyagopb.PodNetworkOptions{
-				CidrIpv4:  ipv4PodCIDR,
-				CidrIpv6:  ipv6PodCIDR,
-				Bandwidth: bandwidth,
+			Network: &aranyagopb.PodNetworkSpec{
+				CidrIpv4:      ipv4PodCIDR,
+				CidrIpv6:      ipv6PodCIDR,
+				Bandwidth:     bandwidth,
+				NameServers:   dnsConfig.Servers,
+				SearchDomains: dnsConfig.Searches,
+				Hosts:         hosts,
+				Ports:         ports,
+				DnsOptions:    dnsConfig.Options,
 			},
 
 			Containers: containers,
 			Wait:       false,
 
-			Ports: ports,
-
-			HostPaths:  hostPathsForWorkCtr,
-			VolumeData: volumeDataForWorkCtr,
-
-			Sysctls: sysctls,
+			Volumes: &aranyagopb.PodVolumeSpec{
+				HostPaths:  hostPathsForWorkCtr,
+				VolumeData: volumeDataForWorkCtr,
+			},
+			Security: &aranyagopb.PodSecuritySpec{
+				Sysctls: sysctls,
+			},
 		}
 	}
 
@@ -415,9 +423,9 @@ func translateContainerSpec(
 	pod *corev1.Pod,
 	envs map[string]map[string]string,
 	ctr *corev1.Container,
-) (*aranyagopb.ContainerSpec, map[string]*aranyagopb.ContainerPort) {
+) (*aranyagopb.ContainerSpec, map[string]*aranyagopb.ContainerPortSpec) {
 	var (
-		podPorts = make(map[string]*aranyagopb.ContainerPort)
+		podPorts = make(map[string]*aranyagopb.ContainerPortSpec)
 		ctrPorts = make(map[string]int32)
 	)
 
@@ -430,7 +438,7 @@ func translateContainerSpec(
 
 		podPortName := fmt.Sprintf("%s/%s", ctr.Name, p.Name)
 
-		port := &aranyagopb.ContainerPort{
+		port := &aranyagopb.ContainerPortSpec{
 			Protocol:      string(p.Protocol),
 			HostPort:      p.HostPort,
 			ContainerPort: p.ContainerPort,
@@ -439,7 +447,7 @@ func translateContainerSpec(
 		podPorts[podPortName] = port
 	}
 
-	mounts := make(map[string]*aranyagopb.MountOptions)
+	mounts := make(map[string]*aranyagopb.ContainerMountSpec)
 	for _, volMount := range ctr.VolumeMounts {
 		var (
 			fileMode uint32
@@ -469,7 +477,7 @@ func translateContainerSpec(
 			break
 		}
 
-		mounts[volMount.Name] = &aranyagopb.MountOptions{
+		mounts[volMount.Name] = &aranyagopb.ContainerMountSpec{
 			MountPath: volMount.MountPath,
 			SubPath:   volMount.SubPath,
 			ReadOnly:  readOnly,
@@ -507,12 +515,12 @@ func translateContainerSpec(
 	return spec, podPorts
 }
 
-func translateProbe(p *corev1.Probe, ports map[string]int32) *aranyagopb.Probe {
+func translateProbe(p *corev1.Probe, ports map[string]int32) *aranyagopb.ContainerProbeSpec {
 	if p == nil {
 		return nil
 	}
 
-	return &aranyagopb.Probe{
+	return &aranyagopb.ContainerProbeSpec{
 		Method:           translateHandler(&p.Handler, ports),
 		InitialDelay:     int64(time.Second) * int64(p.InitialDelaySeconds),
 		ProbeTimeout:     int64(time.Second) * int64(p.TimeoutSeconds),
@@ -522,16 +530,16 @@ func translateProbe(p *corev1.Probe, ports map[string]int32) *aranyagopb.Probe {
 	}
 }
 
-func translateHandler(h *corev1.Handler, namedPorts map[string]int32) *aranyagopb.ActionMethod {
+func translateHandler(h *corev1.Handler, namedPorts map[string]int32) *aranyagopb.ContainerAction {
 	if h == nil {
 		return nil
 	}
 
 	switch {
 	case h.Exec != nil:
-		return &aranyagopb.ActionMethod{
-			Action: &aranyagopb.ActionMethod_Exec{
-				Exec: &aranyagopb.ActionMethod_ActionExec{
+		return &aranyagopb.ContainerAction{
+			Action: &aranyagopb.ContainerAction_Exec_{
+				Exec: &aranyagopb.ContainerAction_Exec{
 					Command: h.Exec.Command,
 				},
 			},
@@ -547,9 +555,9 @@ func translateHandler(h *corev1.Handler, namedPorts map[string]int32) *aranyagop
 			kvPair = append(kvPair, &aranyagopb.KeyValuePair{Key: header.Name, Value: header.Value})
 		}
 
-		return &aranyagopb.ActionMethod{
-			Action: &aranyagopb.ActionMethod_Http{
-				Http: &aranyagopb.ActionMethod_ActionHTTP{
+		return &aranyagopb.ContainerAction{
+			Action: &aranyagopb.ContainerAction_Http{
+				Http: &aranyagopb.ContainerAction_HTTP{
 					Method:  http.MethodGet,
 					Url:     fmt.Sprintf("%s://%s:%d%s", h.HTTPGet.Scheme, h.HTTPGet.Host, port, h.HTTPGet.Path),
 					Headers: kvPair,
@@ -562,10 +570,10 @@ func translateHandler(h *corev1.Handler, namedPorts map[string]int32) *aranyagop
 			return nil
 		}
 
-		return &aranyagopb.ActionMethod{
-			Action: &aranyagopb.ActionMethod_Socket{
-				Socket: &aranyagopb.ActionMethod_ActionSocket{
-					Url: fmt.Sprintf("tcp://%s:%d", h.TCPSocket.Host, port),
+		return &aranyagopb.ContainerAction{
+			Action: &aranyagopb.ContainerAction_Socket_{
+				Socket: &aranyagopb.ContainerAction_Socket{
+					Address: fmt.Sprintf("tcp://%s:%d", h.TCPSocket.Host, port),
 				},
 			},
 		}
@@ -594,7 +602,7 @@ func getPortValue(ports map[string]int32, port intstr.IntOrString) int32 {
 func translateContainerSecOpts(
 	podSecOpts *corev1.PodSecurityContext,
 	ctrSecOpts *corev1.SecurityContext,
-) *aranyagopb.ContainerSecurityOptions {
+) *aranyagopb.ContainerSecuritySpec {
 	result := resolveCommonSecOpts(podSecOpts, ctrSecOpts)
 	if result == nil || ctrSecOpts == nil {
 		return result
@@ -641,12 +649,12 @@ func translateContainerSecOpts(
 func resolveCommonSecOpts(
 	podSecOpts *corev1.PodSecurityContext,
 	ctrSecOpts *corev1.SecurityContext,
-) *aranyagopb.ContainerSecurityOptions {
+) *aranyagopb.ContainerSecuritySpec {
 	if podSecOpts == nil && ctrSecOpts != nil {
 		return nil
 	}
 
-	return &aranyagopb.ContainerSecurityOptions{
+	return &aranyagopb.ContainerSecuritySpec{
 		NonRoot: func() bool {
 			switch {
 			case ctrSecOpts != nil && ctrSecOpts.RunAsNonRoot != nil:

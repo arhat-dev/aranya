@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	"arhat.dev/aranya/pkg/util/convert"
+
 	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
@@ -71,10 +73,8 @@ func (m *Manager) UpdateMirrorPod(
 			)
 		}
 
-		if devicePodStatus.PodIp != "" {
-			pod.Status.PodIP = devicePodStatus.PodIp
-		}
-		logger.D("resolved device container status", log.String("podIP", pod.Status.PodIP))
+		pod.Status.PodIP, pod.Status.PodIPs = convert.GetPodIPs(devicePodStatus.PodIpv4, devicePodStatus.PodIpv6)
+		logger.D("resolved device container status", log.Any("podIPs", pod.Status.PodIPs))
 	}
 
 	_, err2 := m.UpdatePodStatus(pod)
@@ -361,7 +361,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 	var (
 		graceTime    = time.Duration(0)
-		preStopHooks map[string]*aranyagopb.ActionMethod
+		preStopHooks map[string]*aranyagopb.ContainerAction
 	)
 
 	// usually we should have pod object for pod deletion, but when we are trying to delete a stale pod
@@ -376,7 +376,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 		}
 
 		// collect pre-stop hook spec
-		preStopHooks = make(map[string]*aranyagopb.ActionMethod)
+		preStopHooks = make(map[string]*aranyagopb.ContainerAction)
 		for i, ctr := range podToDelete.Spec.Containers {
 			// ignore pods using virtual images, they do not actually create containers in device
 			if ctr.Image == constant.VirtualImageNameHostExec {

@@ -18,6 +18,8 @@ package convert
 
 import (
 	"net"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 func GetPodCIDRWithIPVersion(podCIDR string, podCIDRs []string) (ipv4, ipv6 string) {
@@ -32,6 +34,22 @@ func GetPodCIDRWithIPVersion(podCIDR string, podCIDRs []string) (ipv4, ipv6 stri
 		} else {
 			ipv6 = cidr
 		}
+	}
+
+	return
+}
+
+func GetPodIPs(ipv4, ipv6 string) (podCIDR string, podCIDRs []corev1.PodIP) {
+	if ipv4 != "" {
+		podCIDR = ipv4
+		podCIDRs = append(podCIDRs, corev1.PodIP{IP: ipv4})
+	}
+
+	if ipv6 != "" {
+		if podCIDR == "" {
+			podCIDR = ipv6
+		}
+		podCIDRs = append(podCIDRs, corev1.PodIP{IP: ipv6})
 	}
 
 	return

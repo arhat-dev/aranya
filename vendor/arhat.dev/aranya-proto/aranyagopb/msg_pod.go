@@ -2,11 +2,12 @@
 
 package aranyagopb
 
-func NewPodStatusMsg(podUID, podIP string, containerStatus map[string]*ContainerStatus) *PodStatusMsg {
+func NewPodStatusMsg(podUID, podIPv4, podIPv6 string, containerStatus map[string]*ContainerStatus) *PodStatusMsg {
 	return &PodStatusMsg{
 		Uid:               podUID,
 		ContainerStatuses: containerStatus,
-		PodIp:             podIP,
+		PodIpv4:           podIPv4,
+		PodIpv6:           podIPv6,
 	}
 }
 

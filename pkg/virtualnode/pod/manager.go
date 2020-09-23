@@ -274,8 +274,8 @@ func (m *Manager) Close() {
 
 // nolint:unused
 func (m *Manager) updateDeviceNetwork() error {
-	cmd := aranyagopb.NewNetworkUpdatePodNetCmd(m.netMgr.GetPodCIDR(false), m.netMgr.GetPodCIDR(true))
-	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_NET_UPDATE_POD_NET, cmd)
+	cmd := aranyagopb.NewContainerNetworkEnsureCmd(m.netMgr.GetPodCIDR(false), m.netMgr.GetPodCIDR(true))
+	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_CTR_NET_ENSURE, cmd)
 	if err != nil {
 		return fmt.Errorf("failed to post network update cmd: %w", err)
 	}

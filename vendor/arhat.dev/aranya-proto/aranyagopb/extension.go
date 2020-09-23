@@ -28,7 +28,7 @@ import (
 	"arhat.dev/aranya-proto/aranyagopb/aranyagoconst"
 )
 
-func (v *MountOptions) Ensure(dir string, dataMap map[string][]byte) (mountPath string, err error) {
+func (v *ContainerMountSpec) Ensure(dir string, dataMap map[string][]byte) (mountPath string, err error) {
 	fileMode := os.FileMode(0644)
 
 	if m := v.FileMode; m > 0 && m <= 0777 {

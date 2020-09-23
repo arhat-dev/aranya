@@ -145,6 +145,10 @@ func (m *Manager) Close() {
 }
 
 func (m *Manager) removeDevices(deviceToRemove sets.String) sets.String {
+	if deviceToRemove.Len() == 0 {
+		return deviceToRemove
+	}
+
 	var (
 		devices = deviceToRemove.UnsortedList()
 	)

@@ -61,6 +61,7 @@ func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeInfoGetCmd_Kin
 	return nil
 }
 
+// nolint:gocyclo
 func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 	sid := msg.Header.Sid
 	logger := vn.log.WithFields(log.String("source", "global"), log.Uint64("sid", sid))
@@ -115,9 +116,12 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 		if err != nil {
 			logger.I("failed to sync mirror node status", log.Error(err))
 		}
-	case aranyagopb.MSG_NETWORK_STATUS:
+	case aranyagopb.MSG_CTR_NET_STATUS:
+	case aranyagopb.MSG_CTR_NET_STATUS_LIST:
+	case aranyagopb.MSG_NET_STATUS:
+	case aranyagopb.MSG_NET_STATUS_LIST:
 	case aranyagopb.MSG_DEVICE_STATUS:
-
+	case aranyagopb.MSG_DEVICE_STATUS_LIST:
 	case aranyagopb.MSG_STORAGE_STATUS:
 		if ss := msg.GetStorageStatus(); ss != nil {
 			logger.V("received global storage status")
