@@ -17,7 +17,6 @@ limitations under the License.
 package constant
 
 const (
-	ContainerNamePause = "_pause"
 	ContainerNameAbbot = "abbot"
 )
 
@@ -53,4 +52,8 @@ const (
 	VirtualContainerNameHost = "host"
 	VirtualContainerIDHost   = "virtualcontainer://host"
 	VirtualContainerIDDevice = "virtualcontainer://device"
+)
+
+const (
+	TLSCaCertKey = "ca.crt"
 )

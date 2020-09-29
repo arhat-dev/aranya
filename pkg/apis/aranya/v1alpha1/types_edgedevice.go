@@ -279,6 +279,10 @@ type EdgeDeviceSpec struct {
 	// +optional
 	Pod PodSpec `json:"pod,omitempty"`
 
+	// MetricsReporters are devices used to push metrics
+	// +optional
+	MetricsReporters []BaseDeviceSpec `json:"metricsReporters,omitempty"`
+
 	// Devices managed by this EdgeDevice
 	// +optional
 	Devices []DeviceSpec `json:"devices,omitempty"`

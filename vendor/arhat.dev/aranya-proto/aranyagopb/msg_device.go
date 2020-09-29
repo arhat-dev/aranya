@@ -2,12 +2,12 @@
 
 package aranyagopb
 
-func NewDeviceStatusMsg(kind DeviceType, connectorHashHex string, state DeviceState, msg string) *DeviceStatusMsg {
+func NewDeviceStatusMsg(kind DeviceType, name string, state DeviceState, msg string) *DeviceStatusMsg {
 	return &DeviceStatusMsg{
-		Kind:             kind,
-		ConnectorHashHex: connectorHashHex,
-		State:            state,
-		Message:          msg,
+		Kind:    kind,
+		Name:    name,
+		State:   state,
+		Message: msg,
 	}
 }
 

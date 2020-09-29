@@ -19,6 +19,7 @@ package pod
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync/atomic"
 	"time"
 
@@ -58,6 +59,10 @@ type Options struct {
 	GetSecret     func(name string) *corev1.Secret
 	ListServices  func() []*corev1.Service
 	EventRecorder record.EventRecorder
+
+	// device interaction
+	OperateDevice func(deviceName, operationName string, data []byte, out io.Writer) error
+	CollectDeviceMetrics func(deviceName string) error
 }
 
 // NewManager creates a new pod manager for virtual node

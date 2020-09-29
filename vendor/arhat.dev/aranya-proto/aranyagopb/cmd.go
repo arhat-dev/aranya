@@ -19,10 +19,7 @@ limitations under the License.
 package aranyagopb
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"math"
-	"sort"
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb/aranyagoconst"
@@ -207,68 +204,40 @@ func NewContainerNetworkEnsureCmd(ipv4CIDR, ipv6CIDR string) *ContainerNetworkEn
 	}
 }
 
-func NewDeviceListCmd(ids ...string) *DeviceListCmd {
-	return &DeviceListCmd{Ids: ids}
+func NewDeviceListCmd(names ...string) *DeviceListCmd {
+	return &DeviceListCmd{DeviceNames: names}
 }
 
 func NewDeviceEnsureCmd(
 	kind DeviceType,
-	connectorHashHex, deviceID string,
+	name string,
 	connector *Connectivity,
 	operations []*DeviceOperation,
 	metrics []*DeviceMetric,
 ) *DeviceEnsureCmd {
 	return &DeviceEnsureCmd{
-		Kind:             kind,
-		ConnectorHashHex: connectorHashHex,
-		Connector:        connector,
-
-		DeviceId:   deviceID,
+		Kind:       kind,
+		Name:       name,
+		Connector:  connector,
 		Operations: operations,
 		Metrics:    metrics,
 	}
 }
 
-func NewDeviceDeleteCmd(ids ...string) *DeviceDeleteCmd {
-	return &DeviceDeleteCmd{Ids: ids}
+func NewDeviceDeleteCmd(names ...string) *DeviceDeleteCmd {
+	return &DeviceDeleteCmd{DeviceNames: names}
 }
 
-func HexHashOfConnectivity(c *Connectivity) string {
-	h := sha256.New()
-
-	_, _ = h.Write([]byte(c.Method))
-	_, _ = h.Write([]byte(c.Target))
-
-	if tls := c.Tls; tls != nil {
-		_, _ = h.Write(tls.CaCert)
-		_, _ = h.Write(tls.Cert)
-		_, _ = h.Write(tls.Key)
-	}
-
-	var keys []string
-	for k := range c.Params {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-	for _, k := range keys {
-		_, _ = h.Write([]byte(k))
-		_, _ = h.Write([]byte(c.Params[k]))
-	}
-
-	return hex.EncodeToString(h.Sum(nil))
-}
-
-func NewDeviceOperateCmd(deviceID, operationID string, data []byte) *DeviceOperateCmd {
+func NewDeviceOperateCmd(deviceName, operationID string, data []byte) *DeviceOperateCmd {
 	return &DeviceOperateCmd{
-		DeviceId:    deviceID,
+		DeviceName:  deviceName,
 		OperationId: operationID,
 		Data:        data,
 	}
 }
 
-func NewDeviceMetricsCollectCmd(deviceIDs ...string) *DeviceMetricsCollectCmd {
+func NewDeviceMetricsCollectCmd(names ...string) *DeviceMetricsCollectCmd {
 	return &DeviceMetricsCollectCmd{
-		DeviceIds: deviceIDs,
+		DeviceNames: names,
 	}
 }

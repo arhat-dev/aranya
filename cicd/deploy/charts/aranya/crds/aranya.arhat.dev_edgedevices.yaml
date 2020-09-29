@@ -250,8 +250,8 @@ spec:
                 description: DeviceSpec is the physical device related to (managed
                   by) this edge device (e.g. sensors, switches)
                 properties:
-                  connectivity:
-                    description: Connectivity instructs how to connect to this device
+                  connector:
+                    description: Connector instructs how to connect this device
                     properties:
                       method:
                         description: Method interacting with this physical device
@@ -269,9 +269,6 @@ spec:
                       tls:
                         description: TLS config for network related connectivity
                         properties:
-                          allowInsecureHashes:
-                            description: options for dtls
-                            type: boolean
                           certSecretRef:
                             description: CertSecretRef for pem encoded x.509 certificate
                               key pair
@@ -288,9 +285,14 @@ spec:
                             type: array
                           insecureSkipVerify:
                             type: boolean
-                          keyLogFile:
-                            description: write tls session shared key to this file
+                          maxVersion:
                             type: string
+                          minVersion:
+                            type: string
+                          nextProtos:
+                            items:
+                              type: string
+                            type: array
                           preSharedKey:
                             properties:
                               identityHint:
@@ -311,13 +313,13 @@ spec:
                   metrics:
                     description: Metrics collection/report from this device
                     items:
-                      description: DeviceMetrics to upload device metrics for prometheus
+                      description: DeviceMetric to upload device metrics for prometheus
                       properties:
                         deviceParams:
                           additionalProperties:
                             type: string
                           description: DeviceParams to override ..connectivity.params
-                            to get metrics
+                            to retrieve this metric
                           type: object
                         name:
                           description: Name of the metrics for prometheus
@@ -330,10 +332,14 @@ spec:
                           - WithArhatConnectivity
                           - WithStandaloneClient
                           type: string
-                        reportParams:
+                        reporterName:
+                          description: ReporterName the name reference to a metrics
+                            reporter used when ReportMethod is standalone
+                          type: string
+                        reporterParams:
                           additionalProperties:
                             type: string
-                          description: ReportParams
+                          description: ReporterParams
                           type: object
                         valueType:
                           description: ValueType of this metric
@@ -341,6 +347,7 @@ spec:
                           - counter
                           - ""
                           - gauge
+                          - unknown
                           type: string
                       required:
                       - name
@@ -382,8 +389,16 @@ spec:
                     x-kubernetes-list-map-keys:
                     - name
                     x-kubernetes-list-type: map
-                  uploadConnectivity:
-                    description: UploadConnectivity instructs how to upload metrics
+                required:
+                - name
+                type: object
+              type: array
+            metricsReporters:
+              description: MetricsReporters are devices used to push metrics
+              items:
+                properties:
+                  connector:
+                    description: Connector instructs how to connect this device
                     properties:
                       method:
                         description: Method interacting with this physical device
@@ -401,9 +416,6 @@ spec:
                       tls:
                         description: TLS config for network related connectivity
                         properties:
-                          allowInsecureHashes:
-                            description: options for dtls
-                            type: boolean
                           certSecretRef:
                             description: CertSecretRef for pem encoded x.509 certificate
                               key pair
@@ -420,9 +432,14 @@ spec:
                             type: array
                           insecureSkipVerify:
                             type: boolean
-                          keyLogFile:
-                            description: write tls session shared key to this file
+                          maxVersion:
                             type: string
+                          minVersion:
+                            type: string
+                          nextProtos:
+                            items:
+                              type: string
+                            type: array
                           preSharedKey:
                             properties:
                               identityHint:
@@ -440,6 +457,12 @@ spec:
                             type: string
                         type: object
                     type: object
+                  name:
+                    description: 'Name of the physical device, and this name will
+                      become available in virtual pod as a container name NOTE: name
+                      `host` is reserved by the aranya'
+                    pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                    type: string
                 required:
                 - name
                 type: object

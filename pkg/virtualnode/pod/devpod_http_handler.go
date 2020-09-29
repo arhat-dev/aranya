@@ -19,7 +19,9 @@ package pod
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -209,6 +211,29 @@ func (m *Manager) doHandleExecInContainer() kubeletrc.Executor {
 			}
 		}()
 
+		if len(cmd) == 0 {
+			return fmt.Errorf("invalid empty command")
+		}
+
+		if uid == "" && container != constant.VirtualContainerNameHost {
+			// manual device operation
+			data := []byte(strings.Join(cmd[1:], " "))
+			if stdin != nil {
+				var err error
+				data, err = ioutil.ReadAll(stdin)
+				if err != nil {
+					return fmt.Errorf("failed to read all stdin data: %w", err)
+				}
+			}
+
+			err := m.options.OperateDevice(container, cmd[0], data, stdout)
+			if err != nil {
+				return fmt.Errorf("manual device operation failed: %w", err)
+			}
+
+			return nil
+		}
+
 		// kubectl exec has no support for environment variables
 		execCmd := aranyagopb.NewExecCmd(
 			string(uid), container, cmd,
@@ -240,6 +265,14 @@ func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
 				_ = stderr.Close()
 			}
 		}()
+
+		if uid == "" && container != constant.VirtualContainerNameHost {
+			// manual device metrics collection
+			err := m.options.CollectDeviceMetrics(container)
+			if err != nil {
+				return fmt.Errorf("manual device metrics collection failed: %w", err)
+			}
+		}
 
 		attachCmd := aranyagopb.NewAttachCmd(
 			string(uid), container,

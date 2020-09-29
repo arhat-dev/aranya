@@ -93,6 +93,10 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 		opt.NetworkOptions,
 	)
 
+	deviceManager := device.NewManager(ctx, opt.NodeName, opt.ConnectivityManager, opt.DeviceOptions)
+
+	opt.PodOptions.OperateDevice = deviceManager.Operate
+	opt.PodOptions.CollectDeviceMetrics = deviceManager.CollectMetrics
 	podManager := pod.NewManager(
 		ctx,
 		opt.NodeName,
@@ -109,8 +113,6 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 		opt.ConnectivityManager,
 		opt.MetricsOptions,
 	)
-
-	deviceManager := device.NewManager(ctx, opt.NodeName, opt.ConnectivityManager, opt.DeviceOptions)
 
 	m := &mux.Router{NotFoundHandler: middleware.NotFoundHandler(logger)}
 	m.Use(middleware.DeviceOnlineCheck(opt.ConnectivityManager.Disconnected, logger))

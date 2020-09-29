@@ -180,6 +180,18 @@ func (m *Msg) GetDeviceStatusList() *DeviceStatusListMsg {
 	return dsl
 }
 
+func (m *Msg) GetDeviceOperationResult() *DeviceOperationResultMsg {
+	if m.Kind != MSG_DEVICE_OPERATION_RESULT {
+		return nil
+	}
+	dor := new(DeviceOperationResultMsg)
+	if err := dor.Unmarshal(m.Body); err != nil {
+		return nil
+	}
+
+	return dor
+}
+
 func (m *ErrorMsg) Error() string {
 	if m == nil {
 		return "<nil>"

@@ -571,9 +571,33 @@ func (c *Controller) prepareDeviceOptions(
 	vnConfig *conf.VirtualnodeConfig,
 ) (_ *device.Options, err error) {
 	var (
+		mrs     = make(map[string]*aranyagopb.DeviceEnsureCmd)
 		devices = make(map[string]*aranyagopb.DeviceEnsureCmd)
 		devs    = make(map[string]struct{})
 	)
+
+	for _, mr := range edgeDevice.Spec.MetricsReporters {
+		if mr.Name == "" {
+			err = fmt.Errorf("invalid empty metrics reporter name")
+			return
+		}
+
+		if _, ok := mrs[mr.Name]; ok {
+			err = fmt.Errorf("duplicate metrics reporter name %q", mr.Name)
+			return
+		}
+
+		conn, err := c.createDeviceConnector(mr.Connector)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create device connector: %w", err)
+		}
+
+		mrs[mr.Name] = &aranyagopb.DeviceEnsureCmd{
+			Kind:      aranyagopb.DEVICE_TYPE_METRICS_REPORTER,
+			Name:      mr.Name,
+			Connector: conn,
+		}
+	}
 
 	for _, d := range edgeDevice.Spec.Devices {
 		if d.Name == "" || d.Name == constant.VirtualContainerNameHost {
@@ -601,30 +625,16 @@ func (c *Controller) prepareDeviceOptions(
 			})
 		}
 
-		var reportConn *aranyagopb.Connectivity
-		if uc := d.UploadConnectivity; uc != nil {
-			reportConn = &aranyagopb.Connectivity{
-				Method: uc.Method,
-				Target: uc.Target,
-				Params: uc.Params,
-				//Tls:       ,
-			}
-		}
-
 		var deviceMetrics []*aranyagopb.DeviceMetric
 		for _, m := range d.Metrics {
-			var uploadMethod aranyagopb.DeviceMetric_ReportMethod
+			var reportMethod aranyagopb.DeviceMetric_ReportMethod
 			switch m.ReportMethod {
-			case aranyaapi.UploadWithArhatConnectivity:
-				uploadMethod = aranyagopb.REPORT_WITH_ARHAT_CONNECTIVITY
-			case aranyaapi.UploadWithNodeMetrics:
-				uploadMethod = aranyagopb.REPORT_WITH_NODE_METRICS
-			case aranyaapi.UploadWithStandaloneClient:
-				if reportConn == nil {
-					err = fmt.Errorf("no upload connectivity configured for standalone upload method")
-					return
-				}
-				uploadMethod = aranyagopb.REPORT_WITH_STANDALONE_CLIENT
+			case aranyaapi.ReportViaArhatConnectivity:
+				reportMethod = aranyagopb.REPORT_WITH_ARHAT_CONNECTIVITY
+			case aranyaapi.ReportViaNodeMetrics, "":
+				reportMethod = aranyagopb.REPORT_WITH_NODE_METRICS
+			case aranyaapi.ReportViaStandaloneClient:
+				reportMethod = aranyagopb.REPORT_WITH_STANDALONE_CLIENT
 			}
 
 			var valueType aranyagopb.DeviceMetric_ValueType
@@ -633,37 +643,38 @@ func (c *Controller) prepareDeviceOptions(
 				valueType = aranyagopb.METRICS_VALUE_TYPE_GAUGE
 			case aranyaapi.DeviceMetricsValueTypeCounter:
 				valueType = aranyagopb.METRICS_VALUE_TYPE_COUNTER
-			case aranyaapi.DeviceMetricsValueTypeUnknown:
+			case aranyaapi.DeviceMetricsValueTypeUnknown, "":
 				valueType = aranyagopb.METRICS_VALUE_TYPE_UNTYPED
 			}
 
 			deviceMetrics = append(deviceMetrics, &aranyagopb.DeviceMetric{
-				Name:            m.Name,
-				DeviceParams:    m.DeviceParams,
-				ValueType:       valueType,
-				ReportMethod:    uploadMethod,
-				ReporterHashHex: aranyagopb.HexHashOfConnectivity(reportConn),
-				ReporterParams:  m.ReportParams,
+				Name:           m.Name,
+				DeviceParams:   m.DeviceParams,
+				ValueType:      valueType,
+				ReportMethod:   reportMethod,
+				ReporterName:   m.ReporterName,
+				ReporterParams: m.ReporterParams,
 			})
 		}
 
-		conn := &aranyagopb.Connectivity{
-			Method: d.Connectivity.Method,
-			Target: d.Connectivity.Target,
-			Params: d.Connectivity.Params,
-			//Tls:
+		conn, err := c.createDeviceConnector(d.Connector)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create device connector: %w", err)
 		}
+
 		devices[d.Name] = &aranyagopb.DeviceEnsureCmd{
-			Kind:             aranyagopb.DEVICE_TYPE_NORMAL,
-			DeviceId:         d.Name,
-			ConnectorHashHex: aranyagopb.HexHashOfConnectivity(conn),
-			Connector:        conn,
-			Operations:       operations,
-			Metrics:          deviceMetrics,
+			Kind:       aranyagopb.DEVICE_TYPE_NORMAL,
+			Name:       d.Name,
+			Connector:  conn,
+			Operations: operations,
+			Metrics:    deviceMetrics,
 		}
 	}
 
-	return &device.Options{Devices: devices}, nil
+	return &device.Options{
+		MetricsReporters: mrs,
+		Devices:          devices,
+	}, nil
 }
 
 // nolint:unparam

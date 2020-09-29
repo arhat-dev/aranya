@@ -3,57 +3,40 @@ package v1alpha1
 import corev1 "k8s.io/api/core/v1"
 
 // +kubebuilder:validation:Enum=WithNodeMetrics;WithArhatConnectivity;WithStandaloneClient
-type DeviceMetricsUploadMethod string
+type DeviceMetricsReportMethod string
 
 const (
-	// UploadAlongWithNodeMetrics will report metrics when arhat receive node metrics collect command
-	UploadWithNodeMetrics DeviceMetricsUploadMethod = "WithNodeMetrics"
+	// ReportViaNodeMetrics will report metrics when arhat receive node metrics collect command
+	ReportViaNodeMetrics DeviceMetricsReportMethod = "node"
 
-	// UploadAlongWithArhatConnectivity will publish data using arhat's connectivity
+	// ReportViaArhatConnectivity will publish data using arhat's connectivity
 	// useful when you want realtime metrics but do not want to create
 	//
 	// (not supported if client connectivity method is gRPC)
-	UploadWithArhatConnectivity DeviceMetricsUploadMethod = "WithArhatConnectivity"
+	ReportViaArhatConnectivity DeviceMetricsReportMethod = "arhat"
 
-	// UploadWithStandaloneClient will create a connectivity client for metrics reporting
-	UploadWithStandaloneClient DeviceMetricsUploadMethod = "WithStandaloneClient"
+	// ReportViaStandaloneClient will create a connectivity client for metrics reporting
+	ReportViaStandaloneClient DeviceMetricsReportMethod = "standalone"
 )
 
-// +kubebuilder:validation:Enum=counter;"";gauge
-type DeviceMetricsValueType string
+// +kubebuilder:validation:Enum=counter;"";gauge;unknown
+type DeviceMetricValueType string
 
 const (
-	DeviceMetricsValueTypeGauge   DeviceMetricsValueType = "gauge"
-	DeviceMetricsValueTypeCounter DeviceMetricsValueType = "counter"
-	DeviceMetricsValueTypeUnknown DeviceMetricsValueType = ""
+	DeviceMetricsValueTypeGauge   DeviceMetricValueType = "gauge"
+	DeviceMetricsValueTypeCounter DeviceMetricValueType = "counter"
+	DeviceMetricsValueTypeUnknown DeviceMetricValueType = "unknown"
 )
 
 type (
-	// DeviceSpec is the physical device related to (managed by) this edge device (e.g. sensors, switches)
-	DeviceSpec struct {
+	BaseDeviceSpec struct {
 		// Name of the physical device, and this name will become available in virtual pod as a container name
 		// NOTE: name `host` is reserved by the aranya
 		// +kubebuilder:validation:Pattern=[a-z0-9]([-a-z0-9]*[a-z0-9])?
 		Name string `json:"name"`
 
-		// Connectivity instructs how to connect to this device
-		Connectivity DeviceConnectivity `json:"connectivity,omitempty"`
-
-		// Operations supported by this device
-		// +optional
-		// +listType=map
-		// +listMapKey=name
-		Operations []DeviceOperation `json:"operations,omitempty"`
-
-		// Metrics collection/report from this device
-		// +optional
-		// +listType=map
-		// +listMapKey=name
-		Metrics []DeviceMetrics `json:"metrics,omitempty"`
-
-		// UploadConnectivity instructs how to upload metrics
-		// +optional
-		UploadConnectivity *DeviceConnectivity `json:"uploadConnectivity,omitempty"`
+		// Connector instructs how to connect this device
+		Connector DeviceConnectivity `json:"connector,omitempty"`
 	}
 
 	// DeviceConnectivity configure how to connect the physical device
@@ -73,6 +56,23 @@ type (
 		TLS *DeviceConnectivityTLSConfig `json:"tls,omitempty"`
 	}
 
+	// DeviceSpec is the physical device related to (managed by) this edge device (e.g. sensors, switches)
+	DeviceSpec struct {
+		BaseDeviceSpec `json:",inline"`
+
+		// Operations supported by this device
+		// +optional
+		// +listType=map
+		// +listMapKey=name
+		Operations []DeviceOperation `json:"operations,omitempty"`
+
+		// Metrics collection/report from this device
+		// +optional
+		// +listType=map
+		// +listMapKey=name
+		Metrics []DeviceMetric `json:"metrics,omitempty"`
+	}
+
 	// DeviceOperation defines operation we can perform on the device
 	DeviceOperation struct {
 		// Name of the operation (e.g. "on", "off" ...)
@@ -89,53 +89,56 @@ type (
 		Params map[string]string `json:"params,omitempty"`
 	}
 
-	// DeviceMetrics to upload device metrics for prometheus
-	DeviceMetrics struct {
+	// DeviceMetric to upload device metrics for prometheus
+	DeviceMetric struct {
 		// Name of the metrics for prometheus
 		// +kubebuilder:validation:Pattern=[a-z0-9]([_a-z0-9]*[a-z0-9])?
 		Name string `json:"name"`
 
 		// ValueType of this metric
-		ValueType DeviceMetricsValueType `json:"valueType,omitempty"`
+		ValueType DeviceMetricValueType `json:"valueType,omitempty"`
 
-		// DeviceParams to override ..connectivity.params to get metrics
+		// DeviceParams to override ..connectivity.params to retrieve this metric
 		// +optional
 		DeviceParams map[string]string `json:"deviceParams,omitempty"`
 
 		// ReportMethod for this metrics
-		ReportMethod DeviceMetricsUploadMethod `json:"reportMethod,omitempty"`
-
-		// ReportParams
 		// +optional
-		ReportParams map[string]string `json:"reportParams,omitempty"`
+		ReportMethod DeviceMetricsReportMethod `json:"reportMethod,omitempty"`
+
+		// ReporterName the name reference to a metrics reporter used when ReportMethod is standalone
+		// +optional
+		ReporterName string `json:"reporterName,omitempty"`
+
+		// ReporterParams
+		// +optional
+		ReporterParams map[string]string `json:"reporterParams,omitempty"`
 	}
 )
 
 type (
 	DeviceConnectivityTLSConfig struct {
 		// +optional
-		PreSharedKey DeviceConnectivityTLSPreSharedKey `json:"preSharedKey"`
-
-		// +optional
-		CipherSuites []string `json:"cipherSuites"`
-
-		// +optional
 		ServerName string `json:"serverName"`
-
-		// write tls session shared key to this file
-		// +optional
-		KeyLogFile string `json:"keyLogFile"`
 
 		// CertSecretRef for pem encoded x.509 certificate key pair
 		// +optional
 		CertSecretRef *corev1.LocalObjectReference `json:"certSecretRef,omitempty"`
 
 		// +optional
-		InsecureSkipVerify bool `json:"insecureSkipVerify"`
+		CipherSuites []string `json:"cipherSuites,omitempty"`
 
-		// options for dtls
 		// +optional
-		AllowInsecureHashes bool `json:"allowInsecureHashes"`
+		InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
+
+		MinVersion string `json:"minVersion,omitempty"`
+
+		MaxVersion string `json:"maxVersion,omitempty"`
+
+		NextProtos []string `json:"nextProtos,omitempty"`
+
+		// +optional
+		PreSharedKey DeviceConnectivityTLSPreSharedKey `json:"preSharedKey,omitempty"`
 	}
 
 	DeviceConnectivityTLSPreSharedKey struct {

@@ -481,7 +481,7 @@ func (c *Controller) createTLSConfigFromSecret(tlsSecretRef *corev1.LocalObjectR
 	}
 
 	_, insecureSkipVerify := tlsSecret.Data["insecureSkipVerify"]
-	caPEM, hasCACert := tlsSecret.Data["ca.crt"]
+	caPEM, hasCACert := tlsSecret.Data[constant.TLSCaCertKey]
 	certPEM, hasCert := tlsSecret.Data[corev1.TLSCertKey]
 	keyPEM, hasKey := tlsSecret.Data[corev1.TLSPrivateKeyKey]
 	clientCaPEM, hasClientCACert := tlsSecret.Data["client_ca.crt"]
