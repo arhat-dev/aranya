@@ -27,184 +27,236 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type Kind int32
+type CmdType int32
 
 const (
-	EMPTY Kind = 0
-	// if kind name contains _DATA_, the message body is raw day
-	// not the encoded protobuf bytes
-	MSG_DATA_DEFAULT  Kind = 1
-	MSG_DATA_STDOUT   Kind = 1
-	MSG_DATA_METRICS  Kind = 1
-	MSG_DATA_STDERR   Kind = 2
-	CMD_DATA_UPSTREAM Kind = 3
-	CMD_REJECT        Kind = 10
-	CMD_SESSION_CLOSE Kind = 11
-	// basic pod operations (frequently used with kubectl)
-	CMD_POD_CTR_EXEC       Kind = 12
-	CMD_POD_CTR_ATTACH     Kind = 13
-	CMD_POD_CTR_LOGS       Kind = 14
-	CMD_POD_CTR_TTY_RESIZE Kind = 15
-	CMD_POD_PORT_FORWARD   Kind = 16
-	// node operations
-	CMD_NODE_INFO_GET Kind = 17
-	// metrics operations
-	CMD_METRICS_CONFIG  Kind = 21
-	CMD_METRICS_COLLECT Kind = 22
-	// credentials operations
-	CMD_CRED_ENSURE Kind = 31
-	// container image / application bundle operations
-	CMD_IMAGE_LIST   Kind = 41
-	CMD_IMAGE_ENSURE Kind = 42
-	CMD_IMAGE_DELETE Kind = 43
-	// storage operations (remote csi)
-	CMD_STORAGE_LIST   Kind = 51
-	CMD_STORAGE_ENSURE Kind = 52
-	CMD_STORAGE_DELETE Kind = 53
-	// pod container provision
-	CMD_POD_LIST   Kind = 61
-	CMD_POD_ENSURE Kind = 62
-	CMD_POD_DELETE Kind = 63
-	// device operations
-	CMD_DEVICE_LIST   Kind = 71
-	CMD_DEVICE_ENSURE Kind = 72
-	CMD_DEVICE_DELETE Kind = 73
-	// container network operations
-	CMD_CTR_NET_LIST   Kind = 81
-	CMD_CTR_NET_ENSURE Kind = 82
-	// host network operations
-	CMD_NET_LIST            Kind = 91
-	CMD_NET_ENSURE          Kind = 92
-	CMD_NET_DELETE          Kind = 93
-	MSG_DONE                Kind = 100
-	MSG_STATE               Kind = 101
-	MSG_ERROR               Kind = 102
-	MSG_NODE_STATUS         Kind = 111
-	MSG_CRED_STATUS         Kind = 131
-	MSG_IMAGE_STATUS        Kind = 141
-	MSG_IMAGE_STATUS_LIST   Kind = 142
-	MSG_STORAGE_STATUS      Kind = 151
-	MSG_STORAGE_STATUS_LIST Kind = 152
-	MSG_POD_STATUS          Kind = 161
-	MSG_POD_STATUS_LIST     Kind = 162
-	MSG_DEVICE_STATUS       Kind = 171
-	MSG_DEVICE_STATUS_LIST  Kind = 172
-	MSG_CTR_NET_STATUS      Kind = 181
-	MSG_CTR_NET_STATUS_LIST Kind = 182
-	MSG_NET_STATUS          Kind = 191
-	MSG_NET_STATUS_LIST     Kind = 192
+	// 0-4: raw data related cmd
+	CMD_DATA_UPSTREAM CmdType = 0
+	CMD_SESSION_CLOSE CmdType = 5
+	CMD_REJECT        CmdType = 6
+	// 11-19: node operations
+	CMD_NODE_INFO_GET CmdType = 11
+	CMD_EXEC          CmdType = 12
+	CMD_ATTACH        CmdType = 13
+	CMD_LOGS          CmdType = 14
+	CMD_TTY_RESIZE    CmdType = 15
+	CMD_PORT_FORWARD  CmdType = 16
+	// 21-29: metrics operations
+	CMD_METRICS_CONFIG  CmdType = 21
+	CMD_METRICS_COLLECT CmdType = 22
+	// 31-39: credentials operations
+	CMD_CRED_ENSURE CmdType = 31
+	// 41-49: container image / application bundle operations
+	CMD_IMAGE_LIST   CmdType = 41
+	CMD_IMAGE_ENSURE CmdType = 42
+	CMD_IMAGE_DELETE CmdType = 43
+	// 51-59: storage operations (remote csi)
+	CMD_STORAGE_LIST   CmdType = 51
+	CMD_STORAGE_ENSURE CmdType = 52
+	CMD_STORAGE_DELETE CmdType = 53
+	// 61-69: pod container provision
+	CMD_POD_LIST   CmdType = 61
+	CMD_POD_ENSURE CmdType = 62
+	CMD_POD_DELETE CmdType = 63
+	// 71-79: device operations
+	CMD_DEVICE_LIST            CmdType = 71
+	CMD_DEVICE_ENSURE          CmdType = 72
+	CMD_DEVICE_DELETE          CmdType = 73
+	CMD_DEVICE_OPERATE         CmdType = 74
+	CMD_DEVICE_COLLECT_METRICS CmdType = 75
+	// 81-89: network operations, both container and host
+	CMD_CTR_NET_LIST   CmdType = 81
+	CMD_CTR_NET_ENSURE CmdType = 82
+	CMD_CTR_NET_DELETE CmdType = 83
+	CMD_HOST_NET_LIST  CmdType = 84
 )
 
-var Kind_name = map[int32]string{
-	0: "EMPTY",
-	1: "MSG_DATA_DEFAULT",
-	// Duplicate value: 1: "MSG_DATA_STDOUT",
-	// Duplicate value: 1: "MSG_DATA_METRICS",
-	2:   "MSG_DATA_STDERR",
-	3:   "CMD_DATA_UPSTREAM",
-	10:  "CMD_REJECT",
-	11:  "CMD_SESSION_CLOSE",
-	12:  "CMD_POD_CTR_EXEC",
-	13:  "CMD_POD_CTR_ATTACH",
-	14:  "CMD_POD_CTR_LOGS",
-	15:  "CMD_POD_CTR_TTY_RESIZE",
-	16:  "CMD_POD_PORT_FORWARD",
-	17:  "CMD_NODE_INFO_GET",
-	21:  "CMD_METRICS_CONFIG",
-	22:  "CMD_METRICS_COLLECT",
-	31:  "CMD_CRED_ENSURE",
-	41:  "CMD_IMAGE_LIST",
-	42:  "CMD_IMAGE_ENSURE",
-	43:  "CMD_IMAGE_DELETE",
-	51:  "CMD_STORAGE_LIST",
-	52:  "CMD_STORAGE_ENSURE",
-	53:  "CMD_STORAGE_DELETE",
-	61:  "CMD_POD_LIST",
-	62:  "CMD_POD_ENSURE",
-	63:  "CMD_POD_DELETE",
-	71:  "CMD_DEVICE_LIST",
-	72:  "CMD_DEVICE_ENSURE",
-	73:  "CMD_DEVICE_DELETE",
-	81:  "CMD_CTR_NET_LIST",
-	82:  "CMD_CTR_NET_ENSURE",
-	91:  "CMD_NET_LIST",
-	92:  "CMD_NET_ENSURE",
-	93:  "CMD_NET_DELETE",
-	100: "MSG_DONE",
-	101: "MSG_STATE",
-	102: "MSG_ERROR",
-	111: "MSG_NODE_STATUS",
-	131: "MSG_CRED_STATUS",
-	141: "MSG_IMAGE_STATUS",
-	142: "MSG_IMAGE_STATUS_LIST",
-	151: "MSG_STORAGE_STATUS",
-	152: "MSG_STORAGE_STATUS_LIST",
-	161: "MSG_POD_STATUS",
-	162: "MSG_POD_STATUS_LIST",
-	171: "MSG_DEVICE_STATUS",
-	172: "MSG_DEVICE_STATUS_LIST",
-	181: "MSG_CTR_NET_STATUS",
-	182: "MSG_CTR_NET_STATUS_LIST",
-	191: "MSG_NET_STATUS",
-	192: "MSG_NET_STATUS_LIST",
+var CmdType_name = map[int32]string{
+	0:  "CMD_DATA_UPSTREAM",
+	5:  "CMD_SESSION_CLOSE",
+	6:  "CMD_REJECT",
+	11: "CMD_NODE_INFO_GET",
+	12: "CMD_EXEC",
+	13: "CMD_ATTACH",
+	14: "CMD_LOGS",
+	15: "CMD_TTY_RESIZE",
+	16: "CMD_PORT_FORWARD",
+	21: "CMD_METRICS_CONFIG",
+	22: "CMD_METRICS_COLLECT",
+	31: "CMD_CRED_ENSURE",
+	41: "CMD_IMAGE_LIST",
+	42: "CMD_IMAGE_ENSURE",
+	43: "CMD_IMAGE_DELETE",
+	51: "CMD_STORAGE_LIST",
+	52: "CMD_STORAGE_ENSURE",
+	53: "CMD_STORAGE_DELETE",
+	61: "CMD_POD_LIST",
+	62: "CMD_POD_ENSURE",
+	63: "CMD_POD_DELETE",
+	71: "CMD_DEVICE_LIST",
+	72: "CMD_DEVICE_ENSURE",
+	73: "CMD_DEVICE_DELETE",
+	74: "CMD_DEVICE_OPERATE",
+	75: "CMD_DEVICE_COLLECT_METRICS",
+	81: "CMD_CTR_NET_LIST",
+	82: "CMD_CTR_NET_ENSURE",
+	83: "CMD_CTR_NET_DELETE",
+	84: "CMD_HOST_NET_LIST",
 }
 
-var Kind_value = map[string]int32{
-	"EMPTY":                   0,
-	"MSG_DATA_DEFAULT":        1,
-	"MSG_DATA_STDOUT":         1,
-	"MSG_DATA_METRICS":        1,
-	"MSG_DATA_STDERR":         2,
-	"CMD_DATA_UPSTREAM":       3,
-	"CMD_REJECT":              10,
-	"CMD_SESSION_CLOSE":       11,
-	"CMD_POD_CTR_EXEC":        12,
-	"CMD_POD_CTR_ATTACH":      13,
-	"CMD_POD_CTR_LOGS":        14,
-	"CMD_POD_CTR_TTY_RESIZE":  15,
-	"CMD_POD_PORT_FORWARD":    16,
-	"CMD_NODE_INFO_GET":       17,
-	"CMD_METRICS_CONFIG":      21,
-	"CMD_METRICS_COLLECT":     22,
-	"CMD_CRED_ENSURE":         31,
-	"CMD_IMAGE_LIST":          41,
-	"CMD_IMAGE_ENSURE":        42,
-	"CMD_IMAGE_DELETE":        43,
-	"CMD_STORAGE_LIST":        51,
-	"CMD_STORAGE_ENSURE":      52,
-	"CMD_STORAGE_DELETE":      53,
-	"CMD_POD_LIST":            61,
-	"CMD_POD_ENSURE":          62,
-	"CMD_POD_DELETE":          63,
-	"CMD_DEVICE_LIST":         71,
-	"CMD_DEVICE_ENSURE":       72,
-	"CMD_DEVICE_DELETE":       73,
-	"CMD_CTR_NET_LIST":        81,
-	"CMD_CTR_NET_ENSURE":      82,
-	"CMD_NET_LIST":            91,
-	"CMD_NET_ENSURE":          92,
-	"CMD_NET_DELETE":          93,
-	"MSG_DONE":                100,
-	"MSG_STATE":               101,
-	"MSG_ERROR":               102,
-	"MSG_NODE_STATUS":         111,
-	"MSG_CRED_STATUS":         131,
-	"MSG_IMAGE_STATUS":        141,
-	"MSG_IMAGE_STATUS_LIST":   142,
-	"MSG_STORAGE_STATUS":      151,
-	"MSG_STORAGE_STATUS_LIST": 152,
-	"MSG_POD_STATUS":          161,
-	"MSG_POD_STATUS_LIST":     162,
-	"MSG_DEVICE_STATUS":       171,
-	"MSG_DEVICE_STATUS_LIST":  172,
-	"MSG_CTR_NET_STATUS":      181,
-	"MSG_CTR_NET_STATUS_LIST": 182,
-	"MSG_NET_STATUS":          191,
-	"MSG_NET_STATUS_LIST":     192,
+var CmdType_value = map[string]int32{
+	"CMD_DATA_UPSTREAM":          0,
+	"CMD_SESSION_CLOSE":          5,
+	"CMD_REJECT":                 6,
+	"CMD_NODE_INFO_GET":          11,
+	"CMD_EXEC":                   12,
+	"CMD_ATTACH":                 13,
+	"CMD_LOGS":                   14,
+	"CMD_TTY_RESIZE":             15,
+	"CMD_PORT_FORWARD":           16,
+	"CMD_METRICS_CONFIG":         21,
+	"CMD_METRICS_COLLECT":        22,
+	"CMD_CRED_ENSURE":            31,
+	"CMD_IMAGE_LIST":             41,
+	"CMD_IMAGE_ENSURE":           42,
+	"CMD_IMAGE_DELETE":           43,
+	"CMD_STORAGE_LIST":           51,
+	"CMD_STORAGE_ENSURE":         52,
+	"CMD_STORAGE_DELETE":         53,
+	"CMD_POD_LIST":               61,
+	"CMD_POD_ENSURE":             62,
+	"CMD_POD_DELETE":             63,
+	"CMD_DEVICE_LIST":            71,
+	"CMD_DEVICE_ENSURE":          72,
+	"CMD_DEVICE_DELETE":          73,
+	"CMD_DEVICE_OPERATE":         74,
+	"CMD_DEVICE_COLLECT_METRICS": 75,
+	"CMD_CTR_NET_LIST":           81,
+	"CMD_CTR_NET_ENSURE":         82,
+	"CMD_CTR_NET_DELETE":         83,
+	"CMD_HOST_NET_LIST":          84,
 }
 
-func (Kind) EnumDescriptor() ([]byte, []int) {
+func (CmdType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_2fcc84b9998d60d8, []int{0}
+}
+
+type MsgType int32
+
+const (
+	MSG_DATA         MsgType = 0
+	MSG_DATA_DEFAULT MsgType = 0
+	MSG_DATA_STDOUT  MsgType = 0
+	MSG_DATA_METRICS MsgType = 0
+	MSG_DATA_STDERR  MsgType = 1
+	MSG_DONE         MsgType = 5
+	MSG_STATE        MsgType = 6
+	MSG_ERROR        MsgType = 7
+	// 11-19: node msgs
+	MSG_NODE_STATUS MsgType = 11
+	// 31-39: credential msgs
+	MSG_CRED_STATUS MsgType = 31
+	// 41-49: image msgs
+	MSG_IMAGE_STATUS      MsgType = 41
+	MSG_IMAGE_STATUS_LIST MsgType = 42
+	// 51-59: storage msgs
+	MSG_STORAGE_STATUS      MsgType = 51
+	MSG_STORAGE_STATUS_LIST MsgType = 52
+	// 61-69: pod msgs
+	MSG_POD_STATUS      MsgType = 61
+	MSG_POD_STATUS_LIST MsgType = 62
+	// 71-79: device msgs
+	MSG_DEVICE_STATUS           MsgType = 71
+	MSG_DEVICE_STATUS_LIST      MsgType = 72
+	MSG_DEVICE_OPERATION_RESULT MsgType = 73
+	// 81-89: network msgs
+	MSG_CTR_NET_STATUS      MsgType = 81
+	MSG_CTR_NET_STATUS_LIST MsgType = 82
+	MSG_HOST_NET_STATUS     MsgType = 83
+)
+
+var MsgType_name = map[int32]string{
+	0: "MSG_DATA",
+	// Duplicate value: 0: "MSG_DATA_DEFAULT",
+	// Duplicate value: 0: "MSG_DATA_STDOUT",
+	// Duplicate value: 0: "MSG_DATA_METRICS",
+	1:  "MSG_DATA_STDERR",
+	5:  "MSG_DONE",
+	6:  "MSG_STATE",
+	7:  "MSG_ERROR",
+	11: "MSG_NODE_STATUS",
+	31: "MSG_CRED_STATUS",
+	41: "MSG_IMAGE_STATUS",
+	42: "MSG_IMAGE_STATUS_LIST",
+	51: "MSG_STORAGE_STATUS",
+	52: "MSG_STORAGE_STATUS_LIST",
+	61: "MSG_POD_STATUS",
+	62: "MSG_POD_STATUS_LIST",
+	71: "MSG_DEVICE_STATUS",
+	72: "MSG_DEVICE_STATUS_LIST",
+	73: "MSG_DEVICE_OPERATION_RESULT",
+	81: "MSG_CTR_NET_STATUS",
+	82: "MSG_CTR_NET_STATUS_LIST",
+	83: "MSG_HOST_NET_STATUS",
+}
+
+var MsgType_value = map[string]int32{
+	"MSG_DATA":                    0,
+	"MSG_DATA_DEFAULT":            0,
+	"MSG_DATA_STDOUT":             0,
+	"MSG_DATA_METRICS":            0,
+	"MSG_DATA_STDERR":             1,
+	"MSG_DONE":                    5,
+	"MSG_STATE":                   6,
+	"MSG_ERROR":                   7,
+	"MSG_NODE_STATUS":             11,
+	"MSG_CRED_STATUS":             31,
+	"MSG_IMAGE_STATUS":            41,
+	"MSG_IMAGE_STATUS_LIST":       42,
+	"MSG_STORAGE_STATUS":          51,
+	"MSG_STORAGE_STATUS_LIST":     52,
+	"MSG_POD_STATUS":              61,
+	"MSG_POD_STATUS_LIST":         62,
+	"MSG_DEVICE_STATUS":           71,
+	"MSG_DEVICE_STATUS_LIST":      72,
+	"MSG_DEVICE_OPERATION_RESULT": 73,
+	"MSG_CTR_NET_STATUS":          81,
+	"MSG_CTR_NET_STATUS_LIST":     82,
+	"MSG_HOST_NET_STATUS":         83,
+}
+
+func (MsgType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_2fcc84b9998d60d8, []int{1}
+}
+
+type RejectionReason int32
+
+const (
+	_INVALID_REJECTION_REASON       RejectionReason = 0
+	REJECTION_INVALID_PROTO         RejectionReason = 1
+	REJECTION_ALREADY_CONNECTED     RejectionReason = 2
+	REJECTION_INITIAL_CHECK_FAILURE RejectionReason = 3
+	REJECTION_INTERNAL_SERVER_ERROR RejectionReason = 4
+)
+
+var RejectionReason_name = map[int32]string{
+	0: "_INVALID_REJECTION_REASON",
+	1: "REJECTION_INVALID_PROTO",
+	2: "REJECTION_ALREADY_CONNECTED",
+	3: "REJECTION_INITIAL_CHECK_FAILURE",
+	4: "REJECTION_INTERNAL_SERVER_ERROR",
+}
+
+var RejectionReason_value = map[string]int32{
+	"_INVALID_REJECTION_REASON":       0,
+	"REJECTION_INVALID_PROTO":         1,
+	"REJECTION_ALREADY_CONNECTED":     2,
+	"REJECTION_INITIAL_CHECK_FAILURE": 3,
+	"REJECTION_INTERNAL_SERVER_ERROR": 4,
+}
+
+func (RejectionReason) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_2fcc84b9998d60d8, []int{2}
 }
 
 type NodeInfoGetCmd_Kind int32
@@ -225,46 +277,7 @@ var NodeInfoGetCmd_Kind_value = map[string]int32{
 }
 
 func (NodeInfoGetCmd_Kind) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{4, 0}
-}
-
-type RejectCmd_Reason int32
-
-const (
-	_INVALID_REJECTION_REASON        RejectCmd_Reason = 0
-	REJECTION_ALREADY_CONNECTED      RejectCmd_Reason = 1
-	REJECTION_POD_STATUS_SYNC_ERROR  RejectCmd_Reason = 2
-	REJECTION_NODE_STATUS_SYNC_ERROR RejectCmd_Reason = 3
-	REJECTION_NETWORK_UPDATE_FAILURE RejectCmd_Reason = 4
-	REJECTION_CREDENTIAL_FAILURE     RejectCmd_Reason = 5
-	REJECTION_INTERNAL_SERVER_ERROR  RejectCmd_Reason = 6
-	REJECTION_INVALID_PROTO          RejectCmd_Reason = 7
-)
-
-var RejectCmd_Reason_name = map[int32]string{
-	0: "_INVALID_REJECTION_REASON",
-	1: "REJECTION_ALREADY_CONNECTED",
-	2: "REJECTION_POD_STATUS_SYNC_ERROR",
-	3: "REJECTION_NODE_STATUS_SYNC_ERROR",
-	4: "REJECTION_NETWORK_UPDATE_FAILURE",
-	5: "REJECTION_CREDENTIAL_FAILURE",
-	6: "REJECTION_INTERNAL_SERVER_ERROR",
-	7: "REJECTION_INVALID_PROTO",
-}
-
-var RejectCmd_Reason_value = map[string]int32{
-	"_INVALID_REJECTION_REASON":        0,
-	"REJECTION_ALREADY_CONNECTED":      1,
-	"REJECTION_POD_STATUS_SYNC_ERROR":  2,
-	"REJECTION_NODE_STATUS_SYNC_ERROR": 3,
-	"REJECTION_NETWORK_UPDATE_FAILURE": 4,
-	"REJECTION_CREDENTIAL_FAILURE":     5,
-	"REJECTION_INTERNAL_SERVER_ERROR":  6,
-	"REJECTION_INVALID_PROTO":          7,
-}
-
-func (RejectCmd_Reason) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{6, 0}
+	return fileDescriptor_2fcc84b9998d60d8, []int{3, 0}
 }
 
 type ErrorMsg_Kind int32
@@ -285,7 +298,7 @@ const (
 	// aranya should ignore this error and cancel all future
 	// job.
 	ERR_NOT_SUPPORTED ErrorMsg_Kind = 3
-	// ERR_TIMEOUT only happen in connectivity server,
+	// ERR_TIMEOUT only happens in connectivity server,
 	// right after the session is timed out
 	ERR_TIMEOUT ErrorMsg_Kind = 4
 )
@@ -307,7 +320,7 @@ var ErrorMsg_Kind_value = map[string]int32{
 }
 
 func (ErrorMsg_Kind) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{11, 0}
+	return fileDescriptor_2fcc84b9998d60d8, []int{10, 0}
 }
 
 type StateMsg_Kind int32
@@ -331,7 +344,7 @@ var StateMsg_Kind_value = map[string]int32{
 }
 
 func (StateMsg_Kind) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{12, 0}
+	return fileDescriptor_2fcc84b9998d60d8, []int{11, 0}
 }
 
 type Empty struct {
@@ -369,80 +382,14 @@ func (m *Empty) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Empty proto.InternalMessageInfo
 
-type Header struct {
-	Kind Kind `protobuf:"varint,1,opt,name=kind,proto3,enum=aranya.Kind" json:"kind,omitempty"`
-	// session id used by Cmd/Msg
+type Cmd struct {
+	Kind CmdType `protobuf:"varint,1,opt,name=kind,proto3,enum=aranya.CmdType" json:"kind,omitempty"`
+	// session id
 	Sid uint64 `protobuf:"varint,2,opt,name=sid,proto3" json:"sid,omitempty"`
 	// sequence in the session, to ensure ordered data
-	// if the session contains multiple Cmd/Msg,
-	// seq keeps increasing
 	Seq uint64 `protobuf:"varint,3,opt,name=seq,proto3" json:"seq,omitempty"`
-	// mark this Cmd/Msg is the last message in the session
+	// mark this Cmd is the last piece in the session
 	Completed bool `protobuf:"varint,4,opt,name=completed,proto3" json:"completed,omitempty"`
-}
-
-func (m *Header) Reset()      { *m = Header{} }
-func (*Header) ProtoMessage() {}
-func (*Header) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{1}
-}
-func (m *Header) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Header) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Header.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Header) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Header.Merge(m, src)
-}
-func (m *Header) XXX_Size() int {
-	return m.Size()
-}
-func (m *Header) XXX_DiscardUnknown() {
-	xxx_messageInfo_Header.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Header proto.InternalMessageInfo
-
-func (m *Header) GetKind() Kind {
-	if m != nil {
-		return m.Kind
-	}
-	return EMPTY
-}
-
-func (m *Header) GetSid() uint64 {
-	if m != nil {
-		return m.Sid
-	}
-	return 0
-}
-
-func (m *Header) GetSeq() uint64 {
-	if m != nil {
-		return m.Seq
-	}
-	return 0
-}
-
-func (m *Header) GetCompleted() bool {
-	if m != nil {
-		return m.Completed
-	}
-	return false
-}
-
-type Cmd struct {
-	Header *Header `protobuf:"bytes,1,opt,name=header,proto3" json:"header,omitempty"`
 	// body of encoded XxxCmd or raw data bytes
 	Body []byte `protobuf:"bytes,11,opt,name=body,proto3" json:"body,omitempty"`
 }
@@ -450,7 +397,7 @@ type Cmd struct {
 func (m *Cmd) Reset()      { *m = Cmd{} }
 func (*Cmd) ProtoMessage() {}
 func (*Cmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{2}
+	return fileDescriptor_2fcc84b9998d60d8, []int{1}
 }
 func (m *Cmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -479,11 +426,32 @@ func (m *Cmd) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Cmd proto.InternalMessageInfo
 
-func (m *Cmd) GetHeader() *Header {
+func (m *Cmd) GetKind() CmdType {
 	if m != nil {
-		return m.Header
+		return m.Kind
 	}
-	return nil
+	return CMD_DATA_UPSTREAM
+}
+
+func (m *Cmd) GetSid() uint64 {
+	if m != nil {
+		return m.Sid
+	}
+	return 0
+}
+
+func (m *Cmd) GetSeq() uint64 {
+	if m != nil {
+		return m.Seq
+	}
+	return 0
+}
+
+func (m *Cmd) GetCompleted() bool {
+	if m != nil {
+		return m.Completed
+	}
+	return false
 }
 
 func (m *Cmd) GetBody() []byte {
@@ -494,7 +462,13 @@ func (m *Cmd) GetBody() []byte {
 }
 
 type Msg struct {
-	Header *Header `protobuf:"bytes,1,opt,name=header,proto3" json:"header,omitempty"`
+	Kind MsgType `protobuf:"varint,1,opt,name=kind,proto3,enum=aranya.MsgType" json:"kind,omitempty"`
+	// session id
+	Sid uint64 `protobuf:"varint,2,opt,name=sid,proto3" json:"sid,omitempty"`
+	// sequence in the session, to ensure ordered data
+	Seq uint64 `protobuf:"varint,3,opt,name=seq,proto3" json:"seq,omitempty"`
+	// mark this Msg is the last piece in the session
+	Completed bool `protobuf:"varint,4,opt,name=completed,proto3" json:"completed,omitempty"`
 	// body of encoded XxxMsg or raw data bytes
 	Body []byte `protobuf:"bytes,11,opt,name=body,proto3" json:"body,omitempty"`
 }
@@ -502,7 +476,7 @@ type Msg struct {
 func (m *Msg) Reset()      { *m = Msg{} }
 func (*Msg) ProtoMessage() {}
 func (*Msg) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{3}
+	return fileDescriptor_2fcc84b9998d60d8, []int{2}
 }
 func (m *Msg) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -531,11 +505,32 @@ func (m *Msg) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Msg proto.InternalMessageInfo
 
-func (m *Msg) GetHeader() *Header {
+func (m *Msg) GetKind() MsgType {
 	if m != nil {
-		return m.Header
+		return m.Kind
 	}
-	return nil
+	return MSG_DATA
+}
+
+func (m *Msg) GetSid() uint64 {
+	if m != nil {
+		return m.Sid
+	}
+	return 0
+}
+
+func (m *Msg) GetSeq() uint64 {
+	if m != nil {
+		return m.Seq
+	}
+	return 0
+}
+
+func (m *Msg) GetCompleted() bool {
+	if m != nil {
+		return m.Completed
+	}
+	return false
 }
 
 func (m *Msg) GetBody() []byte {
@@ -552,7 +547,7 @@ type NodeInfoGetCmd struct {
 func (m *NodeInfoGetCmd) Reset()      { *m = NodeInfoGetCmd{} }
 func (*NodeInfoGetCmd) ProtoMessage() {}
 func (*NodeInfoGetCmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{4}
+	return fileDescriptor_2fcc84b9998d60d8, []int{3}
 }
 func (m *NodeInfoGetCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -595,7 +590,7 @@ type SessionCloseCmd struct {
 func (m *SessionCloseCmd) Reset()      { *m = SessionCloseCmd{} }
 func (*SessionCloseCmd) ProtoMessage() {}
 func (*SessionCloseCmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{5}
+	return fileDescriptor_2fcc84b9998d60d8, []int{4}
 }
 func (m *SessionCloseCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -632,14 +627,14 @@ func (m *SessionCloseCmd) GetSid() uint64 {
 }
 
 type RejectCmd struct {
-	Reason  RejectCmd_Reason `protobuf:"varint,1,opt,name=reason,proto3,enum=aranya.RejectCmd_Reason" json:"reason,omitempty"`
-	Message string           `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Reason  RejectionReason `protobuf:"varint,1,opt,name=reason,proto3,enum=aranya.RejectionReason" json:"reason,omitempty"`
+	Message string          `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 }
 
 func (m *RejectCmd) Reset()      { *m = RejectCmd{} }
 func (*RejectCmd) ProtoMessage() {}
 func (*RejectCmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{6}
+	return fileDescriptor_2fcc84b9998d60d8, []int{5}
 }
 func (m *RejectCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -668,7 +663,7 @@ func (m *RejectCmd) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_RejectCmd proto.InternalMessageInfo
 
-func (m *RejectCmd) GetReason() RejectCmd_Reason {
+func (m *RejectCmd) GetReason() RejectionReason {
 	if m != nil {
 		return m.Reason
 	}
@@ -682,7 +677,7 @@ func (m *RejectCmd) GetMessage() string {
 	return ""
 }
 
-type ContainerLogsCmd struct {
+type LogsCmd struct {
 	PodUid     string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
 	Container  string `protobuf:"bytes,2,opt,name=container,proto3" json:"container,omitempty"`
 	Follow     bool   `protobuf:"varint,3,opt,name=follow,proto3" json:"follow,omitempty"`
@@ -695,17 +690,17 @@ type ContainerLogsCmd struct {
 	Path string `protobuf:"bytes,9,opt,name=path,proto3" json:"path,omitempty"`
 }
 
-func (m *ContainerLogsCmd) Reset()      { *m = ContainerLogsCmd{} }
-func (*ContainerLogsCmd) ProtoMessage() {}
-func (*ContainerLogsCmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{7}
+func (m *LogsCmd) Reset()      { *m = LogsCmd{} }
+func (*LogsCmd) ProtoMessage() {}
+func (*LogsCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2fcc84b9998d60d8, []int{6}
 }
-func (m *ContainerLogsCmd) XXX_Unmarshal(b []byte) error {
+func (m *LogsCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ContainerLogsCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *LogsCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ContainerLogsCmd.Marshal(b, m, deterministic)
+		return xxx_messageInfo_LogsCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -715,83 +710,83 @@ func (m *ContainerLogsCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *ContainerLogsCmd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ContainerLogsCmd.Merge(m, src)
+func (m *LogsCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LogsCmd.Merge(m, src)
 }
-func (m *ContainerLogsCmd) XXX_Size() int {
+func (m *LogsCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *ContainerLogsCmd) XXX_DiscardUnknown() {
-	xxx_messageInfo_ContainerLogsCmd.DiscardUnknown(m)
+func (m *LogsCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_LogsCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ContainerLogsCmd proto.InternalMessageInfo
+var xxx_messageInfo_LogsCmd proto.InternalMessageInfo
 
-func (m *ContainerLogsCmd) GetPodUid() string {
+func (m *LogsCmd) GetPodUid() string {
 	if m != nil {
 		return m.PodUid
 	}
 	return ""
 }
 
-func (m *ContainerLogsCmd) GetContainer() string {
+func (m *LogsCmd) GetContainer() string {
 	if m != nil {
 		return m.Container
 	}
 	return ""
 }
 
-func (m *ContainerLogsCmd) GetFollow() bool {
+func (m *LogsCmd) GetFollow() bool {
 	if m != nil {
 		return m.Follow
 	}
 	return false
 }
 
-func (m *ContainerLogsCmd) GetTimestamp() bool {
+func (m *LogsCmd) GetTimestamp() bool {
 	if m != nil {
 		return m.Timestamp
 	}
 	return false
 }
 
-func (m *ContainerLogsCmd) GetSince() string {
+func (m *LogsCmd) GetSince() string {
 	if m != nil {
 		return m.Since
 	}
 	return ""
 }
 
-func (m *ContainerLogsCmd) GetTailLines() int64 {
+func (m *LogsCmd) GetTailLines() int64 {
 	if m != nil {
 		return m.TailLines
 	}
 	return 0
 }
 
-func (m *ContainerLogsCmd) GetBytesLimit() int64 {
+func (m *LogsCmd) GetBytesLimit() int64 {
 	if m != nil {
 		return m.BytesLimit
 	}
 	return 0
 }
 
-func (m *ContainerLogsCmd) GetPrevious() bool {
+func (m *LogsCmd) GetPrevious() bool {
 	if m != nil {
 		return m.Previous
 	}
 	return false
 }
 
-func (m *ContainerLogsCmd) GetPath() string {
+func (m *LogsCmd) GetPath() string {
 	if m != nil {
 		return m.Path
 	}
 	return ""
 }
 
-// Pod Exec/Attach Cmd
-type ContainerExecOrAttachCmd struct {
+// Exec/Attach Cmd
+type ExecOrAttachCmd struct {
 	PodUid    string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
 	Container string `protobuf:"bytes,2,opt,name=container,proto3" json:"container,omitempty"`
 	Stdin     bool   `protobuf:"varint,3,opt,name=stdin,proto3" json:"stdin,omitempty"`
@@ -805,17 +800,17 @@ type ContainerExecOrAttachCmd struct {
 	Envs map[string]string `protobuf:"bytes,8,rep,name=envs,proto3" json:"envs,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
-func (m *ContainerExecOrAttachCmd) Reset()      { *m = ContainerExecOrAttachCmd{} }
-func (*ContainerExecOrAttachCmd) ProtoMessage() {}
-func (*ContainerExecOrAttachCmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{8}
+func (m *ExecOrAttachCmd) Reset()      { *m = ExecOrAttachCmd{} }
+func (*ExecOrAttachCmd) ProtoMessage() {}
+func (*ExecOrAttachCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2fcc84b9998d60d8, []int{7}
 }
-func (m *ContainerExecOrAttachCmd) XXX_Unmarshal(b []byte) error {
+func (m *ExecOrAttachCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ContainerExecOrAttachCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ExecOrAttachCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ContainerExecOrAttachCmd.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ExecOrAttachCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -825,91 +820,91 @@ func (m *ContainerExecOrAttachCmd) XXX_Marshal(b []byte, deterministic bool) ([]
 		return b[:n], nil
 	}
 }
-func (m *ContainerExecOrAttachCmd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ContainerExecOrAttachCmd.Merge(m, src)
+func (m *ExecOrAttachCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExecOrAttachCmd.Merge(m, src)
 }
-func (m *ContainerExecOrAttachCmd) XXX_Size() int {
+func (m *ExecOrAttachCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *ContainerExecOrAttachCmd) XXX_DiscardUnknown() {
-	xxx_messageInfo_ContainerExecOrAttachCmd.DiscardUnknown(m)
+func (m *ExecOrAttachCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExecOrAttachCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ContainerExecOrAttachCmd proto.InternalMessageInfo
+var xxx_messageInfo_ExecOrAttachCmd proto.InternalMessageInfo
 
-func (m *ContainerExecOrAttachCmd) GetPodUid() string {
+func (m *ExecOrAttachCmd) GetPodUid() string {
 	if m != nil {
 		return m.PodUid
 	}
 	return ""
 }
 
-func (m *ContainerExecOrAttachCmd) GetContainer() string {
+func (m *ExecOrAttachCmd) GetContainer() string {
 	if m != nil {
 		return m.Container
 	}
 	return ""
 }
 
-func (m *ContainerExecOrAttachCmd) GetStdin() bool {
+func (m *ExecOrAttachCmd) GetStdin() bool {
 	if m != nil {
 		return m.Stdin
 	}
 	return false
 }
 
-func (m *ContainerExecOrAttachCmd) GetStdout() bool {
+func (m *ExecOrAttachCmd) GetStdout() bool {
 	if m != nil {
 		return m.Stdout
 	}
 	return false
 }
 
-func (m *ContainerExecOrAttachCmd) GetStderr() bool {
+func (m *ExecOrAttachCmd) GetStderr() bool {
 	if m != nil {
 		return m.Stderr
 	}
 	return false
 }
 
-func (m *ContainerExecOrAttachCmd) GetTty() bool {
+func (m *ExecOrAttachCmd) GetTty() bool {
 	if m != nil {
 		return m.Tty
 	}
 	return false
 }
 
-func (m *ContainerExecOrAttachCmd) GetCommand() []string {
+func (m *ExecOrAttachCmd) GetCommand() []string {
 	if m != nil {
 		return m.Command
 	}
 	return nil
 }
 
-func (m *ContainerExecOrAttachCmd) GetEnvs() map[string]string {
+func (m *ExecOrAttachCmd) GetEnvs() map[string]string {
 	if m != nil {
 		return m.Envs
 	}
 	return nil
 }
 
-type PodPortForwardCmd struct {
+type PortForwardCmd struct {
 	PodUid   string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
 	Port     int32  `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
 	Protocol string `protobuf:"bytes,3,opt,name=protocol,proto3" json:"protocol,omitempty"`
 }
 
-func (m *PodPortForwardCmd) Reset()      { *m = PodPortForwardCmd{} }
-func (*PodPortForwardCmd) ProtoMessage() {}
-func (*PodPortForwardCmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{9}
+func (m *PortForwardCmd) Reset()      { *m = PortForwardCmd{} }
+func (*PortForwardCmd) ProtoMessage() {}
+func (*PortForwardCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2fcc84b9998d60d8, []int{8}
 }
-func (m *PodPortForwardCmd) XXX_Unmarshal(b []byte) error {
+func (m *PortForwardCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *PodPortForwardCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PortForwardCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_PodPortForwardCmd.Marshal(b, m, deterministic)
+		return xxx_messageInfo_PortForwardCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -919,55 +914,55 @@ func (m *PodPortForwardCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
-func (m *PodPortForwardCmd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PodPortForwardCmd.Merge(m, src)
+func (m *PortForwardCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PortForwardCmd.Merge(m, src)
 }
-func (m *PodPortForwardCmd) XXX_Size() int {
+func (m *PortForwardCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *PodPortForwardCmd) XXX_DiscardUnknown() {
-	xxx_messageInfo_PodPortForwardCmd.DiscardUnknown(m)
+func (m *PortForwardCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_PortForwardCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_PodPortForwardCmd proto.InternalMessageInfo
+var xxx_messageInfo_PortForwardCmd proto.InternalMessageInfo
 
-func (m *PodPortForwardCmd) GetPodUid() string {
+func (m *PortForwardCmd) GetPodUid() string {
 	if m != nil {
 		return m.PodUid
 	}
 	return ""
 }
 
-func (m *PodPortForwardCmd) GetPort() int32 {
+func (m *PortForwardCmd) GetPort() int32 {
 	if m != nil {
 		return m.Port
 	}
 	return 0
 }
 
-func (m *PodPortForwardCmd) GetProtocol() string {
+func (m *PortForwardCmd) GetProtocol() string {
 	if m != nil {
 		return m.Protocol
 	}
 	return ""
 }
 
-type ContainerTerminalResizeCmd struct {
+type TerminalResizeCmd struct {
 	Cols uint32 `protobuf:"varint,1,opt,name=cols,proto3" json:"cols,omitempty"`
 	Rows uint32 `protobuf:"varint,2,opt,name=rows,proto3" json:"rows,omitempty"`
 }
 
-func (m *ContainerTerminalResizeCmd) Reset()      { *m = ContainerTerminalResizeCmd{} }
-func (*ContainerTerminalResizeCmd) ProtoMessage() {}
-func (*ContainerTerminalResizeCmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{10}
+func (m *TerminalResizeCmd) Reset()      { *m = TerminalResizeCmd{} }
+func (*TerminalResizeCmd) ProtoMessage() {}
+func (*TerminalResizeCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2fcc84b9998d60d8, []int{9}
 }
-func (m *ContainerTerminalResizeCmd) XXX_Unmarshal(b []byte) error {
+func (m *TerminalResizeCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ContainerTerminalResizeCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *TerminalResizeCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ContainerTerminalResizeCmd.Marshal(b, m, deterministic)
+		return xxx_messageInfo_TerminalResizeCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -977,26 +972,26 @@ func (m *ContainerTerminalResizeCmd) XXX_Marshal(b []byte, deterministic bool) (
 		return b[:n], nil
 	}
 }
-func (m *ContainerTerminalResizeCmd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ContainerTerminalResizeCmd.Merge(m, src)
+func (m *TerminalResizeCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TerminalResizeCmd.Merge(m, src)
 }
-func (m *ContainerTerminalResizeCmd) XXX_Size() int {
+func (m *TerminalResizeCmd) XXX_Size() int {
 	return m.Size()
 }
-func (m *ContainerTerminalResizeCmd) XXX_DiscardUnknown() {
-	xxx_messageInfo_ContainerTerminalResizeCmd.DiscardUnknown(m)
+func (m *TerminalResizeCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_TerminalResizeCmd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ContainerTerminalResizeCmd proto.InternalMessageInfo
+var xxx_messageInfo_TerminalResizeCmd proto.InternalMessageInfo
 
-func (m *ContainerTerminalResizeCmd) GetCols() uint32 {
+func (m *TerminalResizeCmd) GetCols() uint32 {
 	if m != nil {
 		return m.Cols
 	}
 	return 0
 }
 
-func (m *ContainerTerminalResizeCmd) GetRows() uint32 {
+func (m *TerminalResizeCmd) GetRows() uint32 {
 	if m != nil {
 		return m.Rows
 	}
@@ -1017,7 +1012,7 @@ type ErrorMsg struct {
 func (m *ErrorMsg) Reset()      { *m = ErrorMsg{} }
 func (*ErrorMsg) ProtoMessage() {}
 func (*ErrorMsg) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{11}
+	return fileDescriptor_2fcc84b9998d60d8, []int{10}
 }
 func (m *ErrorMsg) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1076,7 +1071,7 @@ type StateMsg struct {
 func (m *StateMsg) Reset()      { *m = StateMsg{} }
 func (*StateMsg) ProtoMessage() {}
 func (*StateMsg) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2fcc84b9998d60d8, []int{12}
+	return fileDescriptor_2fcc84b9998d60d8, []int{11}
 }
 func (m *StateMsg) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1120,23 +1115,23 @@ func (m *StateMsg) GetDeviceId() string {
 }
 
 func init() {
-	proto.RegisterEnum("aranya.Kind", Kind_name, Kind_value)
+	proto.RegisterEnum("aranya.CmdType", CmdType_name, CmdType_value)
+	proto.RegisterEnum("aranya.MsgType", MsgType_name, MsgType_value)
+	proto.RegisterEnum("aranya.RejectionReason", RejectionReason_name, RejectionReason_value)
 	proto.RegisterEnum("aranya.NodeInfoGetCmd_Kind", NodeInfoGetCmd_Kind_name, NodeInfoGetCmd_Kind_value)
-	proto.RegisterEnum("aranya.RejectCmd_Reason", RejectCmd_Reason_name, RejectCmd_Reason_value)
 	proto.RegisterEnum("aranya.ErrorMsg_Kind", ErrorMsg_Kind_name, ErrorMsg_Kind_value)
 	proto.RegisterEnum("aranya.StateMsg_Kind", StateMsg_Kind_name, StateMsg_Kind_value)
 	proto.RegisterType((*Empty)(nil), "aranya.Empty")
-	proto.RegisterType((*Header)(nil), "aranya.Header")
 	proto.RegisterType((*Cmd)(nil), "aranya.Cmd")
 	proto.RegisterType((*Msg)(nil), "aranya.Msg")
 	proto.RegisterType((*NodeInfoGetCmd)(nil), "aranya.NodeInfoGetCmd")
 	proto.RegisterType((*SessionCloseCmd)(nil), "aranya.SessionCloseCmd")
 	proto.RegisterType((*RejectCmd)(nil), "aranya.RejectCmd")
-	proto.RegisterType((*ContainerLogsCmd)(nil), "aranya.ContainerLogsCmd")
-	proto.RegisterType((*ContainerExecOrAttachCmd)(nil), "aranya.ContainerExecOrAttachCmd")
-	proto.RegisterMapType((map[string]string)(nil), "aranya.ContainerExecOrAttachCmd.EnvsEntry")
-	proto.RegisterType((*PodPortForwardCmd)(nil), "aranya.PodPortForwardCmd")
-	proto.RegisterType((*ContainerTerminalResizeCmd)(nil), "aranya.ContainerTerminalResizeCmd")
+	proto.RegisterType((*LogsCmd)(nil), "aranya.LogsCmd")
+	proto.RegisterType((*ExecOrAttachCmd)(nil), "aranya.ExecOrAttachCmd")
+	proto.RegisterMapType((map[string]string)(nil), "aranya.ExecOrAttachCmd.EnvsEntry")
+	proto.RegisterType((*PortForwardCmd)(nil), "aranya.PortForwardCmd")
+	proto.RegisterType((*TerminalResizeCmd)(nil), "aranya.TerminalResizeCmd")
 	proto.RegisterType((*ErrorMsg)(nil), "aranya.ErrorMsg")
 	proto.RegisterType((*StateMsg)(nil), "aranya.StateMsg")
 }
@@ -1144,110 +1139,117 @@ func init() {
 func init() { proto.RegisterFile("proto.proto", fileDescriptor_2fcc84b9998d60d8) }
 
 var fileDescriptor_2fcc84b9998d60d8 = []byte{
-	// 1574 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x96, 0x4d, 0x8c, 0xe3, 0x48,
-	0x15, 0x80, 0xe3, 0xc4, 0x9d, 0x76, 0xaa, 0x7f, 0xa6, 0xba, 0x66, 0xba, 0x3b, 0x74, 0xcf, 0x66,
-	0x82, 0x17, 0xa1, 0xde, 0x01, 0x7a, 0xd1, 0x2c, 0x08, 0x84, 0xc4, 0xae, 0x4c, 0x5c, 0xe9, 0x31,
-	0xeb, 0xd8, 0xa1, 0xec, 0xcc, 0x6c, 0x2f, 0x8b, 0x2c, 0x4f, 0x5c, 0x33, 0x63, 0x36, 0x71, 0x65,
-	0x6d, 0x4f, 0x0f, 0xcd, 0x09, 0x09, 0x71, 0x04, 0x21, 0x71, 0x00, 0x21, 0x71, 0x80, 0x13, 0x12,
-	0x5c, 0xe1, 0x84, 0x04, 0x47, 0x8e, 0x73, 0x42, 0x7b, 0x64, 0x7a, 0x2e, 0x1c, 0xf7, 0xc6, 0x15,
-	0xd5, 0x8f, 0xdd, 0x49, 0xb7, 0xd8, 0xcb, 0x5e, 0xa2, 0x7a, 0x5f, 0xbd, 0x7a, 0xbf, 0xae, 0x57,
-	0x01, 0x1b, 0x8b, 0x9c, 0x95, 0xec, 0x58, 0xfc, 0xa2, 0x76, 0x9c, 0xc7, 0xd9, 0x79, 0x6c, 0xae,
-	0x83, 0x35, 0x3c, 0x5f, 0x94, 0xe7, 0xe6, 0x0c, 0xb4, 0xef, 0xd3, 0x38, 0xa1, 0x39, 0xea, 0x03,
-	0xfd, 0xc3, 0x34, 0x4b, 0xba, 0x5a, 0x5f, 0x3b, 0xda, 0xbe, 0xb7, 0x79, 0x2c, 0x35, 0x8f, 0xdf,
-	0x4d, 0xb3, 0x84, 0x88, 0x1d, 0x04, 0x41, 0xab, 0x48, 0x93, 0x6e, 0xb3, 0xaf, 0x1d, 0xe9, 0x84,
-	0x2f, 0x05, 0xa1, 0x1f, 0x75, 0x5b, 0x8a, 0xd0, 0x8f, 0xd0, 0x6d, 0xd0, 0x99, 0xb2, 0xf9, 0x62,
-	0x46, 0x4b, 0x9a, 0x74, 0xf5, 0xbe, 0x76, 0x64, 0x90, 0x4b, 0x60, 0x5a, 0xa0, 0x35, 0x98, 0x27,
-	0xe8, 0x8b, 0xa0, 0xfd, 0x54, 0x38, 0x15, 0xce, 0x36, 0xee, 0x6d, 0x57, 0xce, 0x64, 0x28, 0x44,
-	0xed, 0x22, 0x04, 0xf4, 0x47, 0x2c, 0x39, 0xef, 0x6e, 0xf4, 0xb5, 0xa3, 0x4d, 0x22, 0xd6, 0xdc,
-	0xc4, 0xa8, 0x78, 0xf2, 0x99, 0x4c, 0x30, 0xb0, 0xed, 0xb1, 0x84, 0x3a, 0xd9, 0x63, 0x76, 0x42,
-	0x4b, 0x1e, 0xd0, 0x9b, 0x2b, 0xb9, 0x1f, 0x56, 0xb6, 0x56, 0xb5, 0x96, 0x4a, 0x61, 0x7e, 0x19,
-	0xe8, 0x5c, 0x42, 0x3b, 0x60, 0xcb, 0xf3, 0x6d, 0x1c, 0x39, 0xde, 0xd0, 0x8f, 0xec, 0x53, 0x0f,
-	0x36, 0x56, 0x91, 0xe5, 0xba, 0x50, 0x33, 0x5f, 0x07, 0x37, 0x02, 0x5a, 0x14, 0x29, 0xcb, 0x06,
-	0x33, 0x56, 0x50, 0xee, 0x51, 0xd5, 0x52, 0xab, 0x6b, 0x69, 0xfe, 0xb7, 0x09, 0x3a, 0x84, 0xfe,
-	0x90, 0x4e, 0x45, 0x44, 0x5f, 0x05, 0xed, 0x9c, 0xc6, 0x05, 0xcb, 0x54, 0x4c, 0xdd, 0x2a, 0xa6,
-	0x5a, 0xe5, 0x98, 0x88, 0x7d, 0xa2, 0xf4, 0x50, 0x17, 0xac, 0xcf, 0x69, 0x51, 0xc4, 0x4f, 0xa8,
-	0xe8, 0x50, 0x87, 0x54, 0xa2, 0xf9, 0xbb, 0x26, 0x68, 0x4b, 0x65, 0xf4, 0x1a, 0xf8, 0x5c, 0xe4,
-	0x78, 0x0f, 0x2c, 0xd7, 0xb1, 0x23, 0x82, 0xbf, 0x8b, 0x07, 0xa1, 0xe3, 0x7b, 0x11, 0xc1, 0x56,
-	0xe0, 0xf3, 0xd8, 0xef, 0x80, 0xc3, 0x4b, 0x6a, 0xb9, 0x04, 0x5b, 0xf6, 0x69, 0x34, 0xf0, 0x3d,
-	0x0f, 0x0f, 0x42, 0x6c, 0x43, 0x0d, 0xbd, 0x0e, 0xee, 0x5c, 0x2a, 0x8c, 0x7d, 0x3b, 0x0a, 0x42,
-	0x2b, 0x9c, 0x04, 0x51, 0x70, 0xea, 0x0d, 0x22, 0x4c, 0x88, 0x4f, 0x60, 0x13, 0x7d, 0x01, 0xf4,
-	0x2f, 0x95, 0x44, 0x2d, 0xae, 0x6b, 0xb5, 0xae, 0x68, 0xe1, 0xf0, 0xa1, 0x4f, 0xde, 0x8d, 0x26,
-	0x63, 0xdb, 0x0a, 0x71, 0x34, 0xb4, 0x1c, 0x77, 0x42, 0x30, 0xd4, 0x51, 0x1f, 0xdc, 0xbe, 0xd4,
-	0x1a, 0x10, 0x6c, 0x63, 0x2f, 0x74, 0x2c, 0xb7, 0xd6, 0x58, 0x5b, 0x0d, 0xc9, 0xf1, 0x42, 0x4c,
-	0x3c, 0xcb, 0x8d, 0x02, 0x4c, 0x1e, 0x60, 0xa2, 0x9c, 0xb5, 0xd1, 0x21, 0xd8, 0x5f, 0x56, 0x92,
-	0x05, 0x18, 0x13, 0x3f, 0xf4, 0xe1, 0xba, 0xf9, 0xb3, 0x26, 0x80, 0x03, 0x96, 0x95, 0x71, 0x9a,
-	0xd1, 0xdc, 0x65, 0x4f, 0x0a, 0xde, 0x80, 0x7d, 0xb0, 0xbe, 0x60, 0x49, 0xf4, 0x4c, 0x35, 0xa9,
-	0x43, 0xda, 0x0b, 0x96, 0x4c, 0xd2, 0x44, 0x7e, 0xe1, 0x4a, 0x59, 0x55, 0xfa, 0x12, 0xa0, 0x3d,
-	0xd0, 0x7e, 0xcc, 0x66, 0x33, 0xf6, 0x5c, 0x5c, 0x0a, 0x83, 0x28, 0x89, 0x9f, 0x2a, 0xd3, 0x39,
-	0x2d, 0xca, 0x78, 0xbe, 0xa8, 0xee, 0x45, 0x0d, 0xd0, 0x2d, 0xb0, 0x56, 0xa4, 0xd9, 0x94, 0x76,
-	0xd7, 0x84, 0x3d, 0x29, 0xa0, 0xd7, 0x00, 0x28, 0xe3, 0x74, 0x16, 0xcd, 0xd2, 0x8c, 0x16, 0xdd,
-	0x76, 0x5f, 0x3b, 0x6a, 0x91, 0x0e, 0x27, 0x2e, 0x07, 0xe8, 0x0e, 0xd8, 0x78, 0x74, 0x5e, 0xd2,
-	0x22, 0x9a, 0xa5, 0xf3, 0xb4, 0xec, 0xae, 0x8b, 0x7d, 0x20, 0x90, 0xcb, 0x09, 0x3a, 0x00, 0xc6,
-	0x22, 0xa7, 0x67, 0x29, 0x7b, 0x56, 0x74, 0x0d, 0xe1, 0xb2, 0x96, 0xf9, 0xbd, 0x58, 0xc4, 0xe5,
-	0xd3, 0x6e, 0x47, 0x38, 0x14, 0x6b, 0xf3, 0x6f, 0x4d, 0xd0, 0xad, 0xeb, 0x80, 0x7f, 0x44, 0xa7,
-	0x7e, 0x6e, 0x95, 0x65, 0x3c, 0x7d, 0xfa, 0x19, 0xea, 0xc1, 0x33, 0x2b, 0x93, 0x34, 0x53, 0xe5,
-	0x90, 0x02, 0xaf, 0x52, 0x51, 0x26, 0xec, 0x59, 0xa9, 0x4a, 0xa1, 0x24, 0xc5, 0x69, 0x9e, 0x8b,
-	0x42, 0x48, 0x4e, 0xf3, 0x9c, 0xdf, 0x96, 0xb2, 0x3c, 0x17, 0x25, 0x30, 0x08, 0x5f, 0xf2, 0xaf,
-	0x7d, 0xca, 0xe6, 0xf3, 0x38, 0x4b, 0xba, 0xeb, 0xfd, 0x16, 0xff, 0xda, 0x95, 0x88, 0xde, 0x06,
-	0x3a, 0xcd, 0xce, 0x78, 0xc6, 0xad, 0xa3, 0x8d, 0x7b, 0x77, 0xab, 0x7b, 0xf3, 0xff, 0x12, 0x3b,
-	0xc6, 0xd9, 0x59, 0x81, 0xb3, 0x32, 0x3f, 0x27, 0xe2, 0xdc, 0xc1, 0x37, 0x40, 0xa7, 0x46, 0xdc,
-	0xf1, 0x87, 0xf4, 0x5c, 0x65, 0xcc, 0x97, 0x3c, 0xa1, 0xb3, 0x78, 0xf6, 0xac, 0xba, 0x64, 0x52,
-	0xf8, 0x56, 0xf3, 0x9b, 0x9a, 0xf9, 0x01, 0xd8, 0x19, 0xb3, 0x64, 0xcc, 0xf2, 0x72, 0xc8, 0xf2,
-	0xe7, 0x71, 0x9e, 0x7c, 0x6a, 0xd9, 0x78, 0x03, 0x58, 0x5e, 0x0a, 0x33, 0x6b, 0x44, 0xac, 0x65,
-	0xc3, 0x58, 0xc9, 0xa6, 0x6c, 0x26, 0xea, 0xd5, 0x21, 0xb5, 0x6c, 0xda, 0xe0, 0xa0, 0x4e, 0x21,
-	0xa4, 0xf9, 0x3c, 0xcd, 0xe2, 0x19, 0xa1, 0x45, 0xfa, 0x63, 0x31, 0x4e, 0x10, 0xd0, 0xa7, 0x6c,
-	0x56, 0x08, 0x1f, 0x5b, 0x44, 0xac, 0x39, 0xcb, 0xd9, 0xf3, 0x42, 0x78, 0xd8, 0x22, 0x62, 0x6d,
-	0xfe, 0x4b, 0x03, 0x06, 0xce, 0x73, 0x96, 0xf3, 0x19, 0xfa, 0xc6, 0xca, 0xd4, 0xdb, 0xad, 0x2a,
-	0x55, 0xed, 0x2f, 0x8f, 0xfe, 0x3e, 0xd8, 0x48, 0x68, 0x31, 0xcd, 0xd3, 0x45, 0x99, 0xb2, 0x4c,
-	0xe5, 0xbe, 0x8c, 0x64, 0x04, 0x09, 0x15, 0x71, 0xb7, 0x88, 0x58, 0x9b, 0xa9, 0x9a, 0x92, 0xdb,
-	0x00, 0x60, 0x42, 0xa2, 0x81, 0x3f, 0x1a, 0xf9, 0x6a, 0x44, 0x72, 0xd9, 0xf3, 0xc3, 0x68, 0xe8,
-	0x4f, 0x3c, 0x3e, 0x58, 0xf6, 0x00, 0xe2, 0xa8, 0x9a, 0x39, 0xf8, 0x3d, 0x27, 0x08, 0x03, 0xd8,
-	0x44, 0xbb, 0x60, 0xa7, 0x52, 0x0d, 0x26, 0xe3, 0xb1, 0x4f, 0xf8, 0x1c, 0x6a, 0xa1, 0x1b, 0x60,
-	0x83, 0xe3, 0xd0, 0x19, 0x61, 0x7f, 0x12, 0x42, 0xdd, 0xfc, 0x95, 0x06, 0x8c, 0xa0, 0x8c, 0x4b,
-	0xfa, 0x29, 0x89, 0x55, 0xfb, 0xcb, 0x89, 0x1d, 0x82, 0x4e, 0x42, 0xcf, 0xd2, 0x29, 0x8d, 0xd4,
-	0xcb, 0xd6, 0x21, 0x86, 0x04, 0x4e, 0x62, 0xbe, 0xa3, 0xe2, 0x47, 0x60, 0xbb, 0x1e, 0x1a, 0x7c,
-	0x94, 0x61, 0xd8, 0x40, 0x10, 0x6c, 0x8a, 0x65, 0xe4, 0x7b, 0xae, 0xe3, 0x61, 0xa8, 0xf1, 0xac,
-	0x14, 0x19, 0x0e, 0x05, 0x6a, 0xde, 0xfd, 0x6d, 0x47, 0x59, 0xe8, 0x80, 0x35, 0x3c, 0x1a, 0x87,
-	0xa7, 0xb0, 0x81, 0x6e, 0x01, 0x38, 0x0a, 0x4e, 0x22, 0xdb, 0x0a, 0xad, 0xc8, 0xc6, 0x43, 0x6b,
-	0xe2, 0x86, 0x50, 0x43, 0x37, 0xc1, 0x8d, 0x9a, 0x06, 0xa1, 0xcd, 0x93, 0xd2, 0x56, 0x54, 0x47,
-	0x38, 0x24, 0xce, 0x20, 0xb8, 0xae, 0x8a, 0x09, 0x91, 0x75, 0x1a, 0x8c, 0x6c, 0x09, 0x27, 0xe3,
-	0x20, 0x24, 0xd8, 0x1a, 0xc1, 0x16, 0xaf, 0x3c, 0xc7, 0x72, 0xf6, 0x41, 0x50, 0xa9, 0x05, 0x38,
-	0x08, 0xc4, 0x40, 0x75, 0xfd, 0x00, 0xc3, 0x0d, 0xee, 0x88, 0x63, 0x3e, 0xd0, 0x07, 0x21, 0x89,
-	0xf0, 0x7b, 0x78, 0x00, 0x37, 0x79, 0x4f, 0x96, 0xa9, 0x15, 0x86, 0xd6, 0xe0, 0x3e, 0xdc, 0xba,
-	0xaa, 0xed, 0xfa, 0x27, 0x01, 0xdc, 0x46, 0x07, 0x60, 0x6f, 0x99, 0x86, 0xe1, 0x69, 0x44, 0x70,
-	0xe0, 0xbc, 0x8f, 0xe1, 0x0d, 0xd4, 0x05, 0xb7, 0xaa, 0x3d, 0xde, 0xc2, 0x68, 0xe8, 0x93, 0x87,
-	0x16, 0xb1, 0x21, 0xac, 0x02, 0xba, 0x7c, 0x31, 0x4f, 0x70, 0x08, 0x77, 0x2a, 0xd7, 0x2a, 0x69,
-	0xfe, 0x04, 0x0d, 0x9d, 0x13, 0xb8, 0x8b, 0xf6, 0xc1, 0xcd, 0x55, 0xee, 0xba, 0x3c, 0xb1, 0x3d,
-	0x5e, 0x14, 0xbe, 0xc1, 0x5f, 0x88, 0x08, 0x7b, 0x01, 0x7f, 0x1a, 0xee, 0xf0, 0xbe, 0x71, 0xe8,
-	0x8c, 0xac, 0x13, 0x1c, 0xb9, 0x4e, 0x10, 0xc2, 0x37, 0xaa, 0xe0, 0x25, 0x53, 0x9a, 0x77, 0x57,
-	0xa9, 0x8d, 0x5d, 0x1c, 0x62, 0xf8, 0xa5, 0x8a, 0x06, 0xa1, 0x4f, 0x6a, 0x0b, 0x6f, 0x55, 0xb1,
-	0x55, 0x54, 0xd9, 0xf8, 0xda, 0x55, 0xae, 0xac, 0x7c, 0x9d, 0x7f, 0x29, 0x55, 0xf2, 0xc2, 0xc2,
-	0xb7, 0xab, 0xb8, 0x38, 0x51, 0xa7, 0xdf, 0x5e, 0x66, 0xea, 0xe4, 0x3b, 0x55, 0x52, 0x36, 0x7e,
-	0xe0, 0x0c, 0x94, 0xfb, 0x93, 0xba, 0xd3, 0x12, 0xaa, 0xf3, 0xf7, 0xaf, 0x60, 0x65, 0xc2, 0xa9,
-	0x52, 0xe0, 0x1d, 0xf1, 0x70, 0x28, 0x6d, 0x7c, 0xaf, 0x0a, 0xb5, 0xa2, 0xca, 0x08, 0xa9, 0x42,
-	0xad, 0x35, 0xbf, 0x5f, 0x85, 0xb5, 0xa4, 0xf5, 0xc1, 0x32, 0x53, 0x7e, 0x7e, 0x80, 0x36, 0x81,
-	0x21, 0x3e, 0x4a, 0xdf, 0xc3, 0x30, 0x41, 0x5b, 0xa0, 0xc3, 0x25, 0x79, 0x57, 0x68, 0x25, 0xca,
-	0xc7, 0xf8, 0x71, 0xf5, 0x01, 0x2f, 0xfd, 0x33, 0x80, 0x0c, 0xdd, 0x92, 0x50, 0x34, 0x50, 0xc1,
-	0x9f, 0x6a, 0x68, 0x57, 0xde, 0x00, 0xd9, 0x17, 0x85, 0x7f, 0xae, 0xa1, 0x03, 0xb0, 0x7b, 0x15,
-	0xcb, 0x80, 0x7f, 0xa1, 0xa1, 0x7d, 0x80, 0xa4, 0x6f, 0xd9, 0x06, 0x75, 0xe8, 0xd7, 0x1a, 0xba,
-	0x0d, 0xf6, 0xaf, 0x6f, 0xc8, 0x63, 0xbf, 0xe1, 0xb7, 0x6a, 0x9b, 0xef, 0x5e, 0xfe, 0xa7, 0x81,
-	0xbf, 0xd7, 0x50, 0x17, 0xdc, 0x5c, 0x85, 0x52, 0xfd, 0x0f, 0x7c, 0x5e, 0xed, 0x88, 0x7c, 0x65,
-	0xb9, 0xd5, 0x89, 0x3f, 0x69, 0xe8, 0x10, 0xec, 0x5d, 0xe3, 0xf2, 0xd0, 0x9f, 0xeb, 0xd0, 0xaa,
-	0xb2, 0xab, 0x53, 0x7f, 0xa9, 0x43, 0x5b, 0xdd, 0x90, 0xc7, 0xfe, 0x5a, 0x87, 0xb6, 0x74, 0xe4,
-	0xef, 0x75, 0x68, 0x57, 0xd5, 0xff, 0xa1, 0x1d, 0x34, 0xa1, 0x66, 0xea, 0x86, 0x0e, 0x75, 0x53,
-	0x37, 0xd6, 0xe0, 0x9a, 0xa9, 0x1b, 0x6d, 0xd8, 0x36, 0x75, 0x63, 0x1d, 0xae, 0x9b, 0xba, 0x61,
-	0x40, 0xc3, 0xd4, 0x8d, 0x0e, 0xec, 0x7c, 0xe7, 0xe1, 0x8b, 0x97, 0xbd, 0xc6, 0xc7, 0x2f, 0x7b,
-	0x8d, 0x4f, 0x5e, 0xf6, 0xb4, 0x9f, 0x5c, 0xf4, 0xb4, 0x3f, 0x5e, 0xf4, 0xb4, 0x7f, 0x5e, 0xf4,
-	0xb4, 0x17, 0x17, 0x3d, 0xed, 0xdf, 0x17, 0x3d, 0xed, 0x3f, 0x17, 0xbd, 0xc6, 0x27, 0x17, 0x3d,
-	0xed, 0x97, 0xaf, 0x7a, 0x8d, 0x17, 0xaf, 0x7a, 0x8d, 0x8f, 0x5f, 0xf5, 0x1a, 0xef, 0x7f, 0x3e,
-	0xce, 0x9f, 0xc6, 0xe5, 0x71, 0x42, 0xcf, 0xde, 0x94, 0x63, 0xf5, 0x2b, 0xe2, 0x89, 0x52, 0xc2,
-	0x13, 0xb6, 0x78, 0xf4, 0xa8, 0x2d, 0xc8, 0x5b, 0xff, 0x0b, 0x00, 0x00, 0xff, 0xff, 0xaf, 0x45,
-	0xd9, 0x30, 0x7a, 0x0c, 0x00, 0x00,
+	// 1469 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x96, 0x4d, 0x73, 0xd3, 0x46,
+	0x1f, 0xc0, 0xad, 0xd8, 0xf1, 0xcb, 0x3a, 0x2f, 0xcb, 0x42, 0x12, 0x93, 0x3c, 0x38, 0xc1, 0x5c,
+	0x42, 0x9e, 0xe7, 0x09, 0x33, 0xbc, 0x4c, 0x3b, 0xed, 0x00, 0xa3, 0x4a, 0x6b, 0x47, 0x20, 0x4b,
+	0x61, 0x25, 0x07, 0xc2, 0x45, 0xa3, 0x58, 0x4b, 0x50, 0xb1, 0x25, 0x23, 0x29, 0xa1, 0xee, 0x89,
+	0x8f, 0xd0, 0x69, 0xbf, 0x44, 0xa7, 0x9f, 0xa0, 0x1f, 0xa1, 0x47, 0x4e, 0x1d, 0x8e, 0x25, 0x5c,
+	0x7a, 0xe4, 0x03, 0x70, 0xe8, 0xec, 0x6a, 0xd7, 0x89, 0xc3, 0x94, 0x4b, 0xa7, 0x17, 0xcf, 0xfe,
+	0x7f, 0xfb, 0xdf, 0xff, 0xfb, 0xae, 0x0c, 0xea, 0xa3, 0x24, 0xce, 0xe2, 0x6d, 0xfe, 0x8b, 0xca,
+	0x7e, 0xe2, 0x47, 0x63, 0xbf, 0x55, 0x01, 0xb3, 0x78, 0x38, 0xca, 0xc6, 0xad, 0xd7, 0x0a, 0x28,
+	0x6a, 0xc3, 0x00, 0x5d, 0x03, 0xa5, 0x17, 0x61, 0x14, 0x34, 0x94, 0x0d, 0x65, 0x73, 0xe1, 0xe6,
+	0xe2, 0x76, 0xae, 0xb7, 0xad, 0x0d, 0x03, 0x77, 0x3c, 0xa2, 0x84, 0x6f, 0x22, 0x08, 0x8a, 0x69,
+	0x18, 0x34, 0x66, 0x36, 0x94, 0xcd, 0x12, 0x61, 0x4b, 0x4e, 0xe8, 0xcb, 0x46, 0x51, 0x10, 0xfa,
+	0x12, 0xfd, 0x07, 0xd4, 0xfa, 0xf1, 0x70, 0x34, 0xa0, 0x19, 0x0d, 0x1a, 0xa5, 0x0d, 0x65, 0xb3,
+	0x4a, 0x4e, 0x01, 0x42, 0xa0, 0x74, 0x10, 0x07, 0xe3, 0x46, 0x7d, 0x43, 0xd9, 0x9c, 0x23, 0x7c,
+	0xcd, 0x43, 0xe8, 0xa6, 0x87, 0x7f, 0x17, 0x42, 0x37, 0x3d, 0xfc, 0xd7, 0x43, 0x88, 0xc1, 0x82,
+	0x15, 0x07, 0xd4, 0x88, 0x9e, 0xc5, 0x1d, 0x9a, 0xb1, 0x7a, 0xdc, 0x98, 0x0a, 0x66, 0x4d, 0x06,
+	0x33, 0xad, 0xb5, 0xfd, 0x30, 0x8c, 0x82, 0x3c, 0xb0, 0xd6, 0xff, 0x40, 0x89, 0x49, 0xe8, 0x02,
+	0x98, 0xb7, 0x6c, 0x1d, 0x7b, 0x86, 0xd5, 0xb6, 0x3d, 0x7d, 0xdf, 0x82, 0x85, 0x69, 0xa4, 0x9a,
+	0x26, 0x54, 0x5a, 0xd7, 0xc0, 0xa2, 0x43, 0xd3, 0x34, 0x8c, 0x23, 0x6d, 0x10, 0xa7, 0x94, 0x79,
+	0x14, 0x99, 0x29, 0x93, 0xcc, 0x5a, 0x7b, 0xa0, 0x46, 0xe8, 0xb7, 0xb4, 0x2f, 0x02, 0x2a, 0x27,
+	0xd4, 0x4f, 0xe3, 0x48, 0x84, 0xb4, 0x22, 0x43, 0xca, 0x55, 0xc2, 0x38, 0x22, 0x7c, 0x9b, 0x08,
+	0x35, 0xd4, 0x00, 0x95, 0x21, 0x4d, 0x53, 0xff, 0x90, 0xf2, 0x6a, 0xd5, 0x88, 0x14, 0x5b, 0x1f,
+	0x15, 0x50, 0x31, 0xe3, 0xc3, 0x94, 0x99, 0x5d, 0x01, 0x95, 0x51, 0x1c, 0x78, 0x47, 0xc2, 0x73,
+	0x8d, 0x94, 0x47, 0x71, 0xd0, 0x0b, 0x83, 0xbc, 0x88, 0x51, 0xe6, 0x87, 0x11, 0x4d, 0x84, 0x81,
+	0x53, 0x80, 0x96, 0x41, 0xf9, 0x59, 0x3c, 0x18, 0xc4, 0xaf, 0x78, 0xdd, 0xab, 0x44, 0x48, 0xec,
+	0x54, 0x16, 0x0e, 0x69, 0x9a, 0xf9, 0xc3, 0x91, 0x2c, 0xfd, 0x04, 0xa0, 0x4b, 0x60, 0x36, 0x0d,
+	0xa3, 0x3e, 0x6d, 0xcc, 0x72, 0x7b, 0xb9, 0x80, 0xae, 0x00, 0x90, 0xf9, 0xe1, 0xc0, 0x1b, 0x84,
+	0x11, 0x4d, 0x1b, 0xe5, 0x0d, 0x65, 0xb3, 0x48, 0x6a, 0x8c, 0x98, 0x0c, 0xa0, 0x75, 0x50, 0x3f,
+	0x18, 0x67, 0x34, 0xf5, 0x06, 0xe1, 0x30, 0xcc, 0x1a, 0x15, 0xbe, 0x0f, 0x38, 0x32, 0x19, 0x41,
+	0xab, 0xa0, 0x3a, 0x4a, 0xe8, 0x71, 0x18, 0x1f, 0xa5, 0x8d, 0x2a, 0x77, 0x39, 0x91, 0x59, 0xb3,
+	0x47, 0x7e, 0xf6, 0xbc, 0x51, 0xe3, 0x0e, 0xf9, 0xba, 0xf5, 0xcb, 0x0c, 0x58, 0xc4, 0xdf, 0xd1,
+	0xbe, 0x9d, 0xa8, 0x59, 0xe6, 0xf7, 0x9f, 0xff, 0x83, 0x32, 0xb0, 0x84, 0xb2, 0x20, 0x8c, 0x44,
+	0x15, 0x72, 0x81, 0x15, 0x27, 0xcd, 0x82, 0xf8, 0x28, 0x13, 0x15, 0x10, 0x92, 0xe0, 0x34, 0x49,
+	0x78, 0xfe, 0x39, 0xa7, 0x49, 0xc2, 0x3a, 0x9f, 0x65, 0x63, 0x9e, 0x79, 0x95, 0xb0, 0x25, 0xeb,
+	0x5d, 0x3f, 0x1e, 0x0e, 0xfd, 0x28, 0x68, 0x54, 0x36, 0x8a, 0xac, 0x77, 0x42, 0x44, 0x77, 0x40,
+	0x89, 0x46, 0xc7, 0x2c, 0xd1, 0xe2, 0x66, 0xfd, 0xe6, 0x55, 0x39, 0x04, 0xe7, 0xf2, 0xd9, 0xc6,
+	0xd1, 0x71, 0x8a, 0xa3, 0x2c, 0x19, 0x13, 0xae, 0xbe, 0xfa, 0x05, 0xa8, 0x4d, 0x10, 0xf3, 0xf7,
+	0x82, 0x8e, 0x45, 0xa2, 0x6c, 0xc9, 0xf2, 0x38, 0xf6, 0x07, 0x47, 0x72, 0x52, 0x72, 0xe1, 0xab,
+	0x99, 0x2f, 0x95, 0xd6, 0x3e, 0x58, 0xd8, 0x8d, 0x93, 0xac, 0x1d, 0x27, 0xaf, 0xfc, 0x24, 0xf8,
+	0x6c, 0xa9, 0x58, 0xad, 0xe3, 0x24, 0xe3, 0x36, 0x66, 0x09, 0x5f, 0xe7, 0xbd, 0x89, 0xb3, 0xb8,
+	0x1f, 0x0f, 0x78, 0x8d, 0x6a, 0x64, 0x22, 0xb7, 0xbe, 0x06, 0x17, 0x5c, 0x9a, 0x0c, 0xc3, 0xc8,
+	0x1f, 0x10, 0x9a, 0x86, 0xdf, 0xf3, 0x5b, 0x80, 0x40, 0xa9, 0x1f, 0x0f, 0x52, 0x6e, 0x7a, 0x9e,
+	0xf0, 0x35, 0x63, 0x49, 0xfc, 0x2a, 0xe5, 0x86, 0xe7, 0x09, 0x5f, 0xb7, 0x7e, 0x57, 0x40, 0x15,
+	0x27, 0x49, 0x9c, 0xb0, 0x97, 0xe3, 0xfa, 0xd4, 0x65, 0x5d, 0x9a, 0x14, 0x45, 0xec, 0x9f, 0xb9,
+	0xa6, 0x68, 0x03, 0xd4, 0x03, 0x9a, 0xf6, 0x93, 0x70, 0xc4, 0xae, 0x8c, 0xc8, 0xf7, 0x2c, 0xca,
+	0x23, 0x08, 0x28, 0x0f, 0xb7, 0x48, 0xf8, 0xba, 0x15, 0x8a, 0xcb, 0xbd, 0x00, 0x00, 0x26, 0xc4,
+	0xd3, 0xec, 0x6e, 0xd7, 0x16, 0x37, 0x9b, 0xc9, 0x96, 0xed, 0x7a, 0x6d, 0xbb, 0x67, 0xe9, 0x50,
+	0x41, 0xcb, 0x00, 0x31, 0xa4, 0x9a, 0x04, 0xab, 0xfa, 0xbe, 0x87, 0x9f, 0x18, 0x8e, 0xeb, 0xc0,
+	0x19, 0xb4, 0x04, 0x2e, 0x48, 0x55, 0xa7, 0xb7, 0xbb, 0x6b, 0x13, 0x17, 0xeb, 0xb0, 0x88, 0x16,
+	0x41, 0x9d, 0x61, 0xd7, 0xe8, 0x62, 0xbb, 0xe7, 0xc2, 0x52, 0xeb, 0x27, 0x05, 0x54, 0x9d, 0xcc,
+	0xcf, 0xe8, 0x67, 0x12, 0x93, 0xfb, 0x67, 0x13, 0x5b, 0x03, 0xb5, 0x80, 0x1e, 0x87, 0x7d, 0xea,
+	0x89, 0xe7, 0xb1, 0x46, 0xaa, 0x39, 0x30, 0x82, 0xd6, 0x7d, 0x11, 0x3f, 0x02, 0x0b, 0x9e, 0x61,
+	0xed, 0xa9, 0xa6, 0xa1, 0x7b, 0x8e, 0xab, 0xba, 0x18, 0x16, 0x10, 0x04, 0x73, 0x7c, 0xe9, 0xd9,
+	0x96, 0x69, 0x58, 0x18, 0x2a, 0x2c, 0x2b, 0x41, 0xda, 0x6d, 0x8e, 0x66, 0xb6, 0x7e, 0x9c, 0x05,
+	0x15, 0xf1, 0x2d, 0x60, 0x99, 0x68, 0x5d, 0xdd, 0xd3, 0x55, 0x57, 0xf5, 0x7a, 0xbb, 0x8e, 0x4b,
+	0xb0, 0xda, 0x85, 0x05, 0x89, 0x1d, 0xec, 0x38, 0x86, 0x6d, 0x79, 0x9a, 0x69, 0x3b, 0x18, 0xce,
+	0xb2, 0x92, 0x31, 0x4c, 0xf0, 0x03, 0xac, 0xb9, 0xb0, 0x2c, 0xd5, 0x4e, 0x1f, 0xc4, 0x0e, 0x76,
+	0x61, 0x1d, 0xcd, 0x81, 0x2a, 0xc3, 0xf8, 0x09, 0xd6, 0xe0, 0x9c, 0x3c, 0xa4, 0xba, 0xae, 0xaa,
+	0xed, 0xc0, 0x79, 0xb9, 0x6b, 0xda, 0x1d, 0x07, 0x2e, 0xb0, 0x2c, 0x98, 0xe4, 0xba, 0xfb, 0x1e,
+	0xc1, 0x8e, 0xf1, 0x14, 0xc3, 0x45, 0x74, 0x09, 0x40, 0xc6, 0x58, 0x5d, 0xbd, 0xb6, 0x4d, 0x1e,
+	0xab, 0x44, 0x87, 0x90, 0x35, 0x83, 0xd1, 0x2e, 0x76, 0x89, 0xa1, 0x39, 0x9e, 0x66, 0x5b, 0x6d,
+	0xa3, 0x03, 0x97, 0xd0, 0x0a, 0xb8, 0x38, 0xcd, 0x4d, 0x93, 0x45, 0xb7, 0x8c, 0x2e, 0x82, 0x45,
+	0xb6, 0xa1, 0x11, 0xac, 0x7b, 0xd8, 0x72, 0x7a, 0x04, 0xc3, 0x75, 0xe9, 0xcf, 0xe8, 0xaa, 0x1d,
+	0xec, 0x99, 0x86, 0xe3, 0xc2, 0xeb, 0xd2, 0x5f, 0xce, 0x84, 0xe6, 0xd6, 0x34, 0xd5, 0xb1, 0x89,
+	0x5d, 0x0c, 0xff, 0x2b, 0xa9, 0xe3, 0xda, 0x64, 0x62, 0xe1, 0x96, 0x8c, 0x4d, 0x52, 0x61, 0xe3,
+	0xf6, 0x79, 0x2e, 0xac, 0xdc, 0x61, 0x7d, 0xca, 0x33, 0xd4, 0x73, 0x0b, 0x77, 0x65, 0x5c, 0x8c,
+	0x88, 0xd3, 0xf7, 0xce, 0x32, 0x71, 0xf2, 0xbe, 0x4c, 0x4a, 0xc7, 0x7b, 0x86, 0x26, 0xdc, 0x77,
+	0x26, 0x5d, 0xcc, 0xa1, 0x38, 0xbf, 0x73, 0x0e, 0x0b, 0x13, 0x86, 0x0c, 0x4a, 0x60, 0x7b, 0x17,
+	0x13, 0x36, 0x3c, 0x0f, 0x50, 0x13, 0xac, 0x9e, 0xe1, 0xa2, 0x8e, 0xb2, 0xae, 0xf0, 0xa1, 0x4c,
+	0x5d, 0x73, 0x89, 0x67, 0x61, 0x37, 0xf7, 0xfd, 0x48, 0x5a, 0x93, 0x54, 0x38, 0x27, 0xe7, 0xb9,
+	0xf0, 0xee, 0xc8, 0xa0, 0x76, 0x6c, 0xc7, 0x3d, 0x35, 0xe3, 0x6e, 0x7d, 0x2c, 0x82, 0x8a, 0xf8,
+	0x77, 0xc0, 0x26, 0xa4, 0xeb, 0x74, 0xf8, 0x50, 0xc2, 0x02, 0x73, 0x2b, 0x25, 0x4f, 0xc7, 0x6d,
+	0xb5, 0x67, 0xba, 0xb0, 0xc0, 0xea, 0x30, 0xa1, 0x8e, 0xab, 0xb3, 0xfb, 0x36, 0xad, 0x2a, 0xe3,
+	0xfe, 0x44, 0x15, 0x13, 0x02, 0x95, 0x89, 0x0f, 0xdb, 0x62, 0x83, 0x3d, 0x0f, 0x6a, 0x4c, 0xca,
+	0xaf, 0x51, 0x59, 0x8a, 0x98, 0x10, 0x9b, 0xc0, 0x8a, 0x34, 0xc0, 0xc7, 0x9c, 0xa9, 0xf4, 0x1c,
+	0x58, 0x97, 0x90, 0x4f, 0x97, 0x80, 0xeb, 0x32, 0x80, 0x7c, 0x66, 0x04, 0xbd, 0x8e, 0x2e, 0x83,
+	0xa5, 0xf3, 0x34, 0x4f, 0x7b, 0x8b, 0x55, 0x29, 0x77, 0x9c, 0x0f, 0x88, 0x38, 0x72, 0x0b, 0xad,
+	0x81, 0x95, 0x4f, 0x79, 0x7e, 0xe8, 0x36, 0x9b, 0x0b, 0xb6, 0xc9, 0xe6, 0x42, 0x1c, 0xb8, 0xcb,
+	0x6e, 0xc1, 0x34, 0xcb, 0x95, 0xef, 0xb1, 0x7a, 0xf3, 0x44, 0xf3, 0xae, 0x0a, 0xfd, 0x0e, 0x5a,
+	0x05, 0xcb, 0x9f, 0xe0, 0xfc, 0xc8, 0x0e, 0x5a, 0x07, 0x6b, 0x67, 0xf6, 0xf2, 0x01, 0x61, 0xcf,
+	0x00, 0xc1, 0x0e, 0x2b, 0xbe, 0x21, 0xa3, 0x96, 0xbd, 0x15, 0x46, 0x1f, 0xc9, 0xa8, 0xa7, 0x79,
+	0x6e, 0x95, 0xc8, 0x08, 0x27, 0x8d, 0x17, 0xa7, 0x9c, 0xd5, 0x19, 0xa8, 0x6c, 0xfd, 0xaa, 0x80,
+	0xc5, 0x73, 0x7f, 0x7e, 0xd0, 0x15, 0x70, 0x79, 0xf2, 0xc0, 0xe5, 0x4f, 0x4e, 0x1e, 0x84, 0xea,
+	0xf0, 0xf7, 0x7a, 0x0d, 0xac, 0x9c, 0x52, 0xa9, 0xb7, 0x4b, 0x6c, 0xd7, 0x86, 0x0a, 0x4b, 0xe1,
+	0x74, 0x53, 0xbe, 0xdf, 0x9a, 0x6d, 0x59, 0x58, 0x63, 0x6f, 0xf5, 0x0c, 0xba, 0x06, 0xd6, 0xcf,
+	0x9e, 0x36, 0x5c, 0x43, 0x35, 0x3d, 0x6d, 0x07, 0x6b, 0x0f, 0xbd, 0xb6, 0x6a, 0x98, 0x6c, 0x86,
+	0x8b, 0xe7, 0x95, 0x5c, 0x4c, 0x2c, 0xd5, 0xf4, 0x1c, 0x4c, 0xf6, 0x30, 0x11, 0xd3, 0x51, 0xfa,
+	0xe6, 0xf1, 0x9b, 0x77, 0xcd, 0xc2, 0xdb, 0x77, 0xcd, 0xc2, 0x87, 0x77, 0x4d, 0xe5, 0xf5, 0x49,
+	0x53, 0xf9, 0xf9, 0xa4, 0xa9, 0xfc, 0x76, 0xd2, 0x54, 0xde, 0x9c, 0x34, 0x95, 0x3f, 0x4e, 0x9a,
+	0xca, 0x9f, 0x27, 0xcd, 0xc2, 0x87, 0x93, 0xa6, 0xf2, 0xc3, 0xfb, 0x66, 0xe1, 0xcd, 0xfb, 0x66,
+	0xe1, 0xed, 0xfb, 0x66, 0xe1, 0xe9, 0x55, 0x3f, 0x79, 0xee, 0x67, 0xdb, 0x01, 0x3d, 0xbe, 0x91,
+	0x7f, 0x08, 0xfe, 0xcf, 0xbf, 0xa5, 0x42, 0x38, 0x8c, 0x47, 0x07, 0x07, 0x65, 0x4e, 0x6e, 0xfd,
+	0x15, 0x00, 0x00, 0xff, 0xff, 0x1c, 0xe0, 0x1d, 0x8d, 0xf5, 0x0b, 0x00, 0x00,
 }
 
-func (x Kind) String() string {
-	s, ok := Kind_name[int32(x)]
+func (x CmdType) String() string {
+	s, ok := CmdType_name[int32(x)]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(x))
+}
+func (x MsgType) String() string {
+	s, ok := MsgType_name[int32(x)]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(x))
+}
+func (x RejectionReason) String() string {
+	s, ok := RejectionReason_name[int32(x)]
 	if ok {
 		return s
 	}
@@ -1255,13 +1257,6 @@ func (x Kind) String() string {
 }
 func (x NodeInfoGetCmd_Kind) String() string {
 	s, ok := NodeInfoGetCmd_Kind_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (x RejectCmd_Reason) String() string {
-	s, ok := RejectCmd_Reason_name[int32(x)]
 	if ok {
 		return s
 	}
@@ -1302,14 +1297,14 @@ func (this *Empty) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Header) Equal(that interface{}) bool {
+func (this *Cmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Header)
+	that1, ok := that.(*Cmd)
 	if !ok {
-		that2, ok := that.(Header)
+		that2, ok := that.(Cmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1331,30 +1326,6 @@ func (this *Header) Equal(that interface{}) bool {
 		return false
 	}
 	if this.Completed != that1.Completed {
-		return false
-	}
-	return true
-}
-func (this *Cmd) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Cmd)
-	if !ok {
-		that2, ok := that.(Cmd)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Header.Equal(that1.Header) {
 		return false
 	}
 	if !bytes.Equal(this.Body, that1.Body) {
@@ -1381,7 +1352,16 @@ func (this *Msg) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !this.Header.Equal(that1.Header) {
+	if this.Kind != that1.Kind {
+		return false
+	}
+	if this.Sid != that1.Sid {
+		return false
+	}
+	if this.Seq != that1.Seq {
+		return false
+	}
+	if this.Completed != that1.Completed {
 		return false
 	}
 	if !bytes.Equal(this.Body, that1.Body) {
@@ -1464,14 +1444,14 @@ func (this *RejectCmd) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *ContainerLogsCmd) Equal(that interface{}) bool {
+func (this *LogsCmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*ContainerLogsCmd)
+	that1, ok := that.(*LogsCmd)
 	if !ok {
-		that2, ok := that.(ContainerLogsCmd)
+		that2, ok := that.(LogsCmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1512,14 +1492,14 @@ func (this *ContainerLogsCmd) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *ContainerExecOrAttachCmd) Equal(that interface{}) bool {
+func (this *ExecOrAttachCmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*ContainerExecOrAttachCmd)
+	that1, ok := that.(*ExecOrAttachCmd)
 	if !ok {
-		that2, ok := that.(ContainerExecOrAttachCmd)
+		that2, ok := that.(ExecOrAttachCmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1567,14 +1547,14 @@ func (this *ContainerExecOrAttachCmd) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *PodPortForwardCmd) Equal(that interface{}) bool {
+func (this *PortForwardCmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*PodPortForwardCmd)
+	that1, ok := that.(*PortForwardCmd)
 	if !ok {
-		that2, ok := that.(PodPortForwardCmd)
+		that2, ok := that.(PortForwardCmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1597,14 +1577,14 @@ func (this *PodPortForwardCmd) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *ContainerTerminalResizeCmd) Equal(that interface{}) bool {
+func (this *TerminalResizeCmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*ContainerTerminalResizeCmd)
+	that1, ok := that.(*TerminalResizeCmd)
 	if !ok {
-		that2, ok := that.(ContainerTerminalResizeCmd)
+		that2, ok := that.(TerminalResizeCmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1690,28 +1670,16 @@ func (this *Empty) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Header) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&aranyagopb.Header{")
-	s = append(s, "Kind: "+fmt.Sprintf("%#v", this.Kind)+",\n")
-	s = append(s, "Sid: "+fmt.Sprintf("%#v", this.Sid)+",\n")
-	s = append(s, "Seq: "+fmt.Sprintf("%#v", this.Seq)+",\n")
-	s = append(s, "Completed: "+fmt.Sprintf("%#v", this.Completed)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
 func (this *Cmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 6)
+	s := make([]string, 0, 9)
 	s = append(s, "&aranyagopb.Cmd{")
-	if this.Header != nil {
-		s = append(s, "Header: "+fmt.Sprintf("%#v", this.Header)+",\n")
-	}
+	s = append(s, "Kind: "+fmt.Sprintf("%#v", this.Kind)+",\n")
+	s = append(s, "Sid: "+fmt.Sprintf("%#v", this.Sid)+",\n")
+	s = append(s, "Seq: "+fmt.Sprintf("%#v", this.Seq)+",\n")
+	s = append(s, "Completed: "+fmt.Sprintf("%#v", this.Completed)+",\n")
 	s = append(s, "Body: "+fmt.Sprintf("%#v", this.Body)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -1720,11 +1688,12 @@ func (this *Msg) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 6)
+	s := make([]string, 0, 9)
 	s = append(s, "&aranyagopb.Msg{")
-	if this.Header != nil {
-		s = append(s, "Header: "+fmt.Sprintf("%#v", this.Header)+",\n")
-	}
+	s = append(s, "Kind: "+fmt.Sprintf("%#v", this.Kind)+",\n")
+	s = append(s, "Sid: "+fmt.Sprintf("%#v", this.Sid)+",\n")
+	s = append(s, "Seq: "+fmt.Sprintf("%#v", this.Seq)+",\n")
+	s = append(s, "Completed: "+fmt.Sprintf("%#v", this.Completed)+",\n")
 	s = append(s, "Body: "+fmt.Sprintf("%#v", this.Body)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -1760,12 +1729,12 @@ func (this *RejectCmd) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *ContainerLogsCmd) GoString() string {
+func (this *LogsCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 13)
-	s = append(s, "&aranyagopb.ContainerLogsCmd{")
+	s = append(s, "&aranyagopb.LogsCmd{")
 	s = append(s, "PodUid: "+fmt.Sprintf("%#v", this.PodUid)+",\n")
 	s = append(s, "Container: "+fmt.Sprintf("%#v", this.Container)+",\n")
 	s = append(s, "Follow: "+fmt.Sprintf("%#v", this.Follow)+",\n")
@@ -1778,12 +1747,12 @@ func (this *ContainerLogsCmd) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *ContainerExecOrAttachCmd) GoString() string {
+func (this *ExecOrAttachCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 12)
-	s = append(s, "&aranyagopb.ContainerExecOrAttachCmd{")
+	s = append(s, "&aranyagopb.ExecOrAttachCmd{")
 	s = append(s, "PodUid: "+fmt.Sprintf("%#v", this.PodUid)+",\n")
 	s = append(s, "Container: "+fmt.Sprintf("%#v", this.Container)+",\n")
 	s = append(s, "Stdin: "+fmt.Sprintf("%#v", this.Stdin)+",\n")
@@ -1807,24 +1776,24 @@ func (this *ContainerExecOrAttachCmd) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *PodPortForwardCmd) GoString() string {
+func (this *PortForwardCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 7)
-	s = append(s, "&aranyagopb.PodPortForwardCmd{")
+	s = append(s, "&aranyagopb.PortForwardCmd{")
 	s = append(s, "PodUid: "+fmt.Sprintf("%#v", this.PodUid)+",\n")
 	s = append(s, "Port: "+fmt.Sprintf("%#v", this.Port)+",\n")
 	s = append(s, "Protocol: "+fmt.Sprintf("%#v", this.Protocol)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *ContainerTerminalResizeCmd) GoString() string {
+func (this *TerminalResizeCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&aranyagopb.ContainerTerminalResizeCmd{")
+	s = append(s, "&aranyagopb.TerminalResizeCmd{")
 	s = append(s, "Cols: "+fmt.Sprintf("%#v", this.Cols)+",\n")
 	s = append(s, "Rows: "+fmt.Sprintf("%#v", this.Rows)+",\n")
 	s = append(s, "}")
@@ -1884,54 +1853,6 @@ func (m *Empty) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *Header) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Header) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Header) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Completed {
-		i--
-		if m.Completed {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x20
-	}
-	if m.Seq != 0 {
-		i = encodeVarintProto(dAtA, i, uint64(m.Seq))
-		i--
-		dAtA[i] = 0x18
-	}
-	if m.Sid != 0 {
-		i = encodeVarintProto(dAtA, i, uint64(m.Sid))
-		i--
-		dAtA[i] = 0x10
-	}
-	if m.Kind != 0 {
-		i = encodeVarintProto(dAtA, i, uint64(m.Kind))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *Cmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1959,17 +1880,30 @@ func (m *Cmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x5a
 	}
-	if m.Header != nil {
-		{
-			size, err := m.Header.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintProto(dAtA, i, uint64(size))
+	if m.Completed {
+		i--
+		if m.Completed {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
 		}
 		i--
-		dAtA[i] = 0xa
+		dAtA[i] = 0x20
+	}
+	if m.Seq != 0 {
+		i = encodeVarintProto(dAtA, i, uint64(m.Seq))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.Sid != 0 {
+		i = encodeVarintProto(dAtA, i, uint64(m.Sid))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.Kind != 0 {
+		i = encodeVarintProto(dAtA, i, uint64(m.Kind))
+		i--
+		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -2001,17 +1935,30 @@ func (m *Msg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x5a
 	}
-	if m.Header != nil {
-		{
-			size, err := m.Header.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintProto(dAtA, i, uint64(size))
+	if m.Completed {
+		i--
+		if m.Completed {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
 		}
 		i--
-		dAtA[i] = 0xa
+		dAtA[i] = 0x20
+	}
+	if m.Seq != 0 {
+		i = encodeVarintProto(dAtA, i, uint64(m.Seq))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.Sid != 0 {
+		i = encodeVarintProto(dAtA, i, uint64(m.Sid))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.Kind != 0 {
+		i = encodeVarintProto(dAtA, i, uint64(m.Kind))
+		i--
+		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -2107,7 +2054,7 @@ func (m *RejectCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ContainerLogsCmd) Marshal() (dAtA []byte, err error) {
+func (m *LogsCmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -2117,12 +2064,12 @@ func (m *ContainerLogsCmd) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ContainerLogsCmd) MarshalTo(dAtA []byte) (int, error) {
+func (m *LogsCmd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ContainerLogsCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *LogsCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -2198,7 +2145,7 @@ func (m *ContainerLogsCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ContainerExecOrAttachCmd) Marshal() (dAtA []byte, err error) {
+func (m *ExecOrAttachCmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -2208,12 +2155,12 @@ func (m *ContainerExecOrAttachCmd) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ContainerExecOrAttachCmd) MarshalTo(dAtA []byte) (int, error) {
+func (m *ExecOrAttachCmd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ContainerExecOrAttachCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ExecOrAttachCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -2303,7 +2250,7 @@ func (m *ContainerExecOrAttachCmd) MarshalToSizedBuffer(dAtA []byte) (int, error
 	return len(dAtA) - i, nil
 }
 
-func (m *PodPortForwardCmd) Marshal() (dAtA []byte, err error) {
+func (m *PortForwardCmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -2313,12 +2260,12 @@ func (m *PodPortForwardCmd) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PodPortForwardCmd) MarshalTo(dAtA []byte) (int, error) {
+func (m *PortForwardCmd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *PodPortForwardCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *PortForwardCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -2345,7 +2292,7 @@ func (m *PodPortForwardCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ContainerTerminalResizeCmd) Marshal() (dAtA []byte, err error) {
+func (m *TerminalResizeCmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -2355,12 +2302,12 @@ func (m *ContainerTerminalResizeCmd) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ContainerTerminalResizeCmd) MarshalTo(dAtA []byte) (int, error) {
+func (m *TerminalResizeCmd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ContainerTerminalResizeCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *TerminalResizeCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -2473,7 +2420,7 @@ func (m *Empty) Size() (n int) {
 	return n
 }
 
-func (m *Header) Size() (n int) {
+func (m *Cmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2491,19 +2438,6 @@ func (m *Header) Size() (n int) {
 	if m.Completed {
 		n += 2
 	}
-	return n
-}
-
-func (m *Cmd) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Header != nil {
-		l = m.Header.Size()
-		n += 1 + l + sovProto(uint64(l))
-	}
 	l = len(m.Body)
 	if l > 0 {
 		n += 1 + l + sovProto(uint64(l))
@@ -2517,9 +2451,17 @@ func (m *Msg) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Header != nil {
-		l = m.Header.Size()
-		n += 1 + l + sovProto(uint64(l))
+	if m.Kind != 0 {
+		n += 1 + sovProto(uint64(m.Kind))
+	}
+	if m.Sid != 0 {
+		n += 1 + sovProto(uint64(m.Sid))
+	}
+	if m.Seq != 0 {
+		n += 1 + sovProto(uint64(m.Seq))
+	}
+	if m.Completed {
+		n += 2
 	}
 	l = len(m.Body)
 	if l > 0 {
@@ -2568,7 +2510,7 @@ func (m *RejectCmd) Size() (n int) {
 	return n
 }
 
-func (m *ContainerLogsCmd) Size() (n int) {
+func (m *LogsCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2608,7 +2550,7 @@ func (m *ContainerLogsCmd) Size() (n int) {
 	return n
 }
 
-func (m *ContainerExecOrAttachCmd) Size() (n int) {
+func (m *ExecOrAttachCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2651,7 +2593,7 @@ func (m *ContainerExecOrAttachCmd) Size() (n int) {
 	return n
 }
 
-func (m *PodPortForwardCmd) Size() (n int) {
+func (m *PortForwardCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2671,7 +2613,7 @@ func (m *PodPortForwardCmd) Size() (n int) {
 	return n
 }
 
-func (m *ContainerTerminalResizeCmd) Size() (n int) {
+func (m *TerminalResizeCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2736,25 +2678,15 @@ func (this *Empty) String() string {
 	}, "")
 	return s
 }
-func (this *Header) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Header{`,
-		`Kind:` + fmt.Sprintf("%v", this.Kind) + `,`,
-		`Sid:` + fmt.Sprintf("%v", this.Sid) + `,`,
-		`Seq:` + fmt.Sprintf("%v", this.Seq) + `,`,
-		`Completed:` + fmt.Sprintf("%v", this.Completed) + `,`,
-		`}`,
-	}, "")
-	return s
-}
 func (this *Cmd) String() string {
 	if this == nil {
 		return "nil"
 	}
 	s := strings.Join([]string{`&Cmd{`,
-		`Header:` + strings.Replace(this.Header.String(), "Header", "Header", 1) + `,`,
+		`Kind:` + fmt.Sprintf("%v", this.Kind) + `,`,
+		`Sid:` + fmt.Sprintf("%v", this.Sid) + `,`,
+		`Seq:` + fmt.Sprintf("%v", this.Seq) + `,`,
+		`Completed:` + fmt.Sprintf("%v", this.Completed) + `,`,
 		`Body:` + fmt.Sprintf("%v", this.Body) + `,`,
 		`}`,
 	}, "")
@@ -2765,7 +2697,10 @@ func (this *Msg) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&Msg{`,
-		`Header:` + strings.Replace(this.Header.String(), "Header", "Header", 1) + `,`,
+		`Kind:` + fmt.Sprintf("%v", this.Kind) + `,`,
+		`Sid:` + fmt.Sprintf("%v", this.Sid) + `,`,
+		`Seq:` + fmt.Sprintf("%v", this.Seq) + `,`,
+		`Completed:` + fmt.Sprintf("%v", this.Completed) + `,`,
 		`Body:` + fmt.Sprintf("%v", this.Body) + `,`,
 		`}`,
 	}, "")
@@ -2802,11 +2737,11 @@ func (this *RejectCmd) String() string {
 	}, "")
 	return s
 }
-func (this *ContainerLogsCmd) String() string {
+func (this *LogsCmd) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&ContainerLogsCmd{`,
+	s := strings.Join([]string{`&LogsCmd{`,
 		`PodUid:` + fmt.Sprintf("%v", this.PodUid) + `,`,
 		`Container:` + fmt.Sprintf("%v", this.Container) + `,`,
 		`Follow:` + fmt.Sprintf("%v", this.Follow) + `,`,
@@ -2820,7 +2755,7 @@ func (this *ContainerLogsCmd) String() string {
 	}, "")
 	return s
 }
-func (this *ContainerExecOrAttachCmd) String() string {
+func (this *ExecOrAttachCmd) String() string {
 	if this == nil {
 		return "nil"
 	}
@@ -2834,7 +2769,7 @@ func (this *ContainerExecOrAttachCmd) String() string {
 		mapStringForEnvs += fmt.Sprintf("%v: %v,", k, this.Envs[k])
 	}
 	mapStringForEnvs += "}"
-	s := strings.Join([]string{`&ContainerExecOrAttachCmd{`,
+	s := strings.Join([]string{`&ExecOrAttachCmd{`,
 		`PodUid:` + fmt.Sprintf("%v", this.PodUid) + `,`,
 		`Container:` + fmt.Sprintf("%v", this.Container) + `,`,
 		`Stdin:` + fmt.Sprintf("%v", this.Stdin) + `,`,
@@ -2847,11 +2782,11 @@ func (this *ContainerExecOrAttachCmd) String() string {
 	}, "")
 	return s
 }
-func (this *PodPortForwardCmd) String() string {
+func (this *PortForwardCmd) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&PodPortForwardCmd{`,
+	s := strings.Join([]string{`&PortForwardCmd{`,
 		`PodUid:` + fmt.Sprintf("%v", this.PodUid) + `,`,
 		`Port:` + fmt.Sprintf("%v", this.Port) + `,`,
 		`Protocol:` + fmt.Sprintf("%v", this.Protocol) + `,`,
@@ -2859,11 +2794,11 @@ func (this *PodPortForwardCmd) String() string {
 	}, "")
 	return s
 }
-func (this *ContainerTerminalResizeCmd) String() string {
+func (this *TerminalResizeCmd) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&ContainerTerminalResizeCmd{`,
+	s := strings.Join([]string{`&TerminalResizeCmd{`,
 		`Cols:` + fmt.Sprintf("%v", this.Cols) + `,`,
 		`Rows:` + fmt.Sprintf("%v", this.Rows) + `,`,
 		`}`,
@@ -2954,7 +2889,7 @@ func (m *Empty) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Header) Unmarshal(dAtA []byte) error {
+func (m *Cmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2977,10 +2912,10 @@ func (m *Header) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Header: wiretype end group for non-group")
+			return fmt.Errorf("proto: Cmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Header: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Cmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2997,7 +2932,7 @@ func (m *Header) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Kind |= Kind(b&0x7F) << shift
+				m.Kind |= CmdType(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -3060,95 +2995,6 @@ func (m *Header) Unmarshal(dAtA []byte) error {
 				}
 			}
 			m.Completed = bool(v != 0)
-		default:
-			iNdEx = preIndex
-			skippy, err := skipProto(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthProto
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthProto
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Cmd) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowProto
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Cmd: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Cmd: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Header", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowProto
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthProto
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthProto
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Header == nil {
-				m.Header = &Header{}
-			}
-			if err := m.Header.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
 		case 11:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Body", wireType)
@@ -3237,10 +3083,10 @@ func (m *Msg) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Header", wireType)
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Kind", wireType)
 			}
-			var msglen int
+			m.Kind = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowProto
@@ -3250,28 +3096,69 @@ func (m *Msg) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				msglen |= int(b&0x7F) << shift
+				m.Kind |= MsgType(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if msglen < 0 {
-				return ErrInvalidLengthProto
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Sid", wireType)
 			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthProto
+			m.Sid = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowProto
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Sid |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
 			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Seq", wireType)
 			}
-			if m.Header == nil {
-				m.Header = &Header{}
+			m.Seq = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowProto
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Seq |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
 			}
-			if err := m.Header.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Completed", wireType)
 			}
-			iNdEx = postIndex
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowProto
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Completed = bool(v != 0)
 		case 11:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Body", wireType)
@@ -3517,7 +3404,7 @@ func (m *RejectCmd) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Reason |= RejectCmd_Reason(b&0x7F) << shift
+				m.Reason |= RejectionReason(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -3578,7 +3465,7 @@ func (m *RejectCmd) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ContainerLogsCmd) Unmarshal(dAtA []byte) error {
+func (m *LogsCmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3601,10 +3488,10 @@ func (m *ContainerLogsCmd) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ContainerLogsCmd: wiretype end group for non-group")
+			return fmt.Errorf("proto: LogsCmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ContainerLogsCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: LogsCmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3857,7 +3744,7 @@ func (m *ContainerLogsCmd) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ContainerExecOrAttachCmd) Unmarshal(dAtA []byte) error {
+func (m *ExecOrAttachCmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3880,10 +3767,10 @@ func (m *ContainerExecOrAttachCmd) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ContainerExecOrAttachCmd: wiretype end group for non-group")
+			return fmt.Errorf("proto: ExecOrAttachCmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ContainerExecOrAttachCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ExecOrAttachCmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -4213,7 +4100,7 @@ func (m *ContainerExecOrAttachCmd) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *PodPortForwardCmd) Unmarshal(dAtA []byte) error {
+func (m *PortForwardCmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4236,10 +4123,10 @@ func (m *PodPortForwardCmd) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: PodPortForwardCmd: wiretype end group for non-group")
+			return fmt.Errorf("proto: PortForwardCmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PodPortForwardCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: PortForwardCmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -4349,7 +4236,7 @@ func (m *PodPortForwardCmd) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ContainerTerminalResizeCmd) Unmarshal(dAtA []byte) error {
+func (m *TerminalResizeCmd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4372,10 +4259,10 @@ func (m *ContainerTerminalResizeCmd) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ContainerTerminalResizeCmd: wiretype end group for non-group")
+			return fmt.Errorf("proto: TerminalResizeCmd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ContainerTerminalResizeCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: TerminalResizeCmd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

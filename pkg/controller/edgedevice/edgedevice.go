@@ -593,70 +593,73 @@ func (c *Controller) prepareDeviceOptions(
 
 		devs[d.Name] = struct{}{}
 
-		var mode aranyagopb.DeviceConnectivity_Mode
-		switch d.Connectivity.Mode {
-		case aranyaapi.DeviceConnectivityModeServer:
-			mode = aranyagopb.DEVICE_CONNECTIVITY_MODE_SERVER
-		case aranyaapi.DeviceConnectivityModeClient:
-			mode = aranyagopb.DEVICE_CONNECTIVITY_MODE_CLIENT
-		default:
-			mode = aranyagopb.DEVICE_CONNECTIVITY_MODE_CLIENT
-		}
-
 		var operations []*aranyagopb.DeviceOperation
 		for _, op := range d.Operations {
 			operations = append(operations, &aranyagopb.DeviceOperation{
-				Id:              op.Name,
-				TransportParams: op.TransportParams,
+				OperationId: op.Name,
+				Params:      op.Params,
 			})
 		}
 
-		var uploadConnectivity *aranyagopb.DeviceConnectivity
+		var reportConn *aranyagopb.Connectivity
 		if uc := d.UploadConnectivity; uc != nil {
-			uploadConnectivity = &aranyagopb.DeviceConnectivity{
-				Transport: uc.Transport,
-				Mode:      aranyagopb.DEVICE_CONNECTIVITY_MODE_CLIENT,
-				Target:    uc.Target,
-				Params:    uc.Params,
+			reportConn = &aranyagopb.Connectivity{
+				Method: uc.Method,
+				Target: uc.Target,
+				Params: uc.Params,
 				//Tls:       ,
 			}
 		}
 
-		var deviceMetrics []*aranyagopb.DeviceMetrics
+		var deviceMetrics []*aranyagopb.DeviceMetric
 		for _, m := range d.Metrics {
-			var uploadMethod aranyagopb.DeviceMetrics_UploadMethod
-			switch m.UploadMethod {
+			var uploadMethod aranyagopb.DeviceMetric_ReportMethod
+			switch m.ReportMethod {
 			case aranyaapi.UploadWithArhatConnectivity:
-				uploadMethod = aranyagopb.UPLOAD_WITH_ARHAT_CONNECTIVITY
+				uploadMethod = aranyagopb.REPORT_WITH_ARHAT_CONNECTIVITY
 			case aranyaapi.UploadWithNodeMetrics:
-				uploadMethod = aranyagopb.UPLOAD_WITH_NODE_METRICS
+				uploadMethod = aranyagopb.REPORT_WITH_NODE_METRICS
 			case aranyaapi.UploadWithStandaloneClient:
-				if uploadConnectivity == nil {
+				if reportConn == nil {
 					err = fmt.Errorf("no upload connectivity configured for standalone upload method")
 					return
 				}
-				uploadMethod = aranyagopb.UPLOAD_WITH_STANDALONE_CLIENT
+				uploadMethod = aranyagopb.REPORT_WITH_STANDALONE_CLIENT
 			}
 
-			deviceMetrics = append(deviceMetrics, &aranyagopb.DeviceMetrics{
+			var valueType aranyagopb.DeviceMetric_ValueType
+			switch m.ValueType {
+			case aranyaapi.DeviceMetricsValueTypeGauge:
+				valueType = aranyagopb.METRICS_VALUE_TYPE_GAUGE
+			case aranyaapi.DeviceMetricsValueTypeCounter:
+				valueType = aranyagopb.METRICS_VALUE_TYPE_COUNTER
+			case aranyaapi.DeviceMetricsValueTypeUnknown:
+				valueType = aranyagopb.METRICS_VALUE_TYPE_UNTYPED
+			}
+
+			deviceMetrics = append(deviceMetrics, &aranyagopb.DeviceMetric{
 				Name:            m.Name,
-				TransportParams: m.TransportParams,
-				UploadMethod:    uploadMethod,
-				UploadParams:    m.UploadParams,
+				DeviceParams:    m.DeviceParams,
+				ValueType:       valueType,
+				ReportMethod:    uploadMethod,
+				ReporterHashHex: aranyagopb.HexHashOfConnectivity(reportConn),
+				ReporterParams:  m.ReportParams,
 			})
 		}
 
+		conn := &aranyagopb.Connectivity{
+			Method: d.Connectivity.Method,
+			Target: d.Connectivity.Target,
+			Params: d.Connectivity.Params,
+			//Tls:
+		}
 		devices[d.Name] = &aranyagopb.DeviceEnsureCmd{
-			DeviceConnectivity: &aranyagopb.DeviceConnectivity{
-				Transport: d.Connectivity.Transport,
-				Mode:      mode,
-				Target:    d.Connectivity.Target,
-				Params:    d.Connectivity.Params,
-				//Tls:
-			},
-			DeviceOperations:   operations,
-			DeviceMetrics:      deviceMetrics,
-			UploadConnectivity: uploadConnectivity,
+			Kind:             aranyagopb.DEVICE_TYPE_NORMAL,
+			DeviceId:         d.Name,
+			ConnectorHashHex: aranyagopb.HexHashOfConnectivity(conn),
+			Connector:        conn,
+			Operations:       operations,
+			Metrics:          deviceMetrics,
 		}
 	}
 

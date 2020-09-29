@@ -73,7 +73,7 @@ func (m *Manager) UpdateMirrorPod(
 			)
 		}
 
-		pod.Status.PodIP, pod.Status.PodIPs = convert.GetPodIPs(devicePodStatus.PodIpv4, devicePodStatus.PodIpv6)
+		pod.Status.PodIP, pod.Status.PodIPs = convert.GetPodIPs(devicePodStatus.Ipv4, devicePodStatus.Ipv6)
 		logger.D("resolved device container status", log.Any("podIPs", pod.Status.PodIPs))
 	}
 

@@ -76,7 +76,7 @@ func resolveContainerStatus(
 	containers []corev1.Container,
 	devicePodStatus *aranyagopb.PodStatusMsg,
 ) (corev1.PodPhase, []corev1.ContainerStatus) {
-	ctrStatusMap := devicePodStatus.GetContainerStatuses()
+	ctrStatusMap := devicePodStatus.GetContainers()
 	if ctrStatusMap == nil {
 		// generalize to avoid panic
 		ctrStatusMap = make(map[string]*aranyagopb.ContainerStatus)

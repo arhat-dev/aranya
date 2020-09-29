@@ -253,11 +253,8 @@ spec:
                   connectivity:
                     description: Connectivity instructs how to connect to this device
                     properties:
-                      mode:
-                        description: Mode when connecting to this device
-                        enum:
-                        - client
-                        - server
+                      method:
+                        description: Method interacting with this physical device
                         type: string
                       params:
                         additionalProperties:
@@ -266,11 +263,8 @@ spec:
                           by the )
                         type: object
                       target:
-                        description: "Target value for transport, its value depends
-                          on the transport method you chose \t- for `file`, `serial`,
-                          `unix/{*}`: the local file path \t- for `unix`: the unix
-                          socket path \t- for `{*/}tcp`,`{*/}udp`: the ip address:port
-                          combination \t- for `serial`: the serial port device path"
+                        description: Target value for transport, its value depends
+                          on the transport method you chose
                         type: string
                       tls:
                         description: TLS config for network related connectivity
@@ -313,47 +307,41 @@ spec:
                           serverName:
                             type: string
                         type: object
-                      transport:
-                        description: Transport method interacting with this physical
-                          device
-                        enum:
-                        - file
-                        - serial
-                        - socket
-                        - http
-                        - mqtt
-                        - modbus
-                        - opcua
-                        type: string
                     type: object
                   metrics:
                     description: Metrics collection/report from this device
                     items:
                       description: DeviceMetrics to upload device metrics for prometheus
                       properties:
-                        name:
-                          description: Name of the metrics, will be formatted to `aranya_edgedevice_devices_<device
-                            name>_<metrics name>` for prometheus
-                          pattern: '[a-z0-9]([_a-z0-9]*[a-z0-9])?'
-                          type: string
-                        transportParams:
+                        deviceParams:
                           additionalProperties:
                             type: string
-                          description: TransportParams to override ..connectivity.params
+                          description: DeviceParams to override ..connectivity.params
                             to get metrics
                           type: object
-                        uploadMethod:
-                          description: UploadMethod for this metrics
+                        name:
+                          description: Name of the metrics for prometheus
+                          pattern: '[a-z0-9]([_a-z0-9]*[a-z0-9])?'
+                          type: string
+                        reportMethod:
+                          description: ReportMethod for this metrics
                           enum:
                           - WithNodeMetrics
                           - WithArhatConnectivity
                           - WithStandaloneClient
                           type: string
-                        uploadParams:
+                        reportParams:
                           additionalProperties:
                             type: string
-                          description: UploadParams
+                          description: ReportParams
                           type: object
+                        valueType:
+                          description: ValueType of this metric
+                          enum:
+                          - counter
+                          - ""
+                          - gauge
+                          type: string
                       required:
                       - name
                       type: object
@@ -376,17 +364,17 @@ spec:
                         name:
                           description: Name of the operation (e.g. "on", "off" ...)
                           type: string
+                        params:
+                          additionalProperties:
+                            type: string
+                          description: Params to override ..connectivity.params
+                          type: object
                         pseudoCommand:
                           description: PseudoCommand used to trigger this operation,
                             so you can trigger this operation by executing `kubectl
                             exec <virtual pod> -c <device name> -- <pseudo command>`
                             Defaults to operation name
                           type: string
-                        transportParams:
-                          additionalProperties:
-                            type: string
-                          description: TransportParams to override ..connectivity.params
-                          type: object
                       required:
                       - name
                       type: object
@@ -397,11 +385,8 @@ spec:
                   uploadConnectivity:
                     description: UploadConnectivity instructs how to upload metrics
                     properties:
-                      mode:
-                        description: Mode when connecting to this device
-                        enum:
-                        - client
-                        - server
+                      method:
+                        description: Method interacting with this physical device
                         type: string
                       params:
                         additionalProperties:
@@ -410,11 +395,8 @@ spec:
                           by the )
                         type: object
                       target:
-                        description: "Target value for transport, its value depends
-                          on the transport method you chose \t- for `file`, `serial`,
-                          `unix/{*}`: the local file path \t- for `unix`: the unix
-                          socket path \t- for `{*/}tcp`,`{*/}udp`: the ip address:port
-                          combination \t- for `serial`: the serial port device path"
+                        description: Target value for transport, its value depends
+                          on the transport method you chose
                         type: string
                       tls:
                         description: TLS config for network related connectivity
@@ -457,18 +439,6 @@ spec:
                           serverName:
                             type: string
                         type: object
-                      transport:
-                        description: Transport method interacting with this physical
-                          device
-                        enum:
-                        - file
-                        - serial
-                        - socket
-                        - http
-                        - mqtt
-                        - modbus
-                        - opcua
-                        type: string
                     type: object
                 required:
                 - name

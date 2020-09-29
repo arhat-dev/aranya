@@ -148,7 +148,7 @@ func (m *Manager) configureMetricsCollection(cmd *aranyagopb.MetricsConfigCmd) {
 			return true
 		}
 
-		if msg.Header.Kind != aranyagopb.MSG_DONE {
+		if msg.Kind != aranyagopb.MSG_DONE {
 			return true
 		}
 
@@ -188,7 +188,7 @@ func (m *Manager) retrieveDeviceMetrics(cmd *aranyagopb.MetricsCollectCmd) {
 			return true
 		}
 
-		if msg.Header.Kind != aranyagopb.MSG_DONE {
+		if msg.Kind != aranyagopb.MSG_DONE {
 			m.Log.I("failed to collect metrics")
 			return true
 		}

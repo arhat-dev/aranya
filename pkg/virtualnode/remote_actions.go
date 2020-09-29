@@ -63,10 +63,10 @@ func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeInfoGetCmd_Kin
 
 // nolint:gocyclo
 func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
-	sid := msg.Header.Sid
+	sid := msg.Sid
 	logger := vn.log.WithFields(log.String("source", "global"), log.Uint64("sid", sid))
 
-	switch msg.Header.Kind {
+	switch msg.Kind {
 	case aranyagopb.MSG_STATE:
 		s := msg.GetState()
 		if s == nil {
@@ -118,8 +118,7 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 		}
 	case aranyagopb.MSG_CTR_NET_STATUS:
 	case aranyagopb.MSG_CTR_NET_STATUS_LIST:
-	case aranyagopb.MSG_NET_STATUS:
-	case aranyagopb.MSG_NET_STATUS_LIST:
+	case aranyagopb.MSG_HOST_NET_STATUS:
 	case aranyagopb.MSG_DEVICE_STATUS:
 	case aranyagopb.MSG_DEVICE_STATUS_LIST:
 	case aranyagopb.MSG_STORAGE_STATUS:
@@ -142,7 +141,7 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 		logger.D("received orphan data", log.Binary("data", data))
 		// close previous session, best effort
 		_, _, _ = vn.opt.ConnectivityManager.PostCmd(
-			0, aranyagopb.CMD_SESSION_CLOSE, aranyagopb.NewSessionCloseCmd(msg.Header.Sid),
+			0, aranyagopb.CMD_SESSION_CLOSE, aranyagopb.NewSessionCloseCmd(msg.Sid),
 		)
 	case aranyagopb.MSG_CRED_STATUS:
 	case aranyagopb.MSG_POD_STATUS:
@@ -275,7 +274,7 @@ func translateDeviceResourcesCapacity(res *aranyagopb.NodeResources, maxPods int
 }
 
 func translateDeviceCondition(prev []corev1.NodeCondition, cond *aranyagopb.NodeConditions) []corev1.NodeCondition {
-	translate := func(condition aranyagopb.NodeConditions_Condition) corev1.ConditionStatus {
+	translate := func(condition aranyagopb.NodeCondition) corev1.ConditionStatus {
 		switch condition {
 		case aranyagopb.NODE_CONDITION_HEALTHY:
 			return corev1.ConditionFalse

@@ -53,14 +53,14 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 	}
 
 	var (
-		sid  = msg.Header.Sid
-		seq  = msg.Header.Seq
-		kind = msg.Header.Kind
+		sid  = msg.Sid
+		seq  = msg.Seq
+		kind = msg.Kind
 	)
 
 	dataChunks, complete := s.seqQ.Offer(seq, msg.Body)
 
-	if msg.Header.Completed {
+	if msg.Completed {
 		complete = s.seqQ.SetMaxSeq(seq)
 	}
 
@@ -232,12 +232,12 @@ func (m *SessionManager) Add(
 }
 
 func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
-	if msg.Header == nil {
+	if msg == nil {
 		// ignore invalid Msgs
 		return true
 	}
 
-	sid := msg.Header.Sid
+	sid := msg.Sid
 	m.mu.RLock()
 	session, ok := m.m[sid]
 	m.mu.RUnlock()

@@ -2,10 +2,21 @@
 
 package aranyagopb
 
-func NewDeviceStatusMsg(deviceID string, state DeviceStatusMsg_State, msg string) *DeviceStatusMsg {
-	return &DeviceStatusMsg{DeviceId: deviceID, State: state, Message: msg}
+func NewDeviceStatusMsg(kind DeviceType, connectorHashHex string, state DeviceState, msg string) *DeviceStatusMsg {
+	return &DeviceStatusMsg{
+		Kind:             kind,
+		ConnectorHashHex: connectorHashHex,
+		State:            state,
+		Message:          msg,
+	}
 }
 
 func NewDeviceStatusListMsg(devices []*DeviceStatusMsg) *DeviceStatusListMsg {
 	return &DeviceStatusListMsg{Devices: devices}
+}
+
+func NewDeviceOperationResultMsg(result [][]byte) *DeviceOperationResultMsg {
+	return &DeviceOperationResultMsg{
+		Data: result,
+	}
 }

@@ -22,7 +22,7 @@ import (
 )
 
 type Data struct {
-	Kind    aranyagopb.Kind
+	Kind    aranyagopb.MsgType
 	Payload []byte
 }
 

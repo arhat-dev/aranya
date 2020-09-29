@@ -19,12 +19,13 @@ const (
 	UploadWithStandaloneClient DeviceMetricsUploadMethod = "WithStandaloneClient"
 )
 
-// +kubebuilder:validation:Enum=client;server
-type DeviceConnectivityMode string
+// +kubebuilder:validation:Enum=counter;"";gauge
+type DeviceMetricsValueType string
 
 const (
-	DeviceConnectivityModeClient DeviceConnectivityMode = "client"
-	DeviceConnectivityModeServer DeviceConnectivityMode = "server"
+	DeviceMetricsValueTypeGauge   DeviceMetricsValueType = "gauge"
+	DeviceMetricsValueTypeCounter DeviceMetricsValueType = "counter"
+	DeviceMetricsValueTypeUnknown DeviceMetricsValueType = ""
 )
 
 type (
@@ -57,18 +58,10 @@ type (
 
 	// DeviceConnectivity configure how to connect the physical device
 	DeviceConnectivity struct {
-		// Transport method interacting with this physical device
-		// +kubebuilder:validation:Enum=file;serial;socket;http;mqtt;modbus;opcua
-		Transport string `json:"transport,omitempty"`
-
-		// Mode when connecting to this device
-		Mode DeviceConnectivityMode `json:"mode,omitempty"`
+		// Method interacting with this physical device
+		Method string `json:"method,omitempty"`
 
 		// Target value for transport, its value depends on the transport method you chose
-		//	- for `file`, `serial`, `unix/{*}`: the local file path
-		//	- for `unix`: the unix socket path
-		//	- for `{*/}tcp`,`{*/}udp`: the ip address:port combination
-		//	- for `serial`: the serial port device path
 		Target string `json:"target,omitempty"`
 
 		// Params for this connectivity (can be overridden by the )
@@ -91,28 +84,30 @@ type (
 		// +optional
 		PseudoCommand string `json:"pseudoCommand,omitempty"`
 
-		// TransportParams to override ..connectivity.params
+		// Params to override ..connectivity.params
 		// +optional
-		TransportParams map[string]string `json:"transportParams,omitempty"`
+		Params map[string]string `json:"params,omitempty"`
 	}
 
 	// DeviceMetrics to upload device metrics for prometheus
-	// nolint:lll
 	DeviceMetrics struct {
-		// Name of the metrics, will be formatted to `aranya_edgedevice_devices_<device name>_<metrics name>` for prometheus
+		// Name of the metrics for prometheus
 		// +kubebuilder:validation:Pattern=[a-z0-9]([_a-z0-9]*[a-z0-9])?
 		Name string `json:"name"`
 
-		// TransportParams to override ..connectivity.params to get metrics
-		// +optional
-		TransportParams map[string]string `json:"transportParams,omitempty"`
+		// ValueType of this metric
+		ValueType DeviceMetricsValueType `json:"valueType,omitempty"`
 
-		// UploadMethod for this metrics
-		UploadMethod DeviceMetricsUploadMethod `json:"uploadMethod,omitempty"`
-
-		// UploadParams
+		// DeviceParams to override ..connectivity.params to get metrics
 		// +optional
-		UploadParams map[string]string `json:"uploadParams,omitempty"`
+		DeviceParams map[string]string `json:"deviceParams,omitempty"`
+
+		// ReportMethod for this metrics
+		ReportMethod DeviceMetricsUploadMethod `json:"reportMethod,omitempty"`
+
+		// ReportParams
+		// +optional
+		ReportParams map[string]string `json:"reportParams,omitempty"`
 	}
 )
 

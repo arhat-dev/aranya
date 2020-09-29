@@ -118,7 +118,7 @@ func (m *MessageQueueManager) Close() {
 	m.onClose(func() {})
 }
 
-func (m *MessageQueueManager) Reject(reason aranyagopb.RejectCmd_Reason, message string) {
+func (m *MessageQueueManager) Reject(reason aranyagopb.RejectionReason, message string) {
 	m.onReject(func() {
 		// best effort
 		if m.sendCmd != nil {

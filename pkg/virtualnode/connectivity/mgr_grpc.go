@@ -35,7 +35,7 @@ var _ Manager = &GRPCManager{}
 type GRPCManager struct {
 	*baseManager
 
-	clientSessions map[string]aranyagopb.Connectivity_SyncServer
+	clientSessions map[string]aranyagopb.EdgeDevice_SyncServer
 
 	server   *grpc.Server
 	listener net.Listener
@@ -45,12 +45,12 @@ func NewGRPCManager(parentCtx context.Context, name string, mgrConfig *Options) 
 	mgr := &GRPCManager{
 		baseManager: newBaseManager(parentCtx, name, mgrConfig),
 
-		clientSessions: make(map[string]aranyagopb.Connectivity_SyncServer),
+		clientSessions: make(map[string]aranyagopb.EdgeDevice_SyncServer),
 
 		listener: mgrConfig.GRPCOpts.Listener,
 		server:   mgrConfig.GRPCOpts.Server,
 	}
-	aranyagopb.RegisterConnectivityServer(mgrConfig.GRPCOpts.Server, mgr)
+	aranyagopb.RegisterEdgeDeviceServer(mgrConfig.GRPCOpts.Server, mgr)
 
 	mgr.sendCmd = func(cmd *aranyagopb.Cmd) error {
 		mgr.mu.RLock()
@@ -78,7 +78,7 @@ func (m *GRPCManager) Close() {
 	})
 }
 
-func (m *GRPCManager) Reject(reason aranyagopb.RejectCmd_Reason, message string) {
+func (m *GRPCManager) Reject(reason aranyagopb.RejectionReason, message string) {
 	m.onReject(func() {
 		// best effort
 		for _, syncSrv := range m.clientSessions {
@@ -88,7 +88,7 @@ func (m *GRPCManager) Reject(reason aranyagopb.RejectCmd_Reason, message string)
 	})
 }
 
-func (m *GRPCManager) Sync(server aranyagopb.Connectivity_SyncServer) error {
+func (m *GRPCManager) Sync(server aranyagopb.EdgeDevice_SyncServer) error {
 	connCtx, closeConn := context.WithCancel(server.Context())
 	defer closeConn()
 
@@ -139,7 +139,7 @@ func (m *GRPCManager) Sync(server aranyagopb.Connectivity_SyncServer) error {
 				return nil
 			}
 
-			if msg.Header.Kind == aranyagopb.MSG_STATE {
+			if msg.Kind == aranyagopb.MSG_STATE {
 				s := msg.GetState()
 				if s == nil {
 					m.Reject(aranyagopb.REJECTION_INVALID_PROTO, "invalid protocol")

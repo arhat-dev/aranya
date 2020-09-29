@@ -103,7 +103,7 @@ type Manager interface {
 	Close()
 
 	// Reject current device connection if any
-	Reject(reason aranyagopb.RejectCmd_Reason, message string)
+	Reject(reason aranyagopb.RejectionReason, message string)
 
 	// Connected signal
 	Connected() <-chan struct{}
@@ -116,11 +116,11 @@ type Manager interface {
 
 	// PostData
 	// nolint:lll
-	PostData(sid uint64, kind aranyagopb.Kind, seq uint64, completed bool, data []byte) (msgCh <-chan interface{}, realSID, lastSeq uint64, err error)
+	PostData(sid uint64, kind aranyagopb.CmdType, seq uint64, completed bool, data []byte) (msgCh <-chan interface{}, realSID, lastSeq uint64, err error)
 
 	// PostCmd send a command to remote device with timeout
 	// return a channel for messages to be received in the session
-	PostCmd(sid uint64, kind aranyagopb.Kind, cmd proto.Marshaler) (msgCh <-chan interface{}, realSID uint64, err error)
+	PostCmd(sid uint64, kind aranyagopb.CmdType, cmd proto.Marshaler) (msgCh <-chan interface{}, realSID uint64, err error)
 
 	// MaxPayloadSize of this kind connectivity method, used to reduce message overhead
 	// when handling date streams for port-forward and command execution
@@ -307,11 +307,11 @@ func (m *baseManager) onRecvMsg(msg *aranyagopb.Msg) {
 	}
 
 	// nolint:gocritic
-	switch msg.Header.Kind {
+	switch msg.Kind {
 	case aranyagopb.MSG_ERROR:
 		if msg.GetError().GetKind() == aranyagopb.ERR_TIMEOUT {
 			// close session with best effort
-			_, _, _ = m.PostCmd(0, aranyagopb.CMD_SESSION_CLOSE, aranyagopb.NewSessionCloseCmd(msg.Header.Sid))
+			_, _, _ = m.PostCmd(0, aranyagopb.CMD_SESSION_CLOSE, aranyagopb.NewSessionCloseCmd(msg.Sid))
 		}
 	}
 }
@@ -351,7 +351,7 @@ func (m *baseManager) OnDisconnected(finalize func() (id string, all bool)) {
 }
 
 func (m *baseManager) PostData(
-	sid uint64, kind aranyagopb.Kind, seq uint64, completed bool, data []byte,
+	sid uint64, kind aranyagopb.CmdType, seq uint64, completed bool, data []byte,
 ) (msgCh <-chan interface{}, realSid, lastSeq uint64, err error) {
 	m.mu.RLock()
 	defer func() {
@@ -380,11 +380,11 @@ func (m *baseManager) PostData(
 		recordSession = false
 
 		defer m.sessions.Delete(sid)
-	case aranyagopb.CMD_POD_CTR_EXEC, aranyagopb.CMD_POD_CTR_ATTACH,
-		aranyagopb.CMD_POD_CTR_LOGS, aranyagopb.CMD_POD_PORT_FORWARD:
+	case aranyagopb.CMD_EXEC, aranyagopb.CMD_ATTACH,
+		aranyagopb.CMD_LOGS, aranyagopb.CMD_PORT_FORWARD:
 
 		timeout = 0
-	case aranyagopb.CMD_POD_CTR_TTY_RESIZE, aranyagopb.CMD_DATA_UPSTREAM:
+	case aranyagopb.CMD_TTY_RESIZE, aranyagopb.CMD_DATA_UPSTREAM:
 		timeout = 0
 		sessionMustExist = true
 
@@ -428,7 +428,7 @@ func (m *baseManager) PostData(
 }
 
 func (m *baseManager) PostCmd(
-	sid uint64, kind aranyagopb.Kind, cmd proto.Marshaler,
+	sid uint64, kind aranyagopb.CmdType, cmd proto.Marshaler,
 ) (msgCh <-chan interface{}, realSID uint64, err error) {
 	data, err := cmd.Marshal()
 	if err != nil {

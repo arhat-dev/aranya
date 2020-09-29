@@ -160,7 +160,7 @@ func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.PodEnsureCmd) (*ara
 
 		var err error
 		for _, arg := range ctr.Args {
-			execCmd := aranyagopb.NewPodContainerExecCmd("", constant.VirtualContainerNameHost,
+			execCmd := aranyagopb.NewExecCmd("", constant.VirtualContainerNameHost,
 				append(append([]string{}, cmd...), arg), ctr.Stdin, true, true, ctr.Tty, ctr.Envs,
 			)
 
@@ -202,7 +202,7 @@ func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.PodEnsureCmd) (*ara
 					_, _ = stdout.Close(), stderr.Close()
 				}()
 
-				return m.doServeTerminalStream(aranyagopb.CMD_POD_CTR_EXEC, execCmd, nil, stdout, stderr, nil)
+				return m.doServeTerminalStream(aranyagopb.CMD_EXEC, execCmd, nil, stdout, stderr, nil)
 			}()
 
 			if err != nil {

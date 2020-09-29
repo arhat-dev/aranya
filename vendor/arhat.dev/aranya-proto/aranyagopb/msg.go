@@ -28,28 +28,24 @@ var (
 func init() {
 	emptyBody, _ := (&Empty{}).Marshal()
 	emptyMsg := &Msg{
-		Header: &Header{
-			Kind:      math.MaxInt32,
-			Sid:       math.MaxUint64,
-			Seq:       math.MaxUint64,
-			Completed: true,
-		},
-		Body: emptyBody,
+		Kind:      math.MaxInt32,
+		Sid:       math.MaxUint64,
+		Seq:       math.MaxUint64,
+		Completed: true,
+		Body:      emptyBody,
 	}
 
 	EmptyMsgSize = emptyMsg.Size()
 	_ = EmptyMsgSize
 }
 
-func NewMsg(kind Kind, sid, seq uint64, completed bool, payload []byte) *Msg {
+func NewMsg(kind MsgType, sid, seq uint64, completed bool, payload []byte) *Msg {
 	return &Msg{
-		Header: &Header{
-			Kind:      kind,
-			Sid:       sid,
-			Seq:       seq,
-			Completed: completed,
-		},
-		Body: payload,
+		Kind:      kind,
+		Sid:       sid,
+		Seq:       seq,
+		Completed: completed,
+		Body:      payload,
 	}
 }
 
@@ -78,6 +74,12 @@ func NewNodeStatusMsg(
 func NewCredentialStatusMsg(sshPrivateKeySha256Hex string) *CredentialStatusMsg {
 	return &CredentialStatusMsg{
 		SshPrivateKeySha256Hex: sshPrivateKeySha256Hex,
+	}
+}
+
+func NewHostNetworkStatusMsg(interfaces []*HostNetworkInterface) *HostNetworkStatusMsg {
+	return &HostNetworkStatusMsg{
+		Interfaces: interfaces,
 	}
 }
 

@@ -93,7 +93,7 @@ func (m *Manager) doGetContainerLogs(
 		since      time.Time
 		tailLines  int64 = -1
 		bytesLimit int64 = -1
-		cmd        *aranyagopb.ContainerLogsCmd
+		cmd        *aranyagopb.LogsCmd
 		podLog     string
 		logger     = m.Log.WithFields(log.String("type", "logs"))
 	)
@@ -114,7 +114,7 @@ func (m *Manager) doGetContainerLogs(
 			bytesLimit = *options.LimitBytes
 		}
 
-		cmd = aranyagopb.NewPodContainerLogsCmd(
+		cmd = aranyagopb.NewLogsCmd(
 			string(uid),
 			options.Container,
 			options.Follow,
@@ -161,7 +161,7 @@ func (m *Manager) doGetContainerLogs(
 		return 0, reader, nil
 	}
 
-	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_POD_CTR_LOGS, cmd)
+	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_LOGS, cmd)
 	if err != nil {
 		logger.I("failed to establish session for logs", log.Error(err))
 		return 0, nil, err
@@ -210,12 +210,12 @@ func (m *Manager) doHandleExecInContainer() kubeletrc.Executor {
 		}()
 
 		// kubectl exec has no support for environment variables
-		execCmd := aranyagopb.NewPodContainerExecCmd(
+		execCmd := aranyagopb.NewExecCmd(
 			string(uid), container, cmd,
 			stdin != nil, stdout != nil, stderr != nil,
 			tty, nil,
 		)
-		err := m.doServeTerminalStream(aranyagopb.CMD_POD_CTR_EXEC, execCmd, stdin, stdout, stderr, resize)
+		err := m.doServeTerminalStream(aranyagopb.CMD_EXEC, execCmd, stdin, stdout, stderr, resize)
 		if err != nil {
 			return err
 		}
@@ -241,12 +241,12 @@ func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
 			}
 		}()
 
-		attachCmd := aranyagopb.NewPodContainerAttachCmd(
+		attachCmd := aranyagopb.NewAttachCmd(
 			string(uid), container,
 			stdin != nil, stdout != nil, stderr != nil,
 			tty,
 		)
-		err := m.doServeTerminalStream(aranyagopb.CMD_POD_CTR_ATTACH, attachCmd, stdin, stdout, stderr, resize)
+		err := m.doServeTerminalStream(aranyagopb.CMD_ATTACH, attachCmd, stdin, stdout, stderr, resize)
 		if err != nil {
 			return err
 		}
@@ -256,8 +256,8 @@ func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
 }
 
 func (m *Manager) doServeTerminalStream(
-	kind aranyagopb.Kind,
-	initialCmd *aranyagopb.ContainerExecOrAttachCmd,
+	kind aranyagopb.CmdType,
+	initialCmd *aranyagopb.ExecOrAttachCmd,
 	stdin io.Reader, stdout, stderr io.Writer,
 	resizeCh <-chan remotecommand.TerminalSize,
 ) error {
@@ -288,8 +288,8 @@ func (m *Manager) doServeTerminalStream(
 	if resizeCh != nil {
 		go func() {
 			for size := range resizeCh {
-				resizeCmd := aranyagopb.NewPodContainerTerminalResizeCmd(size.Width, size.Height)
-				_, _, err2 := m.ConnectivityManager.PostCmd(sid, aranyagopb.CMD_POD_CTR_TTY_RESIZE, resizeCmd)
+				resizeCmd := aranyagopb.NewTerminalResizeCmd(size.Width, size.Height)
+				_, _, err2 := m.ConnectivityManager.PostCmd(sid, aranyagopb.CMD_TTY_RESIZE, resizeCmd)
 				if err2 != nil {
 					logger.I("failed to post resize cmd", log.Error(err2))
 				}

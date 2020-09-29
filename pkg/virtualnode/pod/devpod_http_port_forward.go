@@ -237,8 +237,8 @@ func (m *Manager) handleNewHTTPStream(wg *sync.WaitGroup, s *stream, hs httpstre
 }
 
 func (m *Manager) doPortForward(s *stream) {
-	pfCmd := aranyagopb.NewPodPortForwardCmd(s.podUID, s.port, s.protocol)
-	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_POD_PORT_FORWARD, pfCmd)
+	pfCmd := aranyagopb.NewPortForwardCmd(s.podUID, s.port, s.protocol)
+	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_PORT_FORWARD, pfCmd)
 	if err != nil {
 		s.writeErr(fmt.Sprintf("failed to create port-forward session: %v", err))
 		return

@@ -1,4 +1,4 @@
-// +build !arhat,!abbot
+// +build !arhat
 
 /*
 Copyright 2020 The arhat.dev Authors.
@@ -19,7 +19,7 @@ limitations under the License.
 package aranyagopb
 
 func (m *Msg) GetError() *ErrorMsg {
-	if m.Header.Kind != MSG_ERROR {
+	if m.Kind != MSG_ERROR {
 		return nil
 	}
 
@@ -41,7 +41,7 @@ func (m *Msg) GetError() *ErrorMsg {
 }
 
 func (m *Msg) GetStorageStatus() *StorageStatusMsg {
-	if m.Header.Kind != MSG_STORAGE_STATUS {
+	if m.Kind != MSG_STORAGE_STATUS {
 		return nil
 	}
 
@@ -54,7 +54,7 @@ func (m *Msg) GetStorageStatus() *StorageStatusMsg {
 }
 
 func (m *Msg) GetStorageStatusList() *StorageStatusListMsg {
-	if m.Header.Kind != MSG_STORAGE_STATUS_LIST {
+	if m.Kind != MSG_STORAGE_STATUS_LIST {
 		return nil
 	}
 
@@ -67,7 +67,7 @@ func (m *Msg) GetStorageStatusList() *StorageStatusListMsg {
 }
 
 func (m *Msg) GetData() []byte {
-	switch m.Header.Kind {
+	switch m.Kind {
 	case MSG_DATA_DEFAULT, MSG_DATA_STDERR:
 	default:
 		return nil
@@ -77,7 +77,7 @@ func (m *Msg) GetData() []byte {
 }
 
 func (m *Msg) GetState() *StateMsg {
-	if m.Header.Kind != MSG_STATE {
+	if m.Kind != MSG_STATE {
 		return nil
 	}
 
@@ -90,7 +90,7 @@ func (m *Msg) GetState() *StateMsg {
 }
 
 func (m *Msg) GetNodeStatus() *NodeStatusMsg {
-	if m.Header.Kind != MSG_NODE_STATUS {
+	if m.Kind != MSG_NODE_STATUS {
 		return nil
 	}
 
@@ -103,7 +103,7 @@ func (m *Msg) GetNodeStatus() *NodeStatusMsg {
 }
 
 func (m *Msg) GetPodStatusList() *PodStatusListMsg {
-	if m.Header.Kind != MSG_POD_STATUS_LIST {
+	if m.Kind != MSG_POD_STATUS_LIST {
 		return nil
 	}
 
@@ -116,7 +116,7 @@ func (m *Msg) GetPodStatusList() *PodStatusListMsg {
 }
 
 func (m *Msg) GetPodStatus() *PodStatusMsg {
-	if m.Header.Kind != MSG_POD_STATUS {
+	if m.Kind != MSG_POD_STATUS {
 		return nil
 	}
 
@@ -129,7 +129,7 @@ func (m *Msg) GetPodStatus() *PodStatusMsg {
 }
 
 func (m *Msg) GetImageList() *ImageStatusListMsg {
-	if m.Header.Kind != MSG_IMAGE_STATUS_LIST {
+	if m.Kind != MSG_IMAGE_STATUS_LIST {
 		return nil
 	}
 
@@ -142,7 +142,7 @@ func (m *Msg) GetImageList() *ImageStatusListMsg {
 }
 
 func (m *Msg) GetCredentialStatus() *CredentialStatusMsg {
-	if m.Header.Kind != MSG_CRED_STATUS {
+	if m.Kind != MSG_CRED_STATUS {
 		return nil
 	}
 
@@ -155,7 +155,7 @@ func (m *Msg) GetCredentialStatus() *CredentialStatusMsg {
 }
 
 func (m *Msg) GetDeviceStatus() *DeviceStatusMsg {
-	if m.Header.Kind != MSG_DEVICE_STATUS {
+	if m.Kind != MSG_DEVICE_STATUS {
 		return nil
 	}
 
@@ -168,7 +168,7 @@ func (m *Msg) GetDeviceStatus() *DeviceStatusMsg {
 }
 
 func (m *Msg) GetDeviceStatusList() *DeviceStatusListMsg {
-	if m.Header.Kind != MSG_DEVICE_STATUS_LIST {
+	if m.Kind != MSG_DEVICE_STATUS_LIST {
 		return nil
 	}
 
@@ -211,7 +211,7 @@ func (m *ErrorMsg) isKind(kind ErrorMsg_Kind) bool {
 	return m.Kind == kind
 }
 
-func (s *ContainerStatus) GetState() PodStatusMsg_State {
+func (s *ContainerStatus) GetState() PodState {
 	if s == nil {
 		return POD_STATE_UNKNOWN
 	}

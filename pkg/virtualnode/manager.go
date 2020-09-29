@@ -146,7 +146,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 	if err := vn.SyncDeviceNodeStatus(aranyagopb.NODE_INFO_ALL); err != nil {
 		vn.log.I("failed to sync node info, reject", log.Error(err))
 		vn.opt.ConnectivityManager.Reject(
-			aranyagopb.REJECTION_NODE_STATUS_SYNC_ERROR, "failed to pass initial node sync")
+			aranyagopb.REJECTION_INITIAL_CHECK_FAILURE, "failed to pass initial node sync")
 		return false
 	}
 
@@ -160,7 +160,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 		} else {
 			vn.log.I("failed to sync pods", log.Error(err))
 			vn.opt.ConnectivityManager.Reject(
-				aranyagopb.REJECTION_POD_STATUS_SYNC_ERROR, "failed to pass initial pod sync")
+				aranyagopb.REJECTION_INITIAL_CHECK_FAILURE, "failed to pass initial pod sync")
 			return false
 		}
 	} else {
@@ -236,7 +236,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 		if err != nil {
 			vn.log.E("failed to send storage credentials", log.Error(err))
 			vn.opt.ConnectivityManager.Reject(
-				aranyagopb.REJECTION_CREDENTIAL_FAILURE, "failed to send node credentials")
+				aranyagopb.REJECTION_INITIAL_CHECK_FAILURE, "failed to sync credentials")
 			return false
 		}
 
@@ -268,7 +268,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 			} else {
 				vn.log.I("failed to set node credentials", log.Error(err))
 				vn.opt.ConnectivityManager.Reject(
-					aranyagopb.REJECTION_CREDENTIAL_FAILURE, "failed to set node credentials")
+					aranyagopb.REJECTION_INITIAL_CHECK_FAILURE, "failed to sync credentials")
 				return false
 			}
 		}
@@ -363,7 +363,7 @@ func (m *Manager) consumeForceNodeSync() {
 				logger.V("syncing")
 				if err := vn.SyncDeviceNodeStatus(aranyagopb.NODE_INFO_DYN); err != nil {
 					logger.I("failed", log.Error(err))
-					vn.opt.ConnectivityManager.Reject(aranyagopb.REJECTION_NODE_STATUS_SYNC_ERROR, err.Error())
+					vn.opt.ConnectivityManager.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, err.Error())
 
 					logger.I("rejected")
 					return
@@ -405,7 +405,7 @@ func (m *Manager) consumeForcePodSync() {
 				logger.V("syncing")
 				if err := vn.podManager.SyncDevicePods(); err != nil {
 					logger.I("failed", log.Error(err))
-					vn.opt.ConnectivityManager.Reject(aranyagopb.REJECTION_POD_STATUS_SYNC_ERROR, err.Error())
+					vn.opt.ConnectivityManager.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, err.Error())
 
 					logger.I("rejected")
 					return

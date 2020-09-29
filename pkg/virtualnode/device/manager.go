@@ -75,14 +75,14 @@ func (m *Manager) Start() error {
 				}
 
 				for _, ds := range sl.Devices {
-					if d, ok := m.requestedDevices[ds.DeviceId]; ok {
-						if ds.DeviceId == d.DeviceId && ds.State == aranyagopb.DEVICE_STATE_CONNECTED {
+					if d, ok := m.requestedDevices[ds.ConnectorHashHex]; ok {
+						if ds.ConnectorHashHex == d.ConnectorHashHex && ds.State == aranyagopb.DEVICE_STATE_CONNECTED {
 							ensuredDevices[d.DeviceId] = d
 						} else {
 							failedDevices[d.DeviceId] = d
 						}
 					} else {
-						deviceToRemove.Insert(ds.DeviceId)
+						deviceToRemove.Insert(ds.ConnectorHashHex)
 					}
 				}
 
@@ -175,7 +175,7 @@ func (m *Manager) removeDevices(deviceToRemove sets.String) sets.String {
 
 			// TODO: update pod status
 			for _, ds := range dsl.Devices {
-				deviceToRemove = deviceToRemove.Delete(ds.DeviceId)
+				deviceToRemove = deviceToRemove.Delete(ds.ConnectorHashHex)
 			}
 
 			return false

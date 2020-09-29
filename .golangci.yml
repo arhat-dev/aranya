@@ -52,7 +52,7 @@ linters-settings:
   gocyclo:
     min-complexity: 30
   goimports:
-    local-prefixes: arhat.dev/aranya/
+    local-prefixes: arhat.dev/aranya/pkg
   lll:
     line-length: 120
     # tab width in spaces. Default to 1.

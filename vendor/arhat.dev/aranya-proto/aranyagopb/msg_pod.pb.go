@@ -28,17 +28,17 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type PodStatusMsg_State int32
+type PodState int32
 
 const (
-	POD_STATE_UNKNOWN   PodStatusMsg_State = 0
-	POD_STATE_PENDING   PodStatusMsg_State = 1
-	POD_STATE_RUNNING   PodStatusMsg_State = 2
-	POD_STATE_SUCCEEDED PodStatusMsg_State = 3
-	POD_STATE_FAILED    PodStatusMsg_State = 4
+	POD_STATE_UNKNOWN   PodState = 0
+	POD_STATE_PENDING   PodState = 1
+	POD_STATE_RUNNING   PodState = 2
+	POD_STATE_SUCCEEDED PodState = 3
+	POD_STATE_FAILED    PodState = 4
 )
 
-var PodStatusMsg_State_name = map[int32]string{
+var PodState_name = map[int32]string{
 	0: "POD_STATE_UNKNOWN",
 	1: "POD_STATE_PENDING",
 	2: "POD_STATE_RUNNING",
@@ -46,7 +46,7 @@ var PodStatusMsg_State_name = map[int32]string{
 	4: "POD_STATE_FAILED",
 }
 
-var PodStatusMsg_State_value = map[string]int32{
+var PodState_value = map[string]int32{
 	"POD_STATE_UNKNOWN":   0,
 	"POD_STATE_PENDING":   1,
 	"POD_STATE_RUNNING":   2,
@@ -54,8 +54,8 @@ var PodStatusMsg_State_value = map[string]int32{
 	"POD_STATE_FAILED":    4,
 }
 
-func (PodStatusMsg_State) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_164584cfac8e9deb, []int{1, 0}
+func (PodState) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_164584cfac8e9deb, []int{0}
 }
 
 type ContainerStatus struct {
@@ -169,11 +169,11 @@ func (m *ContainerStatus) GetMessage() string {
 type PodStatusMsg struct {
 	// metadata
 	Uid string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-	// status
-	ContainerStatuses map[string]*ContainerStatus `protobuf:"bytes,2,rep,name=container_statuses,json=containerStatuses,proto3" json:"container_statuses,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// allocated pod ip address
-	PodIpv4 string `protobuf:"bytes,3,opt,name=pod_ipv4,json=podIpv4,proto3" json:"pod_ipv4,omitempty"`
-	PodIpv6 string `protobuf:"bytes,4,opt,name=pod_ipv6,json=podIpv6,proto3" json:"pod_ipv6,omitempty"`
+	Ipv4 string `protobuf:"bytes,2,opt,name=ipv4,proto3" json:"ipv4,omitempty"`
+	Ipv6 string `protobuf:"bytes,3,opt,name=ipv6,proto3" json:"ipv6,omitempty"`
+	// status
+	Containers map[string]*ContainerStatus `protobuf:"bytes,4,rep,name=containers,proto3" json:"containers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (m *PodStatusMsg) Reset()      { *m = PodStatusMsg{} }
@@ -215,25 +215,25 @@ func (m *PodStatusMsg) GetUid() string {
 	return ""
 }
 
-func (m *PodStatusMsg) GetContainerStatuses() map[string]*ContainerStatus {
+func (m *PodStatusMsg) GetIpv4() string {
 	if m != nil {
-		return m.ContainerStatuses
+		return m.Ipv4
+	}
+	return ""
+}
+
+func (m *PodStatusMsg) GetIpv6() string {
+	if m != nil {
+		return m.Ipv6
+	}
+	return ""
+}
+
+func (m *PodStatusMsg) GetContainers() map[string]*ContainerStatus {
+	if m != nil {
+		return m.Containers
 	}
 	return nil
-}
-
-func (m *PodStatusMsg) GetPodIpv4() string {
-	if m != nil {
-		return m.PodIpv4
-	}
-	return ""
-}
-
-func (m *PodStatusMsg) GetPodIpv6() string {
-	if m != nil {
-		return m.PodIpv6
-	}
-	return ""
 }
 
 type PodStatusListMsg struct {
@@ -279,166 +279,56 @@ func (m *PodStatusListMsg) GetPods() []*PodStatusMsg {
 	return nil
 }
 
-type ImageStatusMsg struct {
-	Sha256 string `protobuf:"bytes,1,opt,name=sha256,proto3" json:"sha256,omitempty"`
-	// size of the image in bytes
-	Size_ uint64   `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
-	Names []string `protobuf:"bytes,3,rep,name=names,proto3" json:"names,omitempty"`
-}
-
-func (m *ImageStatusMsg) Reset()      { *m = ImageStatusMsg{} }
-func (*ImageStatusMsg) ProtoMessage() {}
-func (*ImageStatusMsg) Descriptor() ([]byte, []int) {
-	return fileDescriptor_164584cfac8e9deb, []int{3}
-}
-func (m *ImageStatusMsg) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ImageStatusMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ImageStatusMsg.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ImageStatusMsg) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ImageStatusMsg.Merge(m, src)
-}
-func (m *ImageStatusMsg) XXX_Size() int {
-	return m.Size()
-}
-func (m *ImageStatusMsg) XXX_DiscardUnknown() {
-	xxx_messageInfo_ImageStatusMsg.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ImageStatusMsg proto.InternalMessageInfo
-
-func (m *ImageStatusMsg) GetSha256() string {
-	if m != nil {
-		return m.Sha256
-	}
-	return ""
-}
-
-func (m *ImageStatusMsg) GetSize_() uint64 {
-	if m != nil {
-		return m.Size_
-	}
-	return 0
-}
-
-func (m *ImageStatusMsg) GetNames() []string {
-	if m != nil {
-		return m.Names
-	}
-	return nil
-}
-
-type ImageStatusListMsg struct {
-	Images []*ImageStatusMsg `protobuf:"bytes,1,rep,name=images,proto3" json:"images,omitempty"`
-}
-
-func (m *ImageStatusListMsg) Reset()      { *m = ImageStatusListMsg{} }
-func (*ImageStatusListMsg) ProtoMessage() {}
-func (*ImageStatusListMsg) Descriptor() ([]byte, []int) {
-	return fileDescriptor_164584cfac8e9deb, []int{4}
-}
-func (m *ImageStatusListMsg) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ImageStatusListMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ImageStatusListMsg.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ImageStatusListMsg) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ImageStatusListMsg.Merge(m, src)
-}
-func (m *ImageStatusListMsg) XXX_Size() int {
-	return m.Size()
-}
-func (m *ImageStatusListMsg) XXX_DiscardUnknown() {
-	xxx_messageInfo_ImageStatusListMsg.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ImageStatusListMsg proto.InternalMessageInfo
-
-func (m *ImageStatusListMsg) GetImages() []*ImageStatusMsg {
-	if m != nil {
-		return m.Images
-	}
-	return nil
-}
-
 func init() {
-	proto.RegisterEnum("aranya.PodStatusMsg_State", PodStatusMsg_State_name, PodStatusMsg_State_value)
+	proto.RegisterEnum("aranya.PodState", PodState_name, PodState_value)
 	proto.RegisterType((*ContainerStatus)(nil), "aranya.ContainerStatus")
 	proto.RegisterType((*PodStatusMsg)(nil), "aranya.PodStatusMsg")
-	proto.RegisterMapType((map[string]*ContainerStatus)(nil), "aranya.PodStatusMsg.ContainerStatusesEntry")
+	proto.RegisterMapType((map[string]*ContainerStatus)(nil), "aranya.PodStatusMsg.ContainersEntry")
 	proto.RegisterType((*PodStatusListMsg)(nil), "aranya.PodStatusListMsg")
-	proto.RegisterType((*ImageStatusMsg)(nil), "aranya.ImageStatusMsg")
-	proto.RegisterType((*ImageStatusListMsg)(nil), "aranya.ImageStatusListMsg")
 }
 
 func init() { proto.RegisterFile("msg_pod.proto", fileDescriptor_164584cfac8e9deb) }
 
 var fileDescriptor_164584cfac8e9deb = []byte{
-	// 618 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x93, 0xc1, 0x6e, 0xd3, 0x4c,
-	0x14, 0x85, 0x3d, 0x71, 0x92, 0x36, 0x37, 0xe9, 0xff, 0xbb, 0x43, 0x49, 0x0d, 0x88, 0x21, 0x0d,
-	0x9b, 0x48, 0xa8, 0x41, 0x2a, 0xa5, 0x42, 0x88, 0x4d, 0x48, 0x0c, 0x8a, 0x28, 0x6e, 0xe5, 0xb6,
-	0xaa, 0x54, 0x09, 0x59, 0xd3, 0x78, 0x48, 0xad, 0x12, 0x8f, 0xe5, 0x99, 0x44, 0x04, 0x36, 0x3c,
-	0x01, 0xe2, 0x19, 0x58, 0xf1, 0x28, 0x2c, 0xbb, 0xec, 0x92, 0xba, 0x1b, 0x96, 0x7d, 0x04, 0xe4,
-	0xb1, 0xdd, 0xb4, 0x55, 0x77, 0x73, 0xbf, 0x73, 0x75, 0xe7, 0xf8, 0x5c, 0x0f, 0x2c, 0x8c, 0xc4,
-	0xd0, 0x0d, 0xb9, 0xd7, 0x0e, 0x23, 0x2e, 0x39, 0x2e, 0xd3, 0x88, 0x06, 0x53, 0xda, 0xfc, 0x59,
-	0x80, 0xff, 0xbb, 0x3c, 0x90, 0xd4, 0x0f, 0x58, 0xb4, 0x23, 0xa9, 0x1c, 0x0b, 0xbc, 0x02, 0xb5,
-	0x41, 0x8e, 0x5c, 0xdf, 0x33, 0x51, 0x03, 0xb5, 0x2a, 0x4e, 0xf5, 0x92, 0xf5, 0x3d, 0x7c, 0x0f,
-	0xe6, 0xfd, 0x11, 0x1d, 0xb2, 0x44, 0x2e, 0x28, 0x79, 0x4e, 0xd5, 0x7d, 0x0f, 0x3f, 0x04, 0x18,
-	0x44, 0x8c, 0x4a, 0xe6, 0xb9, 0x54, 0x9a, 0x45, 0x25, 0x56, 0x32, 0xd2, 0x91, 0x89, 0x2c, 0x24,
-	0x8d, 0x32, 0xb9, 0x94, 0xca, 0x19, 0xe9, 0x48, 0xfc, 0x08, 0xaa, 0x1f, 0xfd, 0xc0, 0x17, 0x47,
-	0xa9, 0x5e, 0x56, 0x3a, 0xe4, 0xa8, 0x23, 0xf1, 0x03, 0xa8, 0xb0, 0xcf, 0xbe, 0x74, 0x07, 0xdc,
-	0x63, 0xe6, 0x5c, 0x03, 0xb5, 0x4a, 0xce, 0x7c, 0x02, 0xba, 0xdc, 0x63, 0xf8, 0x31, 0x2c, 0x44,
-	0x4c, 0x0d, 0x73, 0x07, 0x7c, 0x1c, 0x48, 0x73, 0x5e, 0x35, 0xd4, 0x32, 0xd8, 0x4d, 0x18, 0xae,
-	0x43, 0x39, 0x62, 0x54, 0xf0, 0xc0, 0xac, 0xaa, 0xe9, 0x59, 0x85, 0x4d, 0x98, 0x1b, 0x31, 0x21,
-	0xe8, 0x90, 0x99, 0xb5, 0xf4, 0x93, 0xb2, 0xb2, 0xf9, 0x5d, 0x87, 0xda, 0x36, 0xf7, 0xd2, 0x78,
-	0xde, 0x8b, 0x21, 0x36, 0x40, 0x1f, 0x5f, 0x06, 0x93, 0x1c, 0xf1, 0x01, 0xe0, 0x59, 0x66, 0x42,
-	0x35, 0x32, 0x61, 0x16, 0x1a, 0x7a, 0xab, 0xba, 0xf6, 0xa4, 0x9d, 0x86, 0xdd, 0xbe, 0x3a, 0xa3,
-	0x7d, 0x23, 0x75, 0x26, 0xac, 0x40, 0x46, 0x53, 0x67, 0x71, 0x70, 0x93, 0x27, 0x61, 0x87, 0xdc,
-	0x73, 0xfd, 0x70, 0xb2, 0x6e, 0xea, 0xa9, 0xb3, 0x90, 0x7b, 0xfd, 0x70, 0xb2, 0x7e, 0x45, 0xda,
-	0xc8, 0xa2, 0xce, 0xa4, 0x8d, 0xfb, 0x1f, 0xa0, 0x7e, 0xfb, 0x15, 0x89, 0xfb, 0x63, 0x36, 0xcd,
-	0xdd, 0x1f, 0xb3, 0x29, 0x5e, 0x85, 0xd2, 0x84, 0x7e, 0x1a, 0x33, 0xb5, 0xcb, 0xea, 0xda, 0x72,
-	0x6e, 0xf8, 0xc6, 0x00, 0x27, 0xed, 0x7a, 0x59, 0x78, 0x81, 0x9a, 0x5f, 0xa1, 0x94, 0x40, 0x86,
-	0xef, 0xc2, 0xe2, 0xf6, 0x56, 0xcf, 0xdd, 0xd9, 0xed, 0xec, 0x5a, 0xee, 0x9e, 0xfd, 0xce, 0xde,
-	0xda, 0xb7, 0x0d, 0xed, 0x3a, 0xde, 0xb6, 0xec, 0x5e, 0xdf, 0x7e, 0x6b, 0xa0, 0xeb, 0xd8, 0xd9,
-	0xb3, 0xed, 0x04, 0x17, 0xf0, 0x32, 0xdc, 0x99, 0xe1, 0x9d, 0xbd, 0x6e, 0xd7, 0xb2, 0x7a, 0x56,
-	0xcf, 0xd0, 0xf1, 0x12, 0x18, 0x33, 0xe1, 0x4d, 0xa7, 0xbf, 0x69, 0xf5, 0x8c, 0x62, 0xf3, 0x15,
-	0x18, 0x97, 0x59, 0x6e, 0xfa, 0x42, 0x26, 0x3b, 0x69, 0x41, 0x31, 0xe4, 0x9e, 0x30, 0x91, 0xca,
-	0x7c, 0xe9, 0xb6, 0xcc, 0x1d, 0xd5, 0xd1, 0x74, 0xe0, 0xbf, 0x7e, 0xf2, 0xb3, 0xce, 0xf6, 0x59,
-	0x87, 0xb2, 0x38, 0xa2, 0x6b, 0xcf, 0x37, 0xb2, 0x50, 0xb2, 0x0a, 0x63, 0x28, 0x0a, 0xff, 0x4b,
-	0x1a, 0x4b, 0xd1, 0x51, 0x67, 0xbc, 0x04, 0xa5, 0x80, 0x8e, 0x98, 0x30, 0xf5, 0x86, 0xde, 0xaa,
-	0x38, 0x69, 0xd1, 0xec, 0x01, 0xbe, 0x32, 0x33, 0xf7, 0xd4, 0x86, 0xb2, 0x7a, 0x16, 0xb9, 0xab,
-	0x7a, 0xee, 0xea, 0xfa, 0xfd, 0x4e, 0xd6, 0xf5, 0x7a, 0xff, 0xe4, 0x8c, 0x68, 0xa7, 0x67, 0x44,
-	0xbb, 0x38, 0x23, 0xe8, 0x5b, 0x4c, 0xd0, 0xaf, 0x98, 0xa0, 0xdf, 0x31, 0x41, 0x27, 0x31, 0x41,
-	0x7f, 0x62, 0x82, 0xfe, 0xc6, 0x44, 0xbb, 0x88, 0x09, 0xfa, 0x71, 0x4e, 0xb4, 0x93, 0x73, 0xa2,
-	0x9d, 0x9e, 0x13, 0xed, 0x60, 0x85, 0x46, 0x47, 0x54, 0xb6, 0x3d, 0x36, 0x79, 0x9a, 0x8e, 0x5f,
-	0x55, 0x6f, 0x3c, 0x2b, 0x86, 0x3c, 0x3c, 0x3c, 0x2c, 0x2b, 0xf2, 0xec, 0x5f, 0x00, 0x00, 0x00,
-	0xff, 0xff, 0x73, 0xac, 0x1b, 0x54, 0x06, 0x04, 0x00, 0x00,
+	// 536 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x93, 0x41, 0x6f, 0xd3, 0x3c,
+	0x18, 0xc7, 0xe3, 0xb6, 0xeb, 0xda, 0xa7, 0x9d, 0xde, 0xbc, 0x66, 0xb0, 0x00, 0xc2, 0x74, 0x85,
+	0x43, 0x85, 0xb4, 0x22, 0x0d, 0x34, 0x21, 0xc4, 0xa5, 0x34, 0x01, 0x55, 0x8c, 0xac, 0x4a, 0x57,
+	0x26, 0x71, 0x89, 0xbc, 0xc6, 0x74, 0xd1, 0x68, 0x5c, 0xc5, 0x6e, 0x45, 0x2f, 0x88, 0x8f, 0xc0,
+	0x67, 0xe0, 0xc4, 0x47, 0xe1, 0xd8, 0xe3, 0x8e, 0x34, 0x95, 0x10, 0xc7, 0x7d, 0x04, 0x14, 0x27,
+	0xcd, 0x3a, 0xc4, 0xcd, 0xcf, 0xef, 0xe7, 0xd8, 0x7f, 0x3f, 0x8f, 0x02, 0x5b, 0x23, 0x31, 0x74,
+	0xc7, 0xdc, 0x6b, 0x8e, 0x43, 0x2e, 0x39, 0x2e, 0xd2, 0x90, 0x06, 0x33, 0x5a, 0xff, 0x96, 0x83,
+	0xff, 0xda, 0x3c, 0x90, 0xd4, 0x0f, 0x58, 0xd8, 0x93, 0x54, 0x4e, 0x04, 0xde, 0x85, 0xea, 0x60,
+	0x85, 0x5c, 0xdf, 0x33, 0x50, 0x0d, 0x35, 0xca, 0x4e, 0x25, 0x63, 0x1d, 0x0f, 0xdf, 0x86, 0x92,
+	0x3f, 0xa2, 0x43, 0x16, 0xeb, 0x9c, 0xd2, 0x9b, 0xaa, 0xee, 0x78, 0xf8, 0x1e, 0xc0, 0x20, 0x64,
+	0x54, 0x32, 0xcf, 0xa5, 0xd2, 0x28, 0x28, 0x59, 0x4e, 0x49, 0x4b, 0xc6, 0x5a, 0x48, 0x1a, 0xa6,
+	0x7a, 0x23, 0xd1, 0x29, 0x69, 0x49, 0x7c, 0x1f, 0x2a, 0x1f, 0xfc, 0xc0, 0x17, 0x67, 0x89, 0x2f,
+	0x2a, 0x0f, 0x2b, 0xd4, 0x92, 0xf8, 0x2e, 0x94, 0xd9, 0x27, 0x5f, 0xba, 0x03, 0xee, 0x31, 0x63,
+	0xb3, 0x86, 0x1a, 0x1b, 0x4e, 0x29, 0x06, 0x6d, 0xee, 0x31, 0xfc, 0x00, 0xb6, 0x42, 0xa6, 0x0e,
+	0x73, 0x07, 0x7c, 0x12, 0x48, 0xa3, 0xa4, 0x36, 0x54, 0x53, 0xd8, 0x8e, 0x19, 0xbe, 0x05, 0xc5,
+	0x90, 0x51, 0xc1, 0x03, 0xa3, 0xa2, 0x4e, 0x4f, 0x2b, 0x6c, 0xc0, 0xe6, 0x88, 0x09, 0x41, 0x87,
+	0xcc, 0xa8, 0x26, 0x4f, 0x4a, 0xcb, 0xfa, 0x2f, 0x04, 0xd5, 0x2e, 0xf7, 0x92, 0xf6, 0xbc, 0x15,
+	0x43, 0xac, 0x43, 0x7e, 0x92, 0x35, 0x26, 0x5e, 0x62, 0x0c, 0x05, 0x7f, 0x3c, 0x7d, 0x9a, 0x36,
+	0x43, 0xad, 0x53, 0x76, 0x60, 0xe4, 0x33, 0x76, 0x80, 0x4d, 0x80, 0xac, 0x8f, 0xc2, 0x28, 0xd4,
+	0xf2, 0x8d, 0xca, 0xfe, 0xc3, 0x66, 0x32, 0x8c, 0xe6, 0xfa, 0x1d, 0xcd, 0x6c, 0x2a, 0xc2, 0x0a,
+	0x64, 0x38, 0x73, 0xd6, 0xbe, 0xbb, 0xf3, 0x6e, 0x6d, 0x68, 0x89, 0x8e, 0x23, 0x9d, 0xb3, 0xd9,
+	0x2a, 0xd2, 0x39, 0x9b, 0xe1, 0x3d, 0xd8, 0x98, 0xd2, 0x8f, 0x13, 0xa6, 0x32, 0x55, 0xf6, 0x77,
+	0x56, 0xb7, 0xfc, 0x35, 0x6e, 0x27, 0xd9, 0xf5, 0x3c, 0xf7, 0x0c, 0xd5, 0x5f, 0x80, 0x9e, 0x65,
+	0x38, 0xf4, 0x85, 0x8c, 0xdf, 0xda, 0x80, 0xc2, 0x98, 0x7b, 0xc2, 0x40, 0x2a, 0xeb, 0xf6, 0xbf,
+	0xb2, 0x3a, 0x6a, 0xc7, 0xa3, 0xcf, 0x50, 0x4a, 0x29, 0xc3, 0x37, 0xe1, 0xff, 0xee, 0x91, 0xe9,
+	0xf6, 0x8e, 0x5b, 0xc7, 0x96, 0xdb, 0xb7, 0xdf, 0xd8, 0x47, 0x27, 0xb6, 0xae, 0x5d, 0xc7, 0x5d,
+	0xcb, 0x36, 0x3b, 0xf6, 0x6b, 0x1d, 0x5d, 0xc7, 0x4e, 0xdf, 0xb6, 0x63, 0x9c, 0xc3, 0x3b, 0x70,
+	0xe3, 0x0a, 0xf7, 0xfa, 0xed, 0xb6, 0x65, 0x99, 0x96, 0xa9, 0xe7, 0xf1, 0x36, 0xe8, 0x57, 0xe2,
+	0x55, 0xab, 0x73, 0x68, 0x99, 0x7a, 0xe1, 0xe5, 0xc9, 0x7c, 0x41, 0xb4, 0x8b, 0x05, 0xd1, 0x2e,
+	0x17, 0x04, 0x7d, 0x89, 0x08, 0xfa, 0x1e, 0x11, 0xf4, 0x23, 0x22, 0x68, 0x1e, 0x11, 0xf4, 0x33,
+	0x22, 0xe8, 0x77, 0x44, 0xb4, 0xcb, 0x88, 0xa0, 0xaf, 0x4b, 0xa2, 0xcd, 0x97, 0x44, 0xbb, 0x58,
+	0x12, 0xed, 0xfd, 0x2e, 0x0d, 0xcf, 0xa8, 0x6c, 0x7a, 0x6c, 0xfa, 0x38, 0x79, 0xda, 0x9e, 0xfa,
+	0x43, 0xd2, 0x62, 0xc8, 0xc7, 0xa7, 0xa7, 0x45, 0x45, 0x9e, 0xfc, 0x09, 0x00, 0x00, 0xff, 0xff,
+	0xb0, 0x54, 0x54, 0xbc, 0x44, 0x03, 0x00, 0x00,
 }
 
-func (x PodStatusMsg_State) String() string {
-	s, ok := PodStatusMsg_State_name[int32(x)]
+func (x PodState) String() string {
+	s, ok := PodState_name[int32(x)]
 	if ok {
 		return s
 	}
@@ -514,19 +404,19 @@ func (this *PodStatusMsg) Equal(that interface{}) bool {
 	if this.Uid != that1.Uid {
 		return false
 	}
-	if len(this.ContainerStatuses) != len(that1.ContainerStatuses) {
+	if this.Ipv4 != that1.Ipv4 {
 		return false
 	}
-	for i := range this.ContainerStatuses {
-		if !this.ContainerStatuses[i].Equal(that1.ContainerStatuses[i]) {
+	if this.Ipv6 != that1.Ipv6 {
+		return false
+	}
+	if len(this.Containers) != len(that1.Containers) {
+		return false
+	}
+	for i := range this.Containers {
+		if !this.Containers[i].Equal(that1.Containers[i]) {
 			return false
 		}
-	}
-	if this.PodIpv4 != that1.PodIpv4 {
-		return false
-	}
-	if this.PodIpv6 != that1.PodIpv6 {
-		return false
 	}
 	return true
 }
@@ -559,70 +449,6 @@ func (this *PodStatusListMsg) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *ImageStatusMsg) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ImageStatusMsg)
-	if !ok {
-		that2, ok := that.(ImageStatusMsg)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Sha256 != that1.Sha256 {
-		return false
-	}
-	if this.Size_ != that1.Size_ {
-		return false
-	}
-	if len(this.Names) != len(that1.Names) {
-		return false
-	}
-	for i := range this.Names {
-		if this.Names[i] != that1.Names[i] {
-			return false
-		}
-	}
-	return true
-}
-func (this *ImageStatusListMsg) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ImageStatusListMsg)
-	if !ok {
-		that2, ok := that.(ImageStatusListMsg)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Images) != len(that1.Images) {
-		return false
-	}
-	for i := range this.Images {
-		if !this.Images[i].Equal(that1.Images[i]) {
-			return false
-		}
-	}
-	return true
-}
 func (this *ContainerStatus) GoString() string {
 	if this == nil {
 		return "nil"
@@ -648,21 +474,21 @@ func (this *PodStatusMsg) GoString() string {
 	s := make([]string, 0, 8)
 	s = append(s, "&aranyagopb.PodStatusMsg{")
 	s = append(s, "Uid: "+fmt.Sprintf("%#v", this.Uid)+",\n")
-	keysForContainerStatuses := make([]string, 0, len(this.ContainerStatuses))
-	for k, _ := range this.ContainerStatuses {
-		keysForContainerStatuses = append(keysForContainerStatuses, k)
+	s = append(s, "Ipv4: "+fmt.Sprintf("%#v", this.Ipv4)+",\n")
+	s = append(s, "Ipv6: "+fmt.Sprintf("%#v", this.Ipv6)+",\n")
+	keysForContainers := make([]string, 0, len(this.Containers))
+	for k, _ := range this.Containers {
+		keysForContainers = append(keysForContainers, k)
 	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForContainerStatuses)
-	mapStringForContainerStatuses := "map[string]*ContainerStatus{"
-	for _, k := range keysForContainerStatuses {
-		mapStringForContainerStatuses += fmt.Sprintf("%#v: %#v,", k, this.ContainerStatuses[k])
+	github_com_gogo_protobuf_sortkeys.Strings(keysForContainers)
+	mapStringForContainers := "map[string]*ContainerStatus{"
+	for _, k := range keysForContainers {
+		mapStringForContainers += fmt.Sprintf("%#v: %#v,", k, this.Containers[k])
 	}
-	mapStringForContainerStatuses += "}"
-	if this.ContainerStatuses != nil {
-		s = append(s, "ContainerStatuses: "+mapStringForContainerStatuses+",\n")
+	mapStringForContainers += "}"
+	if this.Containers != nil {
+		s = append(s, "Containers: "+mapStringForContainers+",\n")
 	}
-	s = append(s, "PodIpv4: "+fmt.Sprintf("%#v", this.PodIpv4)+",\n")
-	s = append(s, "PodIpv6: "+fmt.Sprintf("%#v", this.PodIpv6)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -674,30 +500,6 @@ func (this *PodStatusListMsg) GoString() string {
 	s = append(s, "&aranyagopb.PodStatusListMsg{")
 	if this.Pods != nil {
 		s = append(s, "Pods: "+fmt.Sprintf("%#v", this.Pods)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ImageStatusMsg) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&aranyagopb.ImageStatusMsg{")
-	s = append(s, "Sha256: "+fmt.Sprintf("%#v", this.Sha256)+",\n")
-	s = append(s, "Size_: "+fmt.Sprintf("%#v", this.Size_)+",\n")
-	s = append(s, "Names: "+fmt.Sprintf("%#v", this.Names)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ImageStatusListMsg) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&aranyagopb.ImageStatusListMsg{")
-	if this.Images != nil {
-		s = append(s, "Images: "+fmt.Sprintf("%#v", this.Images)+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -812,23 +614,9 @@ func (m *PodStatusMsg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.PodIpv6) > 0 {
-		i -= len(m.PodIpv6)
-		copy(dAtA[i:], m.PodIpv6)
-		i = encodeVarintMsgPod(dAtA, i, uint64(len(m.PodIpv6)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.PodIpv4) > 0 {
-		i -= len(m.PodIpv4)
-		copy(dAtA[i:], m.PodIpv4)
-		i = encodeVarintMsgPod(dAtA, i, uint64(len(m.PodIpv4)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.ContainerStatuses) > 0 {
-		for k := range m.ContainerStatuses {
-			v := m.ContainerStatuses[k]
+	if len(m.Containers) > 0 {
+		for k := range m.Containers {
+			v := m.Containers[k]
 			baseI := i
 			if v != nil {
 				{
@@ -849,8 +637,22 @@ func (m *PodStatusMsg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			dAtA[i] = 0xa
 			i = encodeVarintMsgPod(dAtA, i, uint64(baseI-i))
 			i--
-			dAtA[i] = 0x12
+			dAtA[i] = 0x22
 		}
+	}
+	if len(m.Ipv6) > 0 {
+		i -= len(m.Ipv6)
+		copy(dAtA[i:], m.Ipv6)
+		i = encodeVarintMsgPod(dAtA, i, uint64(len(m.Ipv6)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Ipv4) > 0 {
+		i -= len(m.Ipv4)
+		copy(dAtA[i:], m.Ipv4)
+		i = encodeVarintMsgPod(dAtA, i, uint64(len(m.Ipv4)))
+		i--
+		dAtA[i] = 0x12
 	}
 	if len(m.Uid) > 0 {
 		i -= len(m.Uid)
@@ -886,87 +688,6 @@ func (m *PodStatusListMsg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		for iNdEx := len(m.Pods) - 1; iNdEx >= 0; iNdEx-- {
 			{
 				size, err := m.Pods[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintMsgPod(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ImageStatusMsg) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ImageStatusMsg) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ImageStatusMsg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Names) > 0 {
-		for iNdEx := len(m.Names) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Names[iNdEx])
-			copy(dAtA[i:], m.Names[iNdEx])
-			i = encodeVarintMsgPod(dAtA, i, uint64(len(m.Names[iNdEx])))
-			i--
-			dAtA[i] = 0x1a
-		}
-	}
-	if m.Size_ != 0 {
-		i = encodeVarintMsgPod(dAtA, i, uint64(m.Size_))
-		i--
-		dAtA[i] = 0x10
-	}
-	if len(m.Sha256) > 0 {
-		i -= len(m.Sha256)
-		copy(dAtA[i:], m.Sha256)
-		i = encodeVarintMsgPod(dAtA, i, uint64(len(m.Sha256)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ImageStatusListMsg) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ImageStatusListMsg) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ImageStatusListMsg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Images) > 0 {
-		for iNdEx := len(m.Images) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Images[iNdEx].MarshalToSizedBuffer(dAtA[:i])
 				if err != nil {
 					return 0, err
 				}
@@ -1044,8 +765,16 @@ func (m *PodStatusMsg) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovMsgPod(uint64(l))
 	}
-	if len(m.ContainerStatuses) > 0 {
-		for k, v := range m.ContainerStatuses {
+	l = len(m.Ipv4)
+	if l > 0 {
+		n += 1 + l + sovMsgPod(uint64(l))
+	}
+	l = len(m.Ipv6)
+	if l > 0 {
+		n += 1 + l + sovMsgPod(uint64(l))
+	}
+	if len(m.Containers) > 0 {
+		for k, v := range m.Containers {
 			_ = k
 			_ = v
 			l = 0
@@ -1056,14 +785,6 @@ func (m *PodStatusMsg) Size() (n int) {
 			mapEntrySize := 1 + len(k) + sovMsgPod(uint64(len(k))) + l
 			n += mapEntrySize + 1 + sovMsgPod(uint64(mapEntrySize))
 		}
-	}
-	l = len(m.PodIpv4)
-	if l > 0 {
-		n += 1 + l + sovMsgPod(uint64(l))
-	}
-	l = len(m.PodIpv6)
-	if l > 0 {
-		n += 1 + l + sovMsgPod(uint64(l))
 	}
 	return n
 }
@@ -1076,43 +797,6 @@ func (m *PodStatusListMsg) Size() (n int) {
 	_ = l
 	if len(m.Pods) > 0 {
 		for _, e := range m.Pods {
-			l = e.Size()
-			n += 1 + l + sovMsgPod(uint64(l))
-		}
-	}
-	return n
-}
-
-func (m *ImageStatusMsg) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Sha256)
-	if l > 0 {
-		n += 1 + l + sovMsgPod(uint64(l))
-	}
-	if m.Size_ != 0 {
-		n += 1 + sovMsgPod(uint64(m.Size_))
-	}
-	if len(m.Names) > 0 {
-		for _, s := range m.Names {
-			l = len(s)
-			n += 1 + l + sovMsgPod(uint64(l))
-		}
-	}
-	return n
-}
-
-func (m *ImageStatusListMsg) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Images) > 0 {
-		for _, e := range m.Images {
 			l = e.Size()
 			n += 1 + l + sovMsgPod(uint64(l))
 		}
@@ -1148,21 +832,21 @@ func (this *PodStatusMsg) String() string {
 	if this == nil {
 		return "nil"
 	}
-	keysForContainerStatuses := make([]string, 0, len(this.ContainerStatuses))
-	for k, _ := range this.ContainerStatuses {
-		keysForContainerStatuses = append(keysForContainerStatuses, k)
+	keysForContainers := make([]string, 0, len(this.Containers))
+	for k, _ := range this.Containers {
+		keysForContainers = append(keysForContainers, k)
 	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForContainerStatuses)
-	mapStringForContainerStatuses := "map[string]*ContainerStatus{"
-	for _, k := range keysForContainerStatuses {
-		mapStringForContainerStatuses += fmt.Sprintf("%v: %v,", k, this.ContainerStatuses[k])
+	github_com_gogo_protobuf_sortkeys.Strings(keysForContainers)
+	mapStringForContainers := "map[string]*ContainerStatus{"
+	for _, k := range keysForContainers {
+		mapStringForContainers += fmt.Sprintf("%v: %v,", k, this.Containers[k])
 	}
-	mapStringForContainerStatuses += "}"
+	mapStringForContainers += "}"
 	s := strings.Join([]string{`&PodStatusMsg{`,
 		`Uid:` + fmt.Sprintf("%v", this.Uid) + `,`,
-		`ContainerStatuses:` + mapStringForContainerStatuses + `,`,
-		`PodIpv4:` + fmt.Sprintf("%v", this.PodIpv4) + `,`,
-		`PodIpv6:` + fmt.Sprintf("%v", this.PodIpv6) + `,`,
+		`Ipv4:` + fmt.Sprintf("%v", this.Ipv4) + `,`,
+		`Ipv6:` + fmt.Sprintf("%v", this.Ipv6) + `,`,
+		`Containers:` + mapStringForContainers + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1178,33 +862,6 @@ func (this *PodStatusListMsg) String() string {
 	repeatedStringForPods += "}"
 	s := strings.Join([]string{`&PodStatusListMsg{`,
 		`Pods:` + repeatedStringForPods + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ImageStatusMsg) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ImageStatusMsg{`,
-		`Sha256:` + fmt.Sprintf("%v", this.Sha256) + `,`,
-		`Size_:` + fmt.Sprintf("%v", this.Size_) + `,`,
-		`Names:` + fmt.Sprintf("%v", this.Names) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ImageStatusListMsg) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForImages := "[]*ImageStatusMsg{"
-	for _, f := range this.Images {
-		repeatedStringForImages += strings.Replace(f.String(), "ImageStatusMsg", "ImageStatusMsg", 1) + ","
-	}
-	repeatedStringForImages += "}"
-	s := strings.Join([]string{`&ImageStatusListMsg{`,
-		`Images:` + repeatedStringForImages + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1595,7 +1252,71 @@ func (m *PodStatusMsg) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ContainerStatuses", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Ipv4", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgPod
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgPod
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgPod
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Ipv4 = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Ipv6", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgPod
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgPod
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgPod
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Ipv6 = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Containers", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -1622,8 +1343,8 @@ func (m *PodStatusMsg) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.ContainerStatuses == nil {
-				m.ContainerStatuses = make(map[string]*ContainerStatus)
+			if m.Containers == nil {
+				m.Containers = make(map[string]*ContainerStatus)
 			}
 			var mapkey string
 			var mapvalue *ContainerStatus
@@ -1720,71 +1441,7 @@ func (m *PodStatusMsg) Unmarshal(dAtA []byte) error {
 					iNdEx += skippy
 				}
 			}
-			m.ContainerStatuses[mapkey] = mapvalue
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PodIpv4", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgPod
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.PodIpv4 = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PodIpv6", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgPod
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.PodIpv6 = string(dAtA[iNdEx:postIndex])
+			m.Containers[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1870,229 +1527,6 @@ func (m *PodStatusListMsg) Unmarshal(dAtA []byte) error {
 			}
 			m.Pods = append(m.Pods, &PodStatusMsg{})
 			if err := m.Pods[len(m.Pods)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipMsgPod(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ImageStatusMsg) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowMsgPod
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ImageStatusMsg: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ImageStatusMsg: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Sha256", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgPod
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Sha256 = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Size_", wireType)
-			}
-			m.Size_ = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgPod
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Size_ |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Names", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgPod
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Names = append(m.Names, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipMsgPod(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ImageStatusListMsg) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowMsgPod
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ImageStatusListMsg: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ImageStatusListMsg: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Images", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgPod
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Images = append(m.Images, &ImageStatusMsg{})
-			if err := m.Images[len(m.Images)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
