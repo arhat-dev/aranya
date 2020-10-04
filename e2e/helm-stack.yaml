@@ -52,3 +52,15 @@ environments:
 
   - name: default/aranya
     chart: aranya@master
+
+- name: v1-19
+  kubeContext: kind-v1-19
+
+  deployments:
+  - name: emqx/emqx
+    chart: emqx@v4.1.1
+  - name: monitoring/promop
+    chart: bitnami/prometheus-operator@0.22.3
+
+  - name: default/aranya
+    chart: aranya@master
