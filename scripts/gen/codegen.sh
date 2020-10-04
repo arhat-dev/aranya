@@ -97,7 +97,7 @@ _do_gen_deepcopy() {
 _do_gen_crd_manifests() {
   group_name="$1"
 
-	"${CONTROLLER_GEN}" crd:preserveUnknownFields=true output:dir=./cicd/deploy/charts/aranya/crds/ paths="./pkg/apis/${group_name}/..."
+  "${CONTROLLER_GEN}" crd:preserveUnknownFields=true output:dir=./cicd/deploy/charts/aranya/crds/ paths="./pkg/apis/${group_name}/..."
 }
 
 gen() {

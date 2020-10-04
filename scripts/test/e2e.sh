@@ -37,7 +37,7 @@ e2e() {
   # delete cluster (best effort)
   trap 'kind -v 100 delete cluster --name "${kube_version}" --kubeconfig "${KUBECONFIG}" || true ' EXIT
 
-	kind -v 100 create cluster --config "e2e/kind/${kube_version}.yaml" --retain --wait 5m --name "${kube_version}" --kubeconfig "${KUBECONFIG}"
+  kind -v 100 create cluster --config "e2e/kind/${kube_version}.yaml" --retain --wait 5m --name "${kube_version}" --kubeconfig "${KUBECONFIG}"
 
   kubectl get nodes -o yaml
   kubectl taint nodes --all node-role.kubernetes.io/master- || true
