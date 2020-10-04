@@ -29,10 +29,16 @@ aranya.linux.armv7:
 aranya.linux.armv6:
 	sh scripts/build/build.sh $@
 
+aranya.linux.armv5:
+	sh scripts/build/build.sh $@
+
 aranya.linux.x86:
 	sh scripts/build/build.sh $@
 
 aranya.linux.ppc64le:
+	sh scripts/build/build.sh $@
+
+aranya.linux.mips64le:
 	sh scripts/build/build.sh $@
 
 aranya.linux.s390x:
@@ -43,8 +49,10 @@ aranya.linux.all: \
 	aranya.linux.arm64 \
 	aranya.linux.armv7 \
 	aranya.linux.armv6 \
+	aranya.linux.armv5 \
 	aranya.linux.x86 \
 	aranya.linux.ppc64le \
+	aranya.linux.mips64le \
 	aranya.linux.s390x
 
 # windows

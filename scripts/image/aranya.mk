@@ -19,6 +19,9 @@ image.build.aranya.linux.x86:
 image.build.aranya.linux.amd64:
 	sh scripts/image/build.sh $@
 
+image.build.aranya.linux.armv5:
+	sh scripts/image/build.sh $@
+
 image.build.aranya.linux.armv6:
 	sh scripts/image/build.sh $@
 
@@ -31,6 +34,9 @@ image.build.aranya.linux.arm64:
 image.build.aranya.linux.ppc64le:
 	sh scripts/image/build.sh $@
 
+image.build.aranya.linux.mips64le:
+	sh scripts/image/build.sh $@
+
 image.build.aranya.linux.s390x:
 	sh scripts/image/build.sh $@
 
@@ -39,9 +45,11 @@ image.build.aranya.linux.all: \
 	image.build.aranya.linux.arm64 \
 	image.build.aranya.linux.armv7 \
 	image.build.aranya.linux.armv6 \
+	image.build.aranya.linux.armv5 \
 	image.build.aranya.linux.x86 \
 	image.build.aranya.linux.s390x \
-	image.build.aranya.linux.ppc64le
+	image.build.aranya.linux.ppc64le \
+	image.build.aranya.linux.mips64le
 
 image.build.aranya.windows.amd64:
 	sh scripts/image/build.sh $@
@@ -60,6 +68,9 @@ image.push.aranya.linux.x86:
 image.push.aranya.linux.amd64:
 	sh scripts/image/push.sh $@
 
+image.push.aranya.linux.armv5:
+	sh scripts/image/push.sh $@
+
 image.push.aranya.linux.armv6:
 	sh scripts/image/push.sh $@
 
@@ -72,6 +83,9 @@ image.push.aranya.linux.arm64:
 image.push.aranya.linux.ppc64le:
 	sh scripts/image/push.sh $@
 
+image.push.aranya.linux.mips64le:
+	sh scripts/image/push.sh $@
+
 image.push.aranya.linux.s390x:
 	sh scripts/image/push.sh $@
 
@@ -80,9 +94,11 @@ image.push.aranya.linux.all: \
 	image.push.aranya.linux.arm64 \
 	image.push.aranya.linux.armv7 \
 	image.push.aranya.linux.armv6 \
+	image.push.aranya.linux.armv5 \
 	image.push.aranya.linux.x86 \
 	image.push.aranya.linux.s390x \
-	image.push.aranya.linux.ppc64le
+	image.push.aranya.linux.ppc64le \
+	image.push.aranya.linux.mips64le
 
 image.push.aranya.windows.amd64:
 	sh scripts/image/push.sh $@
