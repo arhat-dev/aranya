@@ -65,7 +65,9 @@ func (m *Manager) Start() error {
 				err error
 			)
 
-			msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_PERIPHERAL_LIST, aranyagopb.NewPeripheralListCmd())
+			msgCh, _, err := m.ConnectivityManager.PostCmd(
+				0, aranyagopb.CMD_PERIPHERAL_LIST, aranyagopb.NewPeripheralListCmd(),
+			)
 			if err != nil {
 				logger.I("failed to post device list cmd", log.Error(err))
 
