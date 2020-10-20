@@ -120,7 +120,7 @@ func run(appCtx context.Context, config *conf.Config) error {
 		sshListener net.Listener
 		sftpManager *manager.SFTPManager
 	)
-	if config.VirtualNode.Node.Storage.Enabled {
+	if config.VirtualNode.Storage.Enabled {
 		sshListener, err = net.Listen("tcp", ":0")
 		if err != nil {
 			return fmt.Errorf("failed to listen for ssh server: %w", err)
@@ -134,7 +134,7 @@ func run(appCtx context.Context, config *conf.Config) error {
 			publicKey    ssh.PublicKey
 		)
 
-		hostKeyBytes, err = ioutil.ReadFile(config.VirtualNode.Node.Storage.SFTP.HostKeyFile)
+		hostKeyBytes, err = ioutil.ReadFile(config.VirtualNode.Storage.SFTP.HostKeyFile)
 		if err != nil {
 			return fmt.Errorf("failed to read sftp host key: %w", err)
 		}
@@ -154,7 +154,7 @@ func run(appCtx context.Context, config *conf.Config) error {
 			&pem.Block{Type: "OPENSSH PRIVATE KEY", Bytes: encodehelper.MarshalED25519PrivateKeyForOpenSSH(privKey)})
 
 		sftpManager = manager.NewSFTPManager(
-			appCtx, config.VirtualNode.Node.Storage.RootDir, sshListener, hostKey, publicKey.Marshal())
+			appCtx, config.VirtualNode.Storage.RootDir, sshListener, hostKey, publicKey.Marshal())
 	}
 
 	evb := record.NewBroadcaster()
@@ -278,7 +278,7 @@ func onElected(
 		return fmt.Errorf("failed to get at least one node address")
 	}
 
-	if config.VirtualNode.Node.Storage.SFTP.Enabled {
+	if config.VirtualNode.Storage.SFTP.Enabled {
 		err = setupServiceForSftpManager(
 			config.Aranya.Managed.SFTPService.Name, sshListener.Addr().String(), kubeClient, podLabels,
 		)

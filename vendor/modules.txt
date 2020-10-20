@@ -1,4 +1,4 @@
-# arhat.dev/aranya-proto v0.0.0-20201011024038-2f21fe0513f1
+# arhat.dev/aranya-proto v0.0.0-20201020220704-63f196bbc84e
 ## explicit
 arhat.dev/aranya-proto/aranyagopb
 arhat.dev/aranya-proto/aranyagopb/aranyagoconst
@@ -465,7 +465,7 @@ google.golang.org/genproto/googleapis/pubsub/v1
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/type/expr
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.31.1 => github.com/grpc/grpc-go v1.29.1
+# google.golang.org/grpc v1.32.0 => github.com/grpc/grpc-go v1.29.1
 ## explicit
 google.golang.org/grpc
 google.golang.org/grpc/attributes

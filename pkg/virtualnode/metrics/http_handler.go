@@ -172,7 +172,7 @@ func (m *Manager) serveMetrics(cache *cache.MetricsCache, resp http.ResponseWrit
 
 	switch cache {
 	case m.nodeMetricsCache:
-		if !m.options.NodeMetrics.Enabled || !m.nodeMetricsSupported() {
+		if !m.nodeMetricsSupported() {
 			http.Error(resp, "node metrics not supported", http.StatusNotImplemented)
 			return
 		}

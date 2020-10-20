@@ -1,4 +1,4 @@
-package device
+package peripheral
 
 import (
 	"fmt"
@@ -9,25 +9,25 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
-func (m *Manager) CollectMetrics(deviceName string) error {
+func (m *Manager) CollectMetrics(peripheralName string) error {
 	logger := m.Log.WithFields(
-		log.String("device", deviceName),
+		log.String("peripheral", peripheralName),
 	)
 	msgCh, _, err := m.ConnectivityManager.PostCmd(
 		0,
-		aranyagopb.CMD_DEVICE_OPERATE,
-		aranyagopb.NewDeviceMetricsCollectCmd(deviceName),
+		aranyagopb.CMD_PERIPHERAL_OPERATE,
+		aranyagopb.NewPeripheralMetricsCollectCmd(peripheralName),
 	)
 
 	if err != nil {
-		logger.I("failed to post device metrics collect cmd", log.Error(err))
-		return fmt.Errorf("failed to post device metrics collect cmd")
+		logger.I("failed to post peripheral metrics collect cmd", log.Error(err))
+		return fmt.Errorf("failed to post peripheral metrics collect cmd")
 	}
 
 	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		if msgErr := msg.GetError(); msgErr != nil {
 			err = msgErr
-			logger.I("device metrics collection failed", log.Error(msgErr))
+			logger.I("peripheral metrics collection failed", log.Error(msgErr))
 			return true
 		}
 

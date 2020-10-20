@@ -359,10 +359,10 @@ func NewController(
 		Workers:         1,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
-			OnAdded:    ctrl.onEdgeDeviceAdded,
-			OnUpdated:  ctrl.onEdgeDeviceUpdated,
-			OnDeleting: ctrl.onEdgeDeviceDeleting,
-			OnDeleted:  ctrl.onEdgeDeviceDeleted,
+			OnAdded:    ctrl.onEdgeDeviceResAdded,
+			OnUpdated:  ctrl.onEdgeDeviceResUpdated,
+			OnDeleting: ctrl.onEdgeDeviceResDeleting,
+			OnDeleted:  ctrl.onEdgeDeviceResDeleted,
 		},
 	})
 	ctrl.recStart = append(ctrl.recStart, edgeDeviceRec.Start)
@@ -459,7 +459,7 @@ func NewController(
 	ctrl.recStart = append(ctrl.recStart, ctrl.vnRec.Start)
 	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.vnRec.ReconcileUntil)
 
-	if config.VirtualNode.Node.Storage.Enabled {
+	if config.VirtualNode.Storage.Enabled {
 		csiDriverClient := kubehelper.CreateCSIDriverClient(preferredResources, kubeClient)
 
 		var csiDriverInformer kubecache.SharedIndexInformer
@@ -819,7 +819,7 @@ func (c *Controller) onEdgeDeviceCreationRequested(obj interface{}) *reconcile.R
 	)
 
 	logger.I("instantiating edge device to virtual node")
-	err := c.instantiationEdgeDevice(name)
+	err := c.instantiateEdgeDevice(name)
 	if err != nil {
 		logger.I("failed to instantiate edge device", log.Error(err))
 		return &reconcile.Result{Err: err}

@@ -1,4 +1,4 @@
-package device
+package peripheral
 
 import (
 	"encoding/base64"
@@ -18,8 +18,8 @@ func (m *Manager) Operate(deviceName, operationName string, data []byte, out io.
 	)
 	msgCh, _, err := m.ConnectivityManager.PostCmd(
 		0,
-		aranyagopb.CMD_DEVICE_OPERATE,
-		aranyagopb.NewDeviceOperateCmd(deviceName, operationName, data),
+		aranyagopb.CMD_PERIPHERAL_OPERATE,
+		aranyagopb.NewPeripheralOperateCmd(deviceName, operationName, data),
 	)
 
 	if err != nil {
@@ -34,7 +34,7 @@ func (m *Manager) Operate(deviceName, operationName string, data []byte, out io.
 			return true
 		}
 
-		dor := msg.GetDeviceOperationResult()
+		dor := msg.GetPeripheralOperationResult()
 		if dor == nil {
 			logger.I("unexpected non device operation result msg")
 			return true

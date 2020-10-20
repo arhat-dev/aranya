@@ -119,8 +119,8 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 	case aranyagopb.MSG_CTR_NET_STATUS:
 	case aranyagopb.MSG_CTR_NET_STATUS_LIST:
 	case aranyagopb.MSG_HOST_NET_STATUS:
-	case aranyagopb.MSG_DEVICE_STATUS:
-	case aranyagopb.MSG_DEVICE_STATUS_LIST:
+	case aranyagopb.MSG_PERIPHERAL_STATUS:
+	case aranyagopb.MSG_PERIPHERAL_STATUS_LIST:
 	case aranyagopb.MSG_STORAGE_STATUS:
 		if ss := msg.GetStorageStatus(); ss != nil {
 			logger.V("received global storage status")

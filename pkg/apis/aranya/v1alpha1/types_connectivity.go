@@ -24,23 +24,30 @@ import (
 type MQTTSpec struct {
 	// TopicNamespace to share with arhat agent
 	TopicNamespace string `json:"topicNamespace,omitempty"`
+
 	// Broker address in the form of host:port
 	Broker string `json:"broker,omitempty"`
+
 	// Version of MQTT protocol can be one of [3.1.1]
 	// +kubebuilder:validation:Enum="3.1.1"
 	// +optional
 	Version string `json:"version,omitempty"`
+
 	// Transport protocol underlying the MQTT protocol, one of [tcp, websocket]
 	// +kubebuilder:validation:Enum=tcp;websocket
 	// +optional
 	Transport string `json:"transport,omitempty"`
+
 	// +optional
 	ClientID string `json:"clientID,omitempty"`
+
 	// +optional
 	Keepalive int32 `json:"keepalive,omitempty"`
+
 	// Secret for tls cert-key pair
 	// +optional
 	TLSSecretRef *corev1.LocalObjectReference `json:"tlsSecretRef,omitempty"`
+
 	// +optional
 	UserPassRef *corev1.LocalObjectReference `json:"userPassRef,omitempty"`
 }

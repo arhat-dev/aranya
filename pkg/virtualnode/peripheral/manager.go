@@ -1,4 +1,4 @@
-package device
+package peripheral
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 )
 
 type Options struct {
-	MetricsReporters map[string]*aranyagopb.DeviceEnsureCmd
-	Devices          map[string]*aranyagopb.DeviceEnsureCmd
+	MetricsReporters map[string]*aranyagopb.PeripheralEnsureCmd
+	Peripherals      map[string]*aranyagopb.PeripheralEnsureCmd
 }
 
 func NewManager(
@@ -27,16 +27,17 @@ func NewManager(
 	return &Manager{
 		BaseManager: manager.NewBaseManager(parentCtx, fmt.Sprintf("device.%s", name), connectivityManager),
 
-		requestedMRs:     options.MetricsReporters,
-		requestedDevices: options.Devices,
+		requestedMRs:         options.MetricsReporters,
+		requestedPeripherals: options.Peripherals,
 	}
 }
 
 type Manager struct {
 	*manager.BaseManager
 
-	requestedMRs     map[string]*aranyagopb.DeviceEnsureCmd
-	requestedDevices map[string]*aranyagopb.DeviceEnsureCmd
+	requestedMRs map[string]*aranyagopb.PeripheralEnsureCmd
+
+	requestedPeripherals map[string]*aranyagopb.PeripheralEnsureCmd
 }
 
 // nolint:gocyclo
@@ -55,16 +56,16 @@ func (m *Manager) Start() error {
 			var (
 				devicesToRemove = sets.NewString()
 
-				failedDevices  = make(map[string]*aranyagopb.DeviceEnsureCmd)
-				ensuredDevices = make(map[string]*aranyagopb.DeviceEnsureCmd)
+				failedPeripherals  = make(map[string]*aranyagopb.PeripheralEnsureCmd)
+				ensuredPeripherals = make(map[string]*aranyagopb.PeripheralEnsureCmd)
 
-				failedMRs  = make(map[string]*aranyagopb.DeviceEnsureCmd)
-				ensuredMRs = make(map[string]*aranyagopb.DeviceEnsureCmd)
+				failedMRs  = make(map[string]*aranyagopb.PeripheralEnsureCmd)
+				ensuredMRs = make(map[string]*aranyagopb.PeripheralEnsureCmd)
 
 				err error
 			)
 
-			msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_DEVICE_LIST, aranyagopb.NewDeviceListCmd())
+			msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_PERIPHERAL_LIST, aranyagopb.NewPeripheralListCmd())
 			if err != nil {
 				logger.I("failed to post device list cmd", log.Error(err))
 
@@ -78,26 +79,26 @@ func (m *Manager) Start() error {
 					return true
 				}
 
-				sl := msg.GetDeviceStatusList()
+				sl := msg.GetPeripheralStatusList()
 				if sl == nil {
 					return true
 				}
 
-				for _, ds := range sl.Devices {
+				for _, ds := range sl.Peripherals {
 					switch ds.Kind {
-					case aranyagopb.DEVICE_TYPE_NORMAL:
-						if d, ok := m.requestedDevices[ds.Name]; ok {
-							if ds.Name == d.Name && ds.State == aranyagopb.DEVICE_STATE_CONNECTED {
-								ensuredDevices[d.Name] = d
+					case aranyagopb.PERIPHERAL_TYPE_NORMAL:
+						if d, ok := m.requestedPeripherals[ds.Name]; ok {
+							if ds.Name == d.Name && ds.State == aranyagopb.PERIPHERAL_STATE_CONNECTED {
+								ensuredPeripherals[d.Name] = d
 							} else {
-								failedDevices[d.Name] = d
+								failedPeripherals[d.Name] = d
 							}
 						} else {
 							devicesToRemove.Insert(ds.Name)
 						}
-					case aranyagopb.DEVICE_TYPE_METRICS_REPORTER:
-						if d, ok := m.requestedDevices[ds.Name]; ok {
-							if ds.Name == d.Name && ds.State == aranyagopb.DEVICE_STATE_CONNECTED {
+					case aranyagopb.PERIPHERAL_TYPE_METRICS_REPORTER:
+						if d, ok := m.requestedPeripherals[ds.Name]; ok {
+							if ds.Name == d.Name && ds.State == aranyagopb.PERIPHERAL_STATE_CONNECTED {
 								ensuredMRs[d.Name] = d
 							} else {
 								failedMRs[d.Name] = d
@@ -127,13 +128,13 @@ func (m *Manager) Start() error {
 						case <-m.ConnectivityManager.Disconnected():
 							return
 						default:
-							devicesToRemove = m.removeDevices(devicesToRemove)
+							devicesToRemove = m.removePeripherals(devicesToRemove)
 						}
 					}
 				}()
 			}
 
-			if len(failedMRs) > 0 || len(failedDevices) > 0 {
+			if len(failedMRs) > 0 || len(failedPeripherals) > 0 {
 				go func() {
 					// ensure metrics reporters first
 					for len(failedMRs) > 0 {
@@ -145,11 +146,11 @@ func (m *Manager) Start() error {
 						case <-m.ConnectivityManager.Disconnected():
 							return
 						default:
-							failedMRs = m.ensureDevices(failedMRs)
+							failedMRs = m.ensurePeripherals(failedMRs)
 						}
 					}
 
-					for len(failedDevices) > 0 {
+					for len(failedPeripherals) > 0 {
 						// ensure failed device with timeout
 						time.Sleep(5 * time.Second)
 						select {
@@ -158,7 +159,7 @@ func (m *Manager) Start() error {
 						case <-m.ConnectivityManager.Disconnected():
 							return
 						default:
-							failedDevices = m.ensureDevices(failedDevices)
+							failedPeripherals = m.ensurePeripherals(failedPeripherals)
 						}
 					}
 				}()
@@ -179,7 +180,7 @@ func (m *Manager) Close() {
 	m.OnClose(nil)
 }
 
-func (m *Manager) removeDevices(deviceToRemove sets.String) sets.String {
+func (m *Manager) removePeripherals(deviceToRemove sets.String) sets.String {
 	if deviceToRemove.Len() == 0 {
 		return deviceToRemove
 	}
@@ -192,7 +193,7 @@ func (m *Manager) removeDevices(deviceToRemove sets.String) sets.String {
 
 	logger.D("removing unwanted devices")
 	msgCh, _, err := m.ConnectivityManager.PostCmd(
-		0, aranyagopb.CMD_DEVICE_DELETE, aranyagopb.NewDeviceDeleteCmd(devices...),
+		0, aranyagopb.CMD_PERIPHERAL_DELETE, aranyagopb.NewPeripheralDeleteCmd(devices...),
 	)
 	if err != nil {
 		logger.I("failed to post device remove cmd", log.Error(err))
@@ -203,13 +204,13 @@ func (m *Manager) removeDevices(deviceToRemove sets.String) sets.String {
 				return true
 			}
 
-			dsl := msg.GetDeviceStatusList()
+			dsl := msg.GetPeripheralStatusList()
 			if dsl == nil {
 				return true
 			}
 
 			// TODO: update pod status
-			for _, ds := range dsl.Devices {
+			for _, ds := range dsl.Peripherals {
 				deviceToRemove = deviceToRemove.Delete(ds.Name)
 			}
 
@@ -220,47 +221,47 @@ func (m *Manager) removeDevices(deviceToRemove sets.String) sets.String {
 	return deviceToRemove
 }
 
-func (m *Manager) ensureDevices(
-	failedDevices map[string]*aranyagopb.DeviceEnsureCmd,
-) map[string]*aranyagopb.DeviceEnsureCmd {
-	if len(failedDevices) == 0 {
+func (m *Manager) ensurePeripherals(
+	failedPeripherals map[string]*aranyagopb.PeripheralEnsureCmd,
+) map[string]*aranyagopb.PeripheralEnsureCmd {
+	if len(failedPeripherals) == 0 {
 		return nil
 	}
 
-	nextRound := make(map[string]*aranyagopb.DeviceEnsureCmd)
+	nextRound := make(map[string]*aranyagopb.PeripheralEnsureCmd)
 
-	for _, dev := range failedDevices {
+	for _, dev := range failedPeripherals {
 		d := dev
 		logger := m.Log.WithFields(log.String("device", d.Name))
 
 		msgCh, _, err := m.ConnectivityManager.PostCmd(
-			0, aranyagopb.CMD_DEVICE_ENSURE, d,
+			0, aranyagopb.CMD_PERIPHERAL_ENSURE, d,
 		)
 		if err != nil {
 			logger.I("failed to post device ensure cmd", log.Error(err))
-			nextRound[d.Name] = failedDevices[d.Name]
+			nextRound[d.Name] = failedPeripherals[d.Name]
 		}
 
 		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 			if msgErr := msg.GetError(); msgErr != nil {
 				logger.I("failed to ensure device", log.Error(msgErr))
-				nextRound[d.Name] = failedDevices[d.Name]
+				nextRound[d.Name] = failedPeripherals[d.Name]
 				return true
 			}
 
-			status := msg.GetDeviceStatus()
+			status := msg.GetPeripheralStatus()
 			if status == nil {
-				nextRound[d.Name] = failedDevices[d.Name]
+				nextRound[d.Name] = failedPeripherals[d.Name]
 				logger.I("unexpected non device status msg", log.Any("msg", msg))
 				return true
 			}
 
 			logger.D("ensured device")
 			switch status.State {
-			case aranyagopb.DEVICE_STATE_CONNECTED:
+			case aranyagopb.PERIPHERAL_STATE_CONNECTED:
 				// TODO: update pod status
 			default:
-				nextRound[d.Name] = failedDevices[d.Name]
+				nextRound[d.Name] = failedPeripherals[d.Name]
 			}
 
 			return false

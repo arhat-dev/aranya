@@ -20,7 +20,6 @@ import (
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"arhat.dev/aranya/pkg/constant"
 )
@@ -66,10 +65,6 @@ type (
 		// +optional
 		Taints []corev1.Taint `json:"taints,omitempty"`
 
-		// Storage config
-		// +optional
-		Storage NodeStorageSpec `json:"storage,omitempty"`
-
 		// +optional
 		Metrics *MetricsConfig `json:"metrics,omitempty"`
 
@@ -101,12 +96,6 @@ type (
 		Org string `json:"org,omitempty"`
 		// +optional
 		OrgUnit string `json:"orgUnit,omitempty"`
-	}
-
-	// NodeStorageSpec
-	NodeStorageSpec struct {
-		// +optional
-		Enabled bool `json:"enabled"`
 	}
 
 	NodeRBACSpec struct {
@@ -253,16 +242,17 @@ func FlagsForMetricsConfig(prefix string, config *MetricsConfig) *pflag.FlagSet 
 }
 
 type (
-	ReverseProxySpec struct {
-		Selector     map[string]string         `json:"selector,omitempty"`
-		PortMappings []ReverseProxyPortMapping `json:"portMappings,omitempty"`
-	}
-
-	ReverseProxyPortMapping struct {
-		Port      intstr.IntOrString `json:"port,omitempty"`
-		ProxyPort int32              `json:"proxyPort,omitempty"`
+	// StorageSpec
+	StorageSpec struct {
 		// +optional
-		Protocol string `json:"protocol,omitempty"`
+		Enabled bool `json:"enabled"`
+	}
+)
+
+type (
+	NetworkSpec struct {
+		// +optional
+		Enabled bool `json:"enabled"`
 	}
 )
 
@@ -271,24 +261,30 @@ type EdgeDeviceSpec struct {
 	// Connectivity config how we serve the according agent
 	Connectivity ConnectivitySpec `json:"connectivity,omitempty"`
 
-	// Node related settings
+	// Node related settings for kubernetes node resource
 	// +optional
 	Node NodeSpec `json:"node,omitempty"`
 
-	// Pod related settings
+	// Pod related settings for kubernetes pod creation in edge device
 	// +optional
 	Pod PodSpec `json:"pod,omitempty"`
 
-	// MetricsReporters are devices used to push metrics
+	// Storage settings for remote CSI integration
 	// +optional
-	MetricsReporters []BaseDeviceSpec `json:"metricsReporters,omitempty"`
+	Storage StorageSpec `json:"storage,omitempty"`
 
-	// Devices managed by this EdgeDevice
+	// Network settings for network mesh in same namespace
 	// +optional
-	Devices []DeviceSpec `json:"devices,omitempty"`
+	Network NetworkSpec `json:"network,omitempty"`
 
+	// Peripherals managed by this EdgeDevice
 	// +optional
-	ReverseProxy ReverseProxySpec `json:"reverseProxy,omitempty"`
+	Peripherals []PeripheralSpec `json:"peripherals,omitempty"`
+
+	// MetricsReporters are virtual peripherals used to push metrics collected from
+	// peripherals
+	// +optional
+	MetricsReporters []PeripheralBaseSpec `json:"metricsReporters,omitempty"`
 }
 
 // EdgeDeviceStatus defines the observed state of EdgeDevice

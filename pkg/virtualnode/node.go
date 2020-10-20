@@ -37,9 +37,9 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/middleware"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
-	"arhat.dev/aranya/pkg/virtualnode/device"
 	"arhat.dev/aranya/pkg/virtualnode/metrics"
 	"arhat.dev/aranya/pkg/virtualnode/network"
+	"arhat.dev/aranya/pkg/virtualnode/peripheral"
 	"arhat.dev/aranya/pkg/virtualnode/pod"
 	"arhat.dev/aranya/pkg/virtualnode/storage"
 )
@@ -63,7 +63,7 @@ type CreationOptions struct {
 	ConnectivityOptions *connectivity.Options
 	NodeOptions         *Options
 	PodOptions          *pod.Options
-	DeviceOptions       *device.Options
+	DeviceOptions       *peripheral.Options
 	MetricsOptions      *metrics.Options
 	NetworkOptions      *network.Options
 	StorageOptions      *storage.Options
@@ -93,10 +93,10 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 		opt.NetworkOptions,
 	)
 
-	deviceManager := device.NewManager(ctx, opt.NodeName, opt.ConnectivityManager, opt.DeviceOptions)
+	peripheralManager := peripheral.NewManager(ctx, opt.NodeName, opt.ConnectivityManager, opt.DeviceOptions)
 
-	opt.PodOptions.OperateDevice = deviceManager.Operate
-	opt.PodOptions.CollectDeviceMetrics = deviceManager.CollectMetrics
+	opt.PodOptions.OperateDevice = peripheralManager.Operate
+	opt.PodOptions.CollectDeviceMetrics = peripheralManager.CollectMetrics
 	podManager := pod.NewManager(
 		ctx,
 		opt.NodeName,
@@ -105,13 +105,6 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 		networkManager,
 		opt.ConnectivityManager,
 		opt.PodOptions,
-	)
-
-	metricsManager := metrics.NewManager(
-		ctx,
-		opt.NodeName,
-		opt.ConnectivityManager,
-		opt.MetricsOptions,
 	)
 
 	m := &mux.Router{NotFoundHandler: middleware.NotFoundHandler(logger)}
@@ -169,30 +162,6 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 		podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
 	m.HandleFunc("/pods", podManager.HandleGetPods).Methods(http.MethodGet)
 	m.HandleFunc("/runningpods", podManager.HandleGetRunningPods).Methods(http.MethodGet)
-	//
-	// routes for metrics and stats
-	//
-	// metrics
-	m.HandleFunc("/metrics", metricsManager.HandleNodeMetrics).Methods(http.MethodGet)
-	m.HandleFunc("/metrics/cadvisor", metricsManager.HandleContainerMetrics).Methods(http.MethodGet)
-	m.HandleFunc("/metrics/probes", metricsManager.HandleProbesMetrics).Methods(http.MethodGet)
-	m.HandleFunc("/metrics/resource", metricsManager.HandleResourceMetrics).Methods(http.MethodGet)
-	// stats
-	m.HandleFunc("/stats", metricsManager.HandleStats).Methods(http.MethodGet, http.MethodPost)
-	m.HandleFunc("/stats/summary", metricsManager.HandleStatsSummary).Methods(http.MethodGet, http.MethodPost)
-	m.HandleFunc("/stats/container",
-		metricsManager.HandleStatsSystemContainer).Methods(http.MethodGet, http.MethodPost)
-	m.HandleFunc("/stats/{name}/{container}",
-		metricsManager.HandleStatsContainer).Methods(http.MethodGet, http.MethodPost)
-	m.HandleFunc("/stats/{namespace}/{name}/{uid}/{container}",
-		metricsManager.HandleStatsContainer).Methods(http.MethodGet, http.MethodPost)
-	// stats spec
-	m.HandleFunc("/spec", metricsManager.HandleStatsSpec).Methods(http.MethodGet)
-	// pprof
-	m.HandleFunc("/debug/pprof", metricsManager.HandlePprof).Methods(http.MethodGet)
-
-	// TODO: evaluate /cri
-	//m.HandleFunc("/cri", nil)
 
 	vn := &VirtualNode{
 		ctx:    ctx,
@@ -204,13 +173,14 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 
 		nodeClient: opt.KubeClient.CoreV1().Nodes(),
 
-		maxPods:         int64(opt.PodOptions.Config.Allocatable) + 1,
-		kubeletSrv:      &http.Server{Handler: m},
-		networkManager:  networkManager,
-		podManager:      podManager,
-		metricsManager:  metricsManager,
-		deviceManager:   deviceManager,
-		nodeStatusCache: newNodeCache(),
+		maxPods:           int64(opt.PodOptions.Config.Allocatable) + 1,
+		kubeletSrv:        &http.Server{Handler: m},
+		networkManager:    networkManager,
+		podManager:        podManager,
+		storageManager:    nil, // initialized later
+		metricsManager:    nil, // initialized later
+		peripheralManager: peripheralManager,
+		nodeStatusCache:   newNodeCache(),
 
 		SchedulePodJob: podManager.SchedulePodJob,
 
@@ -221,6 +191,38 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 			Interface: opt.KubeClient.CoreV1().Events(constant.WatchNS()),
 		}),
 	}
+
+	opt.MetricsOptions.GetOS = vn.OS
+	vn.metricsManager = metrics.NewManager(
+		ctx,
+		opt.NodeName,
+		opt.ConnectivityManager,
+		opt.MetricsOptions,
+	)
+	//
+	// routes for metrics and stats
+	//
+	// metrics
+	m.HandleFunc("/metrics", vn.metricsManager.HandleNodeMetrics).Methods(http.MethodGet)
+	m.HandleFunc("/metrics/cadvisor", vn.metricsManager.HandleContainerMetrics).Methods(http.MethodGet)
+	m.HandleFunc("/metrics/probes", vn.metricsManager.HandleProbesMetrics).Methods(http.MethodGet)
+	m.HandleFunc("/metrics/resource", vn.metricsManager.HandleResourceMetrics).Methods(http.MethodGet)
+	// stats
+	m.HandleFunc("/stats", vn.metricsManager.HandleStats).Methods(http.MethodGet, http.MethodPost)
+	m.HandleFunc("/stats/summary", vn.metricsManager.HandleStatsSummary).Methods(http.MethodGet, http.MethodPost)
+	m.HandleFunc("/stats/container",
+		vn.metricsManager.HandleStatsSystemContainer).Methods(http.MethodGet, http.MethodPost)
+	m.HandleFunc("/stats/{name}/{container}",
+		vn.metricsManager.HandleStatsContainer).Methods(http.MethodGet, http.MethodPost)
+	m.HandleFunc("/stats/{namespace}/{name}/{uid}/{container}",
+		vn.metricsManager.HandleStatsContainer).Methods(http.MethodGet, http.MethodPost)
+	// stats spec
+	m.HandleFunc("/spec", vn.metricsManager.HandleStatsSpec).Methods(http.MethodGet)
+	// pprof
+	m.HandleFunc("/debug/pprof", vn.metricsManager.HandlePprof).Methods(http.MethodGet)
+
+	// TODO: evaluate /cri
+	//m.HandleFunc("/cri", nil)
 
 	if opt.StorageOptions != nil {
 		vn.storageManager = storage.NewManager(
@@ -255,14 +257,14 @@ type VirtualNode struct {
 
 	nodeClient clientcorev1.NodeInterface
 
-	maxPods         int64
-	kubeletSrv      *http.Server
-	networkManager  *network.Manager
-	podManager      *pod.Manager
-	storageManager  *storage.Manager
-	metricsManager  *metrics.Manager
-	deviceManager   *device.Manager
-	nodeStatusCache *NodeCache
+	maxPods           int64
+	kubeletSrv        *http.Server
+	networkManager    *network.Manager
+	podManager        *pod.Manager
+	storageManager    *storage.Manager
+	metricsManager    *metrics.Manager
+	peripheralManager *peripheral.Manager
+	nodeStatusCache   *NodeCache
 
 	SchedulePodJob pod.JobScheduleFunc
 
@@ -368,16 +370,16 @@ func (vn *VirtualNode) Start() error {
 		}()
 
 		go func() {
-			vn.log.I("starting device manager")
+			vn.log.I("starting peripheral manager")
 			defer func() {
-				vn.log.I("device manager exited")
+				vn.log.I("peripheral manager exited")
 
-				// once device manager exited, delete this virtual node
+				// once peripheral manager exited, delete this virtual node
 				vn.opt.VirtualnodeManager.Delete(vn.name)
 			}()
 
-			if err := vn.deviceManager.Start(); err != nil {
-				vn.log.I("failed to start device manager", log.Error(err))
+			if err := vn.peripheralManager.Start(); err != nil {
+				vn.log.I("failed to start peripheral manager", log.Error(err))
 				return
 			}
 		}()
@@ -446,7 +448,7 @@ func (vn *VirtualNode) ForceClose() {
 	vn.opt.ConnectivityManager.Close()
 	vn.podManager.Close()
 	vn.metricsManager.Close()
-	vn.deviceManager.Close()
+	vn.peripheralManager.Close()
 	vn.networkManager.Close()
 
 	if vn.storageManager != nil {
@@ -488,6 +490,10 @@ func (vn *VirtualNode) ExtInfo() (labels, annotations map[string]string) {
 
 func (vn *VirtualNode) ActualNodeStatus(resNodeStatus corev1.NodeStatus) corev1.NodeStatus {
 	return vn.nodeStatusCache.RetrieveStatus(resNodeStatus)
+}
+
+func (vn *VirtualNode) OS() string {
+	return vn.nodeStatusCache.RetrieveStatus(corev1.NodeStatus{}).NodeInfo.OperatingSystem
 }
 
 func (vn *VirtualNode) SetPodCIDRs(ipv4, ipv6 string) {

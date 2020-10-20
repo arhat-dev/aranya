@@ -204,18 +204,18 @@ func NewContainerNetworkEnsureCmd(ipv4CIDR, ipv6CIDR string) *ContainerNetworkEn
 	}
 }
 
-func NewDeviceListCmd(names ...string) *DeviceListCmd {
-	return &DeviceListCmd{DeviceNames: names}
+func NewPeripheralListCmd(names ...string) *PeripheralListCmd {
+	return &PeripheralListCmd{PeripheralNames: names}
 }
 
-func NewDeviceEnsureCmd(
-	kind DeviceType,
+func NewPeripheralEnsureCmd(
+	kind PeripheralType,
 	name string,
 	connector *Connectivity,
-	operations []*DeviceOperation,
-	metrics []*DeviceMetric,
-) *DeviceEnsureCmd {
-	return &DeviceEnsureCmd{
+	operations []*PeripheralOperation,
+	metrics []*PeripheralMetric,
+) *PeripheralEnsureCmd {
+	return &PeripheralEnsureCmd{
 		Kind:       kind,
 		Name:       name,
 		Connector:  connector,
@@ -224,20 +224,20 @@ func NewDeviceEnsureCmd(
 	}
 }
 
-func NewDeviceDeleteCmd(names ...string) *DeviceDeleteCmd {
-	return &DeviceDeleteCmd{DeviceNames: names}
+func NewPeripheralDeleteCmd(names ...string) *PeripheralDeleteCmd {
+	return &PeripheralDeleteCmd{PeripheralNames: names}
 }
 
-func NewDeviceOperateCmd(deviceName, operationID string, data []byte) *DeviceOperateCmd {
-	return &DeviceOperateCmd{
-		DeviceName:  deviceName,
-		OperationId: operationID,
-		Data:        data,
+func NewPeripheralOperateCmd(peripheralName, operationID string, data []byte) *PeripheralOperateCmd {
+	return &PeripheralOperateCmd{
+		PeripheralName: peripheralName,
+		OperationId:    operationID,
+		Data:           data,
 	}
 }
 
-func NewDeviceMetricsCollectCmd(names ...string) *DeviceMetricsCollectCmd {
-	return &DeviceMetricsCollectCmd{
-		DeviceNames: names,
+func NewPeripheralMetricsCollectCmd(names ...string) *PeripheralMetricsCollectCmd {
+	return &PeripheralMetricsCollectCmd{
+		PeripheralNames: names,
 	}
 }

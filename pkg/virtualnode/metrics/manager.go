@@ -25,14 +25,16 @@ import (
 	"arhat.dev/pkg/log"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/util/cache"
 	"arhat.dev/aranya/pkg/util/manager"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 type Options struct {
-	NodeMetrics      *aranyaapi.MetricsConfig
+	NodeMetrics      []conf.VirtualnodeNodeMetricsConfig
 	ContainerMetrics *aranyaapi.MetricsConfig
+	GetOS            func() string
 }
 
 // NewManager creates a new metrics manager for virtual node
@@ -85,16 +87,43 @@ func (m *Manager) Start() error {
 			}
 
 			m.Log.I("handling device metrics")
+
 			// assume client support metrics collecting
-			if m.options.NodeMetrics.Enabled {
+			var (
+				presets              = m.options.NodeMetrics
+				nodeMetricsCollect   []string
+				nodeMetricsExtraArgs []string
+			)
+			switch {
+			case len(presets) == 1 && presets[0].OS == "":
+				// overridden by EdgeDevice spec
+				if presets[0].Enabled {
+					nodeMetricsCollect = presets[0].Collect
+					nodeMetricsExtraArgs = presets[0].ExtraArgs
+				}
+			case len(presets) > 0:
+				// lookup metrics edge device's OS
+				for _, p := range presets {
+					if p.Enabled && p.OS == m.options.GetOS() {
+						nodeMetricsCollect = p.Collect
+						nodeMetricsExtraArgs = p.ExtraArgs
+						break
+					}
+				}
+			default:
+				// no node metrics configured, skip
+			}
+			if len(nodeMetricsCollect) > 0 {
 				m.Log.I("configuring device node metrics")
 				m.configureMetricsCollection(
 					aranyagopb.NewMetricsConfigCmd(
 						aranyagopb.METRICS_TARGET_NODE,
-						m.options.NodeMetrics.Collect,
-						m.options.NodeMetrics.ExtraArgs,
+						nodeMetricsCollect,
+						nodeMetricsExtraArgs,
 					),
 				)
+			} else {
+				m.Log.I("skipped node metrics configuration")
 			}
 
 			if m.options.ContainerMetrics.Enabled {
@@ -106,6 +135,8 @@ func (m *Manager) Start() error {
 						m.options.ContainerMetrics.ExtraArgs,
 					),
 				)
+			} else {
+				m.Log.I("skipped container metrics configuration")
 			}
 
 			// device connected, serve until disconnected
@@ -113,7 +144,7 @@ func (m *Manager) Start() error {
 			case <-m.Context().Done():
 				return m.Context().Err()
 			case <-m.ConnectivityManager.Disconnected():
-				// disable metrics collections
+				// disable metrics collection, since we cannot reach the edge device
 				atomic.StoreUint32(&m.supportNodeMetrics, 0)
 				atomic.StoreUint32(&m.supportContainerMetrics, 0)
 			}

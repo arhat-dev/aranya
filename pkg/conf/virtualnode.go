@@ -15,17 +15,20 @@ type VirtualnodeConfig struct {
 	KubeClient   confhelper.KubeClientConfig   `json:"kubeClient" yaml:"kubeClient"`
 	Node         VirtualnodeNodeConfig         `json:"node" yaml:"node"`
 	Pod          VirtualnodePodConfig          `json:"pod" yaml:"pod"`
+	Storage      VirtualnodeStorageConfig      `json:"storage" yaml:"storage"`
+	Network      VirtualnodeNetworkConfig      `json:"network" yaml:"network"`
 	Connectivity VirtualnodeConnectivityConfig `json:"connectivity" yaml:"connectivity"`
 }
 
 func FlagsForVirtualnode(prefix string, config *VirtualnodeConfig) *pflag.FlagSet {
 	flags := pflag.NewFlagSet("virtualnode", pflag.ExitOnError)
 
-	flags.AddFlagSet(confhelper.FlagsForKubeClient("vn.", &config.KubeClient))
+	flags.AddFlagSet(confhelper.FlagsForKubeClient(prefix+"kube.", &config.KubeClient))
 
-	flags.AddFlagSet(FlagsForVirtualnodeConnectivityConfig("conn.", &config.Connectivity))
-	flags.AddFlagSet(FlagsForVirtualnodePodConfig("pod.", &config.Pod))
-	flags.AddFlagSet(FlagsForVirtualnodeNodeConfig("node.", &config.Node))
+	flags.AddFlagSet(FlagsForVirtualnodeConnectivityConfig(prefix+"conn.", &config.Connectivity))
+	flags.AddFlagSet(FlagsForVirtualnodePodConfig(prefix+"pod.", &config.Pod))
+	flags.AddFlagSet(FlagsForVirtualnodeNodeConfig(prefix+"node.", &config.Node))
+	flags.AddFlagSet(FlagsForVirtualnodeNodeStorageConfig(prefix+"storage.", &config.Storage))
 
 	return flags
 }
@@ -69,11 +72,16 @@ func (c *VirtualnodeConfig) OverrideWith(spec aranyaapi.EdgeDeviceSpec) *Virtual
 		newConfig.Connectivity.Backoff.MaxDelay = backoff.MaxDelay.Duration
 	}
 
-	// enable storage support only when configured in both EdgeDevice CRD and aranya
-	newConfig.Node.Storage.Enabled = spec.Node.Storage.Enabled && newConfig.Node.Storage.Enabled
+	// enable storage support only when configured in both EdgeDevice CR and aranya
+	newConfig.Storage.Enabled = spec.Storage.Enabled && newConfig.Storage.Enabled
+	// enabled network support only when configured in both EdgeDevice CR and aranya
+	newConfig.Network.Enabled = spec.Network.Enabled && newConfig.Network.Enabled
 
 	if spec.Node.Metrics != nil {
-		newConfig.Node.Metrics = *spec.Node.Metrics
+		newConfig.Node.Metrics = []VirtualnodeNodeMetricsConfig{{
+			OS:            "",
+			MetricsConfig: *spec.Node.Metrics,
+		}}
 	}
 
 	if dnsSpec := spec.Pod.DNS; dnsSpec != nil {

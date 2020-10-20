@@ -42,13 +42,13 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
-	"arhat.dev/aranya/pkg/virtualnode/device"
 	"arhat.dev/aranya/pkg/virtualnode/metrics"
+	"arhat.dev/aranya/pkg/virtualnode/peripheral"
 	"arhat.dev/aranya/pkg/virtualnode/pod"
 	"arhat.dev/aranya/pkg/virtualnode/storage"
 )
 
-func (c *Controller) onEdgeDeviceAdded(obj interface{}) *reconcile.Result {
+func (c *Controller) onEdgeDeviceResAdded(obj interface{}) *reconcile.Result {
 	var (
 		err        error
 		edgeDevice = obj.(*aranyaapi.EdgeDevice)
@@ -86,7 +86,7 @@ func (c *Controller) onEdgeDeviceAdded(obj interface{}) *reconcile.Result {
 	return nil
 }
 
-func (c *Controller) onEdgeDeviceUpdated(oldObj, newObj interface{}) *reconcile.Result {
+func (c *Controller) onEdgeDeviceResUpdated(oldObj, newObj interface{}) *reconcile.Result {
 	var (
 		err           error
 		oldEdgeDevice = oldObj.(*aranyaapi.EdgeDevice)
@@ -111,7 +111,7 @@ func (c *Controller) onEdgeDeviceUpdated(oldObj, newObj interface{}) *reconcile.
 	return nil
 }
 
-func (c *Controller) onEdgeDeviceDeleting(obj interface{}) *reconcile.Result {
+func (c *Controller) onEdgeDeviceResDeleting(obj interface{}) *reconcile.Result {
 	var (
 		edgeDevice = obj.(*aranyaapi.EdgeDevice)
 		name       = edgeDevice.Name
@@ -130,7 +130,7 @@ func (c *Controller) onEdgeDeviceDeleting(obj interface{}) *reconcile.Result {
 	return nil
 }
 
-func (c *Controller) onEdgeDeviceDeleted(obj interface{}) *reconcile.Result {
+func (c *Controller) onEdgeDeviceResDeleted(obj interface{}) *reconcile.Result {
 	var (
 		edgeDevice = obj.(*aranyaapi.EdgeDevice)
 		name       = edgeDevice.Name
@@ -160,13 +160,13 @@ func (c *Controller) onEdgeDeviceDeleted(obj interface{}) *reconcile.Result {
 	return nil
 }
 
-// instantiationEdgeDevice create resources in sequence
+// instantiateEdgeDevice create required resources in sequence
 //   - Ensure kubelet certification valid (secret object contains valid certificate for this node)
 //   - Create connectivity manager
 //   - Create virtualnode
 //   - Ensure NodeVerbs object
 //	 - Start virtualnode
-func (c *Controller) instantiationEdgeDevice(name string) (err error) {
+func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 	var (
 		logger = c.Log.WithFields(log.String("name", name))
 		opts   = &virtualnode.CreationOptions{
@@ -252,7 +252,7 @@ func (c *Controller) instantiationEdgeDevice(name string) (err error) {
 		}
 
 		logger.D("preparing associated device options")
-		opts.DeviceOptions, err = c.prepareDeviceOptions(ed, vnConfig)
+		opts.DeviceOptions, err = c.preparePeripheralOptions(ed, vnConfig)
 		if err != nil {
 			logger.I("failed to prepare associated device options", log.Error(err))
 			return err
@@ -369,9 +369,6 @@ func (c *Controller) instantiationEdgeDevice(name string) (err error) {
 }
 
 func (c *Controller) checkEdgeDeviceUpdated(old, new *aranyaapi.EdgeDevice) bool {
-	old = old.DeepCopy()
-	// ignore reverse proxy change
-	old.Spec.ReverseProxy = new.Spec.ReverseProxy
 	return !reflect.DeepEqual(old.Spec, new.Spec)
 }
 
@@ -507,6 +504,7 @@ func (c *Controller) prepareNodeOptions(
 	edgeDevice *aranyaapi.EdgeDevice,
 	vnConfig *conf.VirtualnodeConfig,
 ) (_ *virtualnode.Options, err error) {
+	_ = edgeDevice
 	opts := &virtualnode.Options{
 		ForceSyncInterval:      vnConfig.Node.Timers.ForceSyncInterval,
 		MirrorNodeSyncInterval: vnConfig.Node.Timers.MirrorSyncInterval,
@@ -565,15 +563,15 @@ func (c *Controller) preparePodOptions(
 	return opts, nil
 }
 
-// nolint:unparam
-func (c *Controller) prepareDeviceOptions(
+func (c *Controller) preparePeripheralOptions(
 	edgeDevice *aranyaapi.EdgeDevice,
 	vnConfig *conf.VirtualnodeConfig,
-) (_ *device.Options, err error) {
+) (_ *peripheral.Options, err error) {
+	_ = vnConfig
 	var (
-		mrs     = make(map[string]*aranyagopb.DeviceEnsureCmd)
-		devices = make(map[string]*aranyagopb.DeviceEnsureCmd)
-		devs    = make(map[string]struct{})
+		mrs         = make(map[string]*aranyagopb.PeripheralEnsureCmd)
+		peripherals = make(map[string]*aranyagopb.PeripheralEnsureCmd)
+		devs        = make(map[string]struct{})
 	)
 
 	for _, mr := range edgeDevice.Spec.MetricsReporters {
@@ -590,45 +588,45 @@ func (c *Controller) prepareDeviceOptions(
 		var conn *aranyagopb.Connectivity
 		conn, err = c.createDeviceConnector(mr.Connector)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create device connector: %w", err)
+			return nil, fmt.Errorf("failed to create peripheral connector: %w", err)
 		}
 
-		mrs[mr.Name] = &aranyagopb.DeviceEnsureCmd{
-			Kind:      aranyagopb.DEVICE_TYPE_METRICS_REPORTER,
+		mrs[mr.Name] = &aranyagopb.PeripheralEnsureCmd{
+			Kind:      aranyagopb.PERIPHERAL_TYPE_METRICS_REPORTER,
 			Name:      mr.Name,
 			Connector: conn,
 		}
 	}
 
-	for _, d := range edgeDevice.Spec.Devices {
+	for _, d := range edgeDevice.Spec.Peripherals {
 		if d.Name == "" || d.Name == constant.VirtualContainerNameHost {
-			err = fmt.Errorf("invalid device name %q", d.Name)
+			err = fmt.Errorf("invalid peripheral name %q", d.Name)
 			return
 		}
 
 		if msgs := validation.IsDNS1123Label(d.Name); len(msgs) > 0 {
-			err = fmt.Errorf("device name %q is not a valid dns label: %s", d.Name, strings.Join(msgs, ", "))
+			err = fmt.Errorf("peripheral name %q is not a valid dns label: %s", d.Name, strings.Join(msgs, ", "))
 			return
 		}
 
 		if _, ok := devs[d.Name]; ok {
-			err = fmt.Errorf("duplicate device name %q", d.Name)
+			err = fmt.Errorf("duplicate peripheral name %q", d.Name)
 			return
 		}
 
 		devs[d.Name] = struct{}{}
 
-		var operations []*aranyagopb.DeviceOperation
+		var operations []*aranyagopb.PeripheralOperation
 		for _, op := range d.Operations {
-			operations = append(operations, &aranyagopb.DeviceOperation{
+			operations = append(operations, &aranyagopb.PeripheralOperation{
 				OperationId: op.Name,
 				Params:      op.Params,
 			})
 		}
 
-		var deviceMetrics []*aranyagopb.DeviceMetric
+		var peripheralMetrics []*aranyagopb.PeripheralMetric
 		for _, m := range d.Metrics {
-			var reportMethod aranyagopb.DeviceMetric_ReportMethod
+			var reportMethod aranyagopb.PeripheralMetric_ReportMethod
 			switch m.ReportMethod {
 			case aranyaapi.ReportViaArhatConnectivity:
 				reportMethod = aranyagopb.REPORT_WITH_ARHAT_CONNECTIVITY
@@ -638,43 +636,43 @@ func (c *Controller) prepareDeviceOptions(
 				reportMethod = aranyagopb.REPORT_WITH_STANDALONE_CLIENT
 			}
 
-			var valueType aranyagopb.DeviceMetric_ValueType
+			var valueType aranyagopb.PeripheralMetric_ValueType
 			switch m.ValueType {
-			case aranyaapi.DeviceMetricsValueTypeGauge:
+			case aranyaapi.PeripheralMetricValueTypeGauge:
 				valueType = aranyagopb.METRICS_VALUE_TYPE_GAUGE
-			case aranyaapi.DeviceMetricsValueTypeCounter:
+			case aranyaapi.PeripheralMetricValueTypeCounter:
 				valueType = aranyagopb.METRICS_VALUE_TYPE_COUNTER
-			case aranyaapi.DeviceMetricsValueTypeUnknown, "":
+			case aranyaapi.PeripheralMetricValueTypeUnknown, "":
 				valueType = aranyagopb.METRICS_VALUE_TYPE_UNTYPED
 			}
 
-			deviceMetrics = append(deviceMetrics, &aranyagopb.DeviceMetric{
-				Name:           m.Name,
-				DeviceParams:   m.DeviceParams,
-				ValueType:      valueType,
-				ReportMethod:   reportMethod,
-				ReporterName:   m.ReporterName,
-				ReporterParams: m.ReporterParams,
+			peripheralMetrics = append(peripheralMetrics, &aranyagopb.PeripheralMetric{
+				Name:             m.Name,
+				PeripheralParams: m.Params,
+				ValueType:        valueType,
+				ReportMethod:     reportMethod,
+				ReporterName:     m.ReporterName,
+				ReporterParams:   m.ReporterParams,
 			})
 		}
 
 		conn, err := c.createDeviceConnector(d.Connector)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create device connector: %w", err)
+			return nil, fmt.Errorf("failed to create peripheral connector: %w", err)
 		}
 
-		devices[d.Name] = &aranyagopb.DeviceEnsureCmd{
-			Kind:       aranyagopb.DEVICE_TYPE_NORMAL,
+		peripherals[d.Name] = &aranyagopb.PeripheralEnsureCmd{
+			Kind:       aranyagopb.PERIPHERAL_TYPE_NORMAL,
 			Name:       d.Name,
 			Connector:  conn,
 			Operations: operations,
-			Metrics:    deviceMetrics,
+			Metrics:    peripheralMetrics,
 		}
 	}
 
-	return &device.Options{
+	return &peripheral.Options{
 		MetricsReporters: mrs,
-		Devices:          devices,
+		Peripherals:      peripherals,
 	}, nil
 }
 
@@ -683,8 +681,9 @@ func (c *Controller) prepareMetricsOptions(
 	edgeDevice *aranyaapi.EdgeDevice,
 	vnConfig *conf.VirtualnodeConfig,
 ) (_ *metrics.Options, err error) {
+	_ = edgeDevice
 	opts := &metrics.Options{
-		NodeMetrics:      &vnConfig.Node.Metrics,
+		NodeMetrics:      vnConfig.Node.Metrics,
 		ContainerMetrics: &vnConfig.Pod.Metrics,
 	}
 
@@ -697,14 +696,14 @@ func (c *Controller) prepareStorageOptions(
 	vnConfig *conf.VirtualnodeConfig,
 	evb record.EventBroadcaster,
 ) (_ *storage.Options, err error) {
-	if !vnConfig.Node.Storage.Enabled {
+	if !vnConfig.Storage.Enabled {
 		return nil, nil
 	}
 
 	opts := &storage.Options{
-		StorageRootDir:         vnConfig.Node.Storage.RootDir,
-		KubeletRegistrationDir: vnConfig.Node.Storage.KubeletRegistrationDir,
-		KubeletPluginsDir:      vnConfig.Node.Storage.KubeletPluginsDir,
+		StorageRootDir:         vnConfig.Storage.RootDir,
+		KubeletRegistrationDir: vnConfig.Storage.KubeletRegistrationDir,
+		KubeletPluginsDir:      vnConfig.Storage.KubeletPluginsDir,
 		CSIDriverLister:        c.csiDriverLister,
 		EventRecorder: evb.NewRecorder(
 			scheme.Scheme,

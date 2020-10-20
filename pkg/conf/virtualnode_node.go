@@ -30,8 +30,14 @@ type VirtualnodeNodeConfig struct {
 		UpdateInterval time.Duration `json:"updateInterval" yaml:"updateInterval"`
 	} `json:"lease" yaml:"lease"`
 
-	Storage VirtualnodeNodeStorageConfig `json:"storage" yaml:"storage"`
-	Metrics aranyaapi.MetricsConfig      `json:"metrics" yaml:"metrics"`
+	Metrics []VirtualnodeNodeMetricsConfig `json:"metrics" yaml:"metrics"`
+}
+
+type VirtualnodeNodeMetricsConfig struct {
+	// OS name, metrics differs from different OSes
+	OS string `json:"os" yaml:"os"`
+
+	aranyaapi.MetricsConfig `json:",inline" yaml:",inline"`
 }
 
 func FlagsForVirtualnodeNodeConfig(prefix string, config *VirtualnodeNodeConfig) *pflag.FlagSet {
@@ -53,9 +59,6 @@ func FlagsForVirtualnodeNodeConfig(prefix string, config *VirtualnodeNodeConfig)
 		"device node status sync interval, reject device if operation failed")
 	flags.DurationVar(&config.Timers.MirrorSyncInterval, prefix+"mirrorSyncInterval",
 		constant.DefaultMirrorNodeSyncInterval, "cluster node status update interval")
-
-	flags.AddFlagSet(FlagsForVirtualnodeNodeStorageConfig(prefix+"storage.", &config.Storage))
-	flags.AddFlagSet(aranyaapi.FlagsForMetricsConfig(prefix+"metrics.", &config.Metrics))
 
 	return flags
 }

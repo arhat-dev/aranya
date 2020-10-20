@@ -389,7 +389,7 @@ func (c *Controller) newVirtualPodForEdgeDevice(device *aranyaapi.EdgeDevice) (*
 	var virtualCtrs []corev1.Container
 
 	// map devices as virtual containers
-	for _, d := range device.Spec.Devices {
+	for _, d := range device.Spec.Peripherals {
 		if d.Name == "" || d.Name == constant.VirtualContainerNameHost {
 			return nil, fmt.Errorf("invalid device name %q", d.Name)
 		}

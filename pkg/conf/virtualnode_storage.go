@@ -6,7 +6,7 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-type VirtualnodeNodeStorageConfig struct {
+type VirtualnodeStorageConfig struct {
 	Enabled                bool   `json:"enabled" yaml:"enabled"`
 	RootDir                string `json:"rootDir" yaml:"rootDir"`
 	KubeletPluginsDir      string `json:"kubeletPluginsDir" yaml:"kubeletPluginsDir"`
@@ -17,7 +17,7 @@ type VirtualnodeNodeStorageConfig struct {
 	} `json:"sftp" yaml:"sftp"`
 }
 
-func FlagsForVirtualnodeNodeStorageConfig(prefix string, config *VirtualnodeNodeStorageConfig) *pflag.FlagSet {
+func FlagsForVirtualnodeNodeStorageConfig(prefix string, config *VirtualnodeStorageConfig) *pflag.FlagSet {
 	flags := pflag.NewFlagSet("virtualnode.node.storage", pflag.ExitOnError)
 
 	flags.BoolVar(&config.Enabled, prefix+"enabled", false,
