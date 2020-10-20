@@ -61,7 +61,7 @@ type Options struct {
 	EventRecorder record.EventRecorder
 
 	// device interaction
-	OperateDevice func(deviceName, operationName string, data []byte, out io.Writer) error
+	OperateDevice        func(deviceName, operationName string, data []byte, out io.Writer) error
 	CollectDeviceMetrics func(deviceName string) error
 }
 

@@ -39,6 +39,7 @@ type Manager struct {
 	requestedDevices map[string]*aranyagopb.DeviceEnsureCmd
 }
 
+// nolint:gocyclo
 func (m *Manager) Start() error {
 	return m.OnStart(func() error {
 		logger := m.Log.WithFields(log.String("routine", "main"))

@@ -116,11 +116,20 @@ type Manager interface {
 
 	// PostData
 	// nolint:lll
-	PostData(sid uint64, kind aranyagopb.CmdType, seq uint64, completed bool, data []byte) (msgCh <-chan interface{}, realSID, lastSeq uint64, err error)
+	PostData(
+		sid uint64,
+		kind aranyagopb.CmdType,
+		seq uint64, completed bool,
+		data []byte,
+	) (msgCh <-chan interface{}, realSID, lastSeq uint64, err error)
 
 	// PostCmd send a command to remote device with timeout
 	// return a channel for messages to be received in the session
-	PostCmd(sid uint64, kind aranyagopb.CmdType, cmd proto.Marshaler) (msgCh <-chan interface{}, realSID uint64, err error)
+	PostCmd(
+		sid uint64,
+		kind aranyagopb.CmdType,
+		cmd proto.Marshaler,
+	) (msgCh <-chan interface{}, realSID uint64, err error)
 
 	// MaxPayloadSize of this kind connectivity method, used to reduce message overhead
 	// when handling date streams for port-forward and command execution

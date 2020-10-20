@@ -1,12 +1,14 @@
 package device
 
 import (
-	"arhat.dev/aranya-proto/aranyagopb"
-	"arhat.dev/aranya/pkg/virtualnode/connectivity"
-	"arhat.dev/pkg/log"
 	"encoding/base64"
 	"fmt"
 	"io"
+
+	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/pkg/log"
+
+	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 func (m *Manager) Operate(deviceName, operationName string, data []byte, out io.Writer) error {

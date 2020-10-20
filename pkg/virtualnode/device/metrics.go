@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/pkg/log"
 
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
-	"arhat.dev/pkg/log"
 )
 
 func (m *Manager) CollectMetrics(deviceName string) error {

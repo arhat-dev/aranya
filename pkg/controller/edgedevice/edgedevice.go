@@ -587,7 +587,8 @@ func (c *Controller) prepareDeviceOptions(
 			return
 		}
 
-		conn, err := c.createDeviceConnector(mr.Connector)
+		var conn *aranyagopb.Connectivity
+		conn, err = c.createDeviceConnector(mr.Connector)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create device connector: %w", err)
 		}

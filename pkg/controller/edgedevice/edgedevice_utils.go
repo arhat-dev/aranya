@@ -1,13 +1,15 @@
 package edgedevice
 
 import (
-	"arhat.dev/aranya-proto/aranyagopb"
-	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
-	"arhat.dev/aranya/pkg/constant"
 	"crypto/tls"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
 	"strings"
+
+	"arhat.dev/aranya-proto/aranyagopb"
+	corev1 "k8s.io/api/core/v1"
+
+	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/constant"
 )
 
 func (c *Controller) createDeviceConnector(spec aranyaapi.DeviceConnectivity) (_ *aranyagopb.Connectivity, _ error) {
