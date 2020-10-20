@@ -32,16 +32,11 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-type Config interface {
-	GetLogConfig() log.ConfigSet
-	SetLogConfig(log.ConfigSet)
-}
-
 func ReadConfig(
 	cmd *cobra.Command,
 	configFile *string,
 	cliLogConfig *log.Config,
-	config Config,
+	config *Config,
 ) (context.Context, error) {
 	flags := cmd.Flags()
 	configBytes, err := ioutil.ReadFile(*configFile)
@@ -68,29 +63,27 @@ func ReadConfig(
 		}
 	}
 
-	logConfigSet := config.GetLogConfig()
-	if len(logConfigSet) > 0 {
+	if len(config.Aranya.Log) > 0 {
 		if flags.Changed("log.format") {
-			logConfigSet[0].Format = cliLogConfig.Format
+			config.Aranya.Log[0].Format = cliLogConfig.Format
 		}
 
 		if flags.Changed("log.level") {
-			logConfigSet[0].Level = cliLogConfig.Level
+			config.Aranya.Log[0].Level = cliLogConfig.Level
 		}
 
 		if flags.Changed("log.file") {
-			logConfigSet[0].File = cliLogConfig.File
+			config.Aranya.Log[0].File = cliLogConfig.File
 		}
 	} else {
-		logConfigSet = append(logConfigSet, *cliLogConfig)
+		config.Aranya.Log = append(config.Aranya.Log, *cliLogConfig)
 	}
-	config.SetLogConfig(logConfigSet)
 
 	if err = cmd.ParseFlags(os.Args); err != nil {
 		return nil, err
 	}
 
-	err = log.SetDefaultLogger(logConfigSet)
+	err = log.SetDefaultLogger(config.Aranya.Log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set default logger: %w", err)
 	}

@@ -105,7 +105,7 @@ func CheckAPIVersionFallback(kubeClient kubeclient.Interface) []*metav1.APIResou
 // nolint:gocyclo
 func NewController(
 	appCtx context.Context,
-	config *conf.AranyaConfig,
+	config *conf.Config,
 	sshPrivateKey []byte,
 	hostNodeName, hostname, hostIP string,
 	hostNodeAddresses []corev1.NodeAddress,

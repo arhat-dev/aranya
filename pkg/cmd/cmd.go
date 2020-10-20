@@ -55,7 +55,7 @@ func NewAranyaCmd() *cobra.Command {
 	var (
 		appCtx       context.Context
 		configFile   string
-		config       = new(conf.AranyaConfig)
+		config       = new(conf.Config)
 		cliLogConfig = new(log.Config)
 	)
 
@@ -96,7 +96,7 @@ func NewAranyaCmd() *cobra.Command {
 	return aranyaCmd
 }
 
-func run(appCtx context.Context, config *conf.AranyaConfig) error {
+func run(appCtx context.Context, config *conf.Config) error {
 	logger := log.Log.WithName("aranya")
 
 	logger.I("creating kube client for initialization")
@@ -206,7 +206,7 @@ func onElected(
 	appCtx context.Context,
 	logger log.Interface,
 	kubeClient kubeclient.Interface,
-	config *conf.AranyaConfig,
+	config *conf.Config,
 
 	// storage related
 	sshListener net.Listener,

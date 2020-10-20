@@ -57,7 +57,7 @@ func newCheckCmd(appCtx *context.Context) *cobra.Command {
 				opts.log = true
 			}
 
-			return runCheck(*appCtx, (*appCtx).Value(constant.ContextKeyConfig).(*conf.AranyaConfig), opts)
+			return runCheck(*appCtx, (*appCtx).Value(constant.ContextKeyConfig).(*conf.Config), opts)
 		},
 	}
 
@@ -69,7 +69,7 @@ func newCheckCmd(appCtx *context.Context) *cobra.Command {
 	return checkCmd
 }
 
-func runCheck(appCtx context.Context, config *conf.AranyaConfig, opts *checkOpts) error {
+func runCheck(appCtx context.Context, config *conf.Config, opts *checkOpts) error {
 	_ = appCtx
 
 	showResult := func(name string, val interface{}) {
