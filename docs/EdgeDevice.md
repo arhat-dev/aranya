@@ -2,172 +2,42 @@
 
 - [Metadata](#metadata)
 - [Spec](#spec)
-  - [Spec for related kubernetes node](#spec-for-related-kubernetes-node)
-  - [Spec for kubernetes pods assigned to related node](#spec-for-kubernetes-pods-assigned-to-related-node)
-  - [Spec for assiciated devices](#spec-for-assiciated-devices)
-  - [Spec for cloud connectivity](#spec-for-cloud-connectivity)
+  - [`spec.connectivity`: In Cloud connectivity to reach your EdgeDevice](#specconnectivity-in-cloud-connectivity-to-reach-your-edgedevice)
+  - [`spec.node`: Kubernetes node resource](#specnode-kubernetes-node-resource)
+  - [`spec.network`: Namespaced network mesh among your EdgeDevices](#specnetwork-namespaced-network-mesh-among-your-edgedevices)
+  - [`spec.storage`: Remote CSI for your EdgeDevices](#specstorage-remote-csi-for-your-edgedevices)
+  - [`spec.pod`: Kubernetes pod resources](#specpod-kubernetes-pod-resources)
+  - [`spec.metricsReporters`: Optional metrics push client for your peripherals](#specmetricsreporters-optional-metrics-push-client-for-your-peripherals)
+  - [`spec.peripherals`: Peripherals definition and operation](#specperipherals-peripherals-definition-and-operation)
 - [Status](#status)
 - [Appendix.A: List of supported collectors](#appendixa-list-of-supported-collectors)
 
 ## Metadata
 
 ```yaml
----
-# An example edge device accessing via gRPC
 apiVersion: aranya.arhat.dev/v1alpha1
 kind: EdgeDevice
 metadata:
   name: example-edge-device
+  # EdgeDevice is always namespaced, but you have to make sure the name is unique
+  # across your cluster
+  namespace: edge
 ```
 
 ## Spec
 
 ```yaml
 spec:
-  node: {}
-  pod: {}
-  devices: {}
   connectivity: {}
+  node: {}
+  network: {}
+  storage: {}
+  pod: {}
+  peripherals: []
+  metricsReporters: []
 ```
 
-### Spec for related kubernetes node
-
-```yaml
-spec:
-  node:
-    timers:
-      forceSyncInterval: 10m
-    # customize your node certificate CSR with following info
-    cert:
-      # two letter country code, ref: https://www.digicert.com/ssl-certificate-country-codes.htm
-      country: ""
-      state: ""
-      locality: ""
-      org: myOrg
-      orgUnit: myOrgUnit
-    # define pod cidr for this node, or it will be allocated by kubernetes dynamically
-    podCIDR: 10.0.10.0/24
-    # labels applied to the according node object
-    labels: {}
-      # key: value
-    # annotations applied to the according node object
-    annotations: {}
-      # key: value
-    storage:
-      enabled: true
-
-    # node metrics (embedded prometheus node_exporter)
-    metrics:
-      # report metrics if it's required by the cloud
-      enabled: true
-      paths:
-        # sysfs path
-        sysfs: /sys
-        # procfs path
-        procfs: /proc
-        # textfile directory to store all textfile metrics
-        textfile: /tmp/metrics/textfile
-
-      # what metrics to collect
-      #
-      # supported metrics collectors is the subset of the collectors listed in
-      #   https://github.com/prometheus/node_exporter#collectors (linux,darwin) and
-      #   https://github.com/prometheus-community/windows_exporter#collectors (windows)
-      # to be specific, collectors require cgo are not supported
-      #
-      # unsupported collectors are:
-      #   1) on linux: (none)
-      #   2) on darwin: boottime,cpu,filesystem,diskstats,loadavg,meminfo,netdev,uname,ntp,time
-      #   3) on windows: (none)
-      collect:
-      - time
-      - textfile
-      # ...
-
-      # additional args for metrics collection, os dependent
-      extraArgs:
-      # example for unix-like (node_exporter)
-      # - --collector.
-      # example for windows (windows_exporter)
-      # - --collector.service.services-where="Name='windows_exporter'"
-
-    fieldHooks:
-    # field hook to update annotation/label value according
-    # to current value of some annotation/label
-    - # query in jq syntax
-      query: .metadata.annotations."example.com/foo"
-      # kubernetes field path
-      targetFieldPath: metadata.labels['example.com/bar']
-      # value to set
-      value: "true"
-      # jq syntax expression to process result
-      #
-      # valueExpression: .[0] < 5
-```
-
-Please refer to [Appendix.A](#appendixa-list-of-supported-collectors) for the full list of supported collectors
-
-### Spec for kubernetes pods assigned to related node
-
-```yaml
-spec:
-  pod:
-    timers:
-      forceSyncInterval: 10m
-
-    ipv4CIDR: 10.0.10.0/24
-    ipv6CIDR: ::1/128
-    # dns config to override aranya's defaults
-    dns:
-      servers:
-      - "1.1.1.1"
-      - "8.8.8.8"
-      searches:
-      - cluster.local
-      options:
-      - ndots:5
-```
-
-### Spec for assiciated devices
-
-```yaml
-spec:
-  devices:
-  - name: foo-serial
-    connectivity:
-      transport: serial
-      mode: client
-      target: /dev/cu.usbserial-XXXX
-      params:
-        baud_rate: "115200"
-        data_bits: "8"
-        parity: "none"
-        stop_bits: "1"
-    uploadConnectivity:
-      transport: mqtt3.1.1/tcp
-      target: mqtt.example.com:8883
-      params:
-        tls_insecure_skip_verify: "true"
-    operations:
-    - name: Start
-      pseudoCommand: start
-      transportParams:
-        text_data: "FOO AT CMD"
-    - name: Stop
-      pseudoCommand: stop
-      transportParams:
-        hex_data: "0123456789ABCDEF"
-    metrics:
-    - name: foo_stats
-      uploadMethod: WithStandaloneClient
-      transportParams:
-        text_data: "COLLECT METRICS CMD"
-      uploadParams:
-        pub_topic: "/test/data"
-        pub_qos: "1"
-```
-
-### Spec for cloud connectivity
+### `spec.connectivity`: In Cloud connectivity to reach your EdgeDevice
 
 ```yaml
 spec:
@@ -288,6 +158,185 @@ spec:
       userPassRef:
         # kubernetes secret name for username and password in amqp connection
         name: amqp-user-pass
+```
+
+### `spec.node`: Kubernetes node resource
+
+```yaml
+spec:
+  node:
+    timers:
+      forceSyncInterval: 10m
+    # customize your node certificate CSR with following info
+    cert:
+      # two letter country code, ref: https://www.digicert.com/ssl-certificate-country-codes.htm
+      country: ""
+      state: ""
+      locality: ""
+      org: myOrg
+      orgUnit: myOrgUnit
+    # define pod cidr for this node, or it will be allocated by kubernetes dynamically
+    podCIDR: 10.0.10.0/24
+    # labels applied to the according node object
+    labels: {}
+      # key: value
+    # annotations applied to the according node object
+    annotations: {}
+      # key: value
+    storage:
+      enabled: true
+
+    # node metrics from node_exporter/windows_exporter
+    metrics:
+      # report metrics if it's required by the cloud
+      enabled: true
+      paths:
+        # sysfs path
+        sysfs: /sys
+        # procfs path
+        procfs: /proc
+        # textfile directory to store all textfile metrics
+        textfile: /tmp/metrics/textfile
+
+      # what metrics to collect
+      #
+      # supported metrics collectors is the subset of the collectors listed in
+      #   https://github.com/prometheus/node_exporter#collectors (linux,darwin) and
+      #   https://github.com/prometheus-community/windows_exporter#collectors (windows)
+      # to be specific, collectors require cgo are not supported
+      #
+      # unsupported collectors are:
+      #   1) on linux: (none)
+      #   2) on darwin: boottime,cpu,filesystem,diskstats,loadavg,meminfo,netdev,uname,ntp,time
+      #   3) on windows: (none)
+      collect:
+      - time
+      - textfile
+      # ...
+
+      # additional args for metrics collection, os dependent
+      extraArgs:
+      # example for unix-like (node_exporter)
+      # - --collector.
+      # example for windows (windows_exporter)
+      # - --collector.service.services-where="Name='windows_exporter'"
+
+    fieldHooks:
+    # field hook to update annotation/label value according
+    # to current value of some annotation/label
+    - # query in jq syntax
+      query: .metadata.annotations."example.com/foo"
+      # kubernetes field path
+      targetFieldPath: metadata.labels['example.com/bar']
+      # value to set
+      value: "true"
+      # jq syntax expression to process result
+      #
+      # valueExpression: .[0] < 5
+```
+
+Please refer to [Appendix.A](#appendixa-list-of-supported-collectors) for the full list of supported collectors
+
+### `spec.network`: Namespaced network mesh among your EdgeDevices
+
+```yaml
+spec:
+  network:
+    # enabled network mesh
+    enabled: true
+```
+
+### `spec.storage`: Remote CSI for your EdgeDevices
+
+```yaml
+spec:
+  storage:
+    # enabled remote CSI storage
+    enabled: true
+```
+
+### `spec.pod`: Kubernetes pod resources
+
+```yaml
+spec:
+  pod:
+    timers:
+      forceSyncInterval: 10m
+
+    ipv4CIDR: 10.0.10.0/24
+    ipv6CIDR: ::1/128
+    # dns config to override aranya's defaults
+    dns:
+      servers:
+      - "1.1.1.1"
+      - "8.8.8.8"
+      searches:
+      - cluster.local
+      options:
+      - ndots:5
+```
+
+### `spec.metricsReporters`: Optional metrics push client for your peripherals
+
+```yaml
+spec:
+  metricsReporters:
+  - name: foo_reporter
+    connector:
+      method: mqtt
+      target: mqtt.example.com:1883
+      # params are resolved by your custom peripheral extension
+      params:
+        # map<string, string>
+        client_id: foo
+```
+
+### `spec.peripherals`: Peripherals definition and operation
+
+```yaml
+spec:
+  peripherals:
+  - name: foo-serial
+    connector:
+      method: serial
+      target: /dev/cu.usbserial-XXXX
+      # params are resolved by your custom peripheral extension
+      params:
+        # map<string, string>
+        baud_rate: "115200"
+        data_bits: "8"
+        parity: "none"
+        stop_bits: "1"
+    operations:
+    - name: Start
+      pseudoCommand: start
+      # operation params are resolved by your custom peripheral extension
+      params:
+        text_data: "FOO AT CMD"
+    - name: Stop
+      pseudoCommand: stop
+      # operation params are resolved by your custom peripheral extension
+      params:
+        hex_data: "0123456789ABCDEF"
+    metrics:
+    - name: foo_node_stats
+      valueType: counter
+      # upload metrics along with node metrics
+      reportMethod: node
+      # params are resolved by your custom peripheral extension
+      params:
+        AT: COLLECT FOO METRICS
+    - name: foo_standalone_stats
+      valueType: gauge
+      reportMethod: standalone
+      reporterName: foo_reporter
+      # params are resolved by your custom peripheral extension
+      params:
+        AT: COLLECT METRICS CMD
+      # params are resolved by your custom peripheral extension
+      reporterParams:
+        pub_topic: "/test/data"
+        pub_qos: "1"
 ```
 
 ## Status

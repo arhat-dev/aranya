@@ -13,7 +13,7 @@
     - `阿罗汉` 是取得了仅次于 `佛` 果位的修行者
 
 - `abbot` (`住持`)
-  - Role: The container network manager at your edge device, deployed as a `Pod`
+  - Role: The network manager at your edge device, deployed as a `Pod`
 
 - `vihara` (`精舍`)
   - Role: The maintenance manager
