@@ -1,0 +1,45 @@
+name: Sync Charts
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+    - master
+    paths:
+    - cicd/deploy/charts/**
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        path: aranya
+
+    - uses: actions/checkout@v2
+      with:
+        repository: arhat-dev/helm-charts
+        path: helm-charts
+        ssh-key: ${{ secrets.ORG_SSH_KEY }}
+
+    - name: Configure git user
+      run: |
+        git config --global user.email '72795724+arhatbot@users.noreply.github.com'
+        git config --global user.name 'Arhat Bot'
+
+    - name: Update charts
+      run: |
+        for chart in aranya/cicd/deploy/charts/*; do
+          chart="${chart#aranya/cicd/deploy/charts/}"
+          echo "Updating chart ${chart}..."
+          rm -rf "helm-charts/charts/${chart}"
+          mv "aranya/cicd/deploy/charts/${chart}" "helm-charts/charts/${chart}"
+          echo "Chart ${chart} updated"
+        done
+
+    - name: Push charts update
+      run: |
+        cd helm-charts
+        git add --all .
+        git commit -m "Update charts from aranya"
+        git push

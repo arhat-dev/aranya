@@ -1,0 +1,31 @@
+name: Deps
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+    - deps/**
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.14.x
+
+    - name: Configure git user
+      run: |
+        git config --global user.email '72795724+arhatbot@users.noreply.github.com'
+        git config --global user.name 'Arhat Bot'
+
+    - name: Update vendored packages
+      run: |
+        make vendor
+
+    - name: Push vendored packages
+      run: |
+        git add --all .
+        git commit -m 'deps(vendor): Update vendored packages'
+        git push

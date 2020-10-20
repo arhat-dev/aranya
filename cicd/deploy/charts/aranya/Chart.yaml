@@ -1,6 +1,27 @@
 apiVersion: v2
 name: aranya
-description: EdgeDevice Controller Deployment
+description: Controller for all kinds of devices
 type: application
+maintainers:
+- name: arhat-dev
+  email: dev@arhat.dev
+keywords:
+- abbot
+- arhat
+- aranya
+- network
+- controller
+- wireguard
+- mesh
+- pod
+- certificate
+- edgedevice
+- edge
+- iot
+# icon:
+home: https://github.com/arhat-dev/aranya
+sources:
+- https://github.com/arhat-dev/aranya
+- https://github.com/arhat-dev/helm-charts
 version: 0.1.0
 appVersion: latest

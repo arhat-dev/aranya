@@ -7,9 +7,18 @@ on:
     - rerequested
     - requested_action
   pull_request:
+    paths-ignore:
+    - docs/**
+    - cicd/deploy/charts/**
+    - README.md
     branches:
     - master
+    - "!deps/**"
   push:
+    paths-ignore:
+    - docs/**
+    - cicd/deploy/charts/**
+    - README.md
     branches:
     - master
     tags:
@@ -20,6 +29,7 @@ env:
 
 jobs:
   stylecheck:
+    if: contains(github.head_ref, 'deps/') == false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -42,6 +52,7 @@ jobs:
         make lint.all
 
   unit-tests:
+    if: contains(github.head_ref, 'deps/') == false
     needs:
     - stylecheck
     strategy:
@@ -74,6 +85,7 @@ jobs:
       #   fail_ci_if_error: true # optional (default = false)
 
   build-linux-images:
+    if: contains(github.head_ref, 'deps/') == false
     needs:
     - stylecheck
     - unit-tests
@@ -97,6 +109,7 @@ jobs:
 
   # TODO: Add support for windows image build in arhat-dev/dockerfile
   # build-windows-images:
+  #   if: contains(github.head_ref, 'deps/') == false
   #   needs:
   #   - stylecheck
   #   - unit-tests
@@ -119,6 +132,7 @@ jobs:
   #       make image.push.windows.all
 
   e2e-tests:
+    if: contains(github.head_ref, 'deps/') == false
     needs:
     - stylecheck
     - unit-tests

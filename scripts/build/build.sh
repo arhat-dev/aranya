@@ -182,6 +182,6 @@ GOBUILD="GO111MODULE=on GOOS=${GOOS} GOARCH=$(_get_goarch "${ARCH}") \
   GOARM=${GOARM} GOMIPS=${GOMIPS} GOWASM=satconv,signext \
   ${CGO_FLAGS} \
   go build -trimpath -buildmode=${BUILD_MODE:-default} \
-  -mod=vendor -ldflags='${GO_LDFLAGS}' -o build/${COMP}.${GOOS}.${ARCH}${GOEXE}"
+  -mod=vendor -ldflags='${GO_LDFLAGS}' -o build/$*${GOEXE}"
 
 $CMD

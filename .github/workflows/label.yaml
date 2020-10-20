@@ -1,7 +1,11 @@
 name: Label
 
 # yamllint disable-line rule:truthy
-on: [pull_request]
+on:
+  pull_request:
+    branches:
+    - master
+    - "!deps/**"
 
 jobs:
   label:

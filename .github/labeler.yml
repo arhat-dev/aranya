@@ -1,34 +1,27 @@
 docs:
-- any:
-  - docs/**
-  - README.md
-
-apis:
-- any:
-  - pkg/apis/**
-
-controller:
-- any:
-  - pkg/controller/**
-  - cmd/**
+- docs/**
+- README.md
 
 ci:
-- any:
-  - .github/**
-  - cicd/gitlab/**
-  - .gitlab-ci.yml
-
-cd:
-- any:
-  - cicd/deploy/**
-  - cicd/docker/**
-
-e2e:
-- any:
-  - e2e/**
+- .github/**
+- cicd/gitlab/**
+- .gitlab-ci.yml
 
 dependency:
-- any:
-  - go.mod
-  - go.sum
-  - vendor/**
+- go.mod
+- go.sum
+- vendor/**
+
+apis:
+- pkg/apis/**
+
+controller:
+- pkg/controller/**
+- cmd/**
+
+cd:
+- cicd/deploy/**
+- cicd/docker/**
+
+e2e:
+- e2e/**
