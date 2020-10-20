@@ -109,7 +109,7 @@ func (c *TracingConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 
 	var traceProvider otapitrace.Provider
 
-	tlsConfig, err := c.TLS.GetTLSConfig()
+	tlsConfig, err := c.TLS.GetTLSConfig(true)
 	if err != nil {
 		return fmt.Errorf("failed to create tls config: %w", err)
 	}
