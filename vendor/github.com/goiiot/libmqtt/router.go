@@ -36,7 +36,7 @@ func NewStandardRouter() *StandardRouter {
 	return &StandardRouter{m: new(sync.Map)}
 }
 
-// StandardRouter implements standard MQTT routing behaviour
+// StandardRouter implements standard MQTT routing behavior
 type StandardRouter struct {
 	m *sync.Map
 }

@@ -145,7 +145,7 @@ func (w oneTimeWriter) Write(data []byte) (int, error) {
 	return n, err
 }
 
-func (c TLSConfig) GetTLSConfig() (_ *tls.Config, err error) {
+func (c TLSConfig) GetTLSConfig(server bool) (_ *tls.Config, err error) {
 	if !c.Enabled {
 		return nil, nil
 	}
@@ -184,10 +184,22 @@ func (c TLSConfig) GetTLSConfig() (_ *tls.Config, err error) {
 				return nil, fmt.Errorf("failed to parse ca certs: %w", err)
 			}
 			for i := range caCerts {
-				tlsConfig.RootCAs.AddCert(caCerts[i])
+				if server {
+					tlsConfig.ClientCAs.AddCert(caCerts[i])
+				} else {
+					tlsConfig.RootCAs.AddCert(caCerts[i])
+				}
 			}
-		} else if !tlsConfig.RootCAs.AppendCertsFromPEM(caBytes) {
-			return nil, fmt.Errorf("failed to add pem formated ca certs")
+		} else {
+			if server {
+				if !tlsConfig.ClientCAs.AppendCertsFromPEM(caBytes) {
+					return nil, fmt.Errorf("failed to add pem encoded client ca certs")
+				}
+			} else {
+				if !tlsConfig.RootCAs.AppendCertsFromPEM(caBytes) {
+					return nil, fmt.Errorf("failed to add pem encoded ca certs")
+				}
+			}
 		}
 	}
 

@@ -51,10 +51,10 @@ func Decode(version ProtoVersion, r BufferedReader) (Packet, error) {
 		case CtrlDisConn:
 			if version == V311 {
 				return &DisconnPacket{}, nil
-			} else {
-				// mqtt v5 has props
-				return nil, ErrDecodeBadPacket
 			}
+
+			// mqtt v5 has props
+			return nil, ErrDecodeBadPacket
 		default:
 			return nil, ErrDecodeBadPacket
 		}
@@ -63,7 +63,7 @@ func Decode(version ProtoVersion, r BufferedReader) (Packet, error) {
 	}
 
 	body := make([]byte, bytesToRead)
-	if _, err = io.ReadFull(r, body[:]); err != nil {
+	if _, err = io.ReadFull(r, body); err != nil {
 		return nil, err
 	}
 
@@ -82,7 +82,8 @@ func decodeV311Packet(header byte, body []byte) (Packet, error) {
 	var err error
 	switch header >> 4 {
 	case CtrlConn:
-		protocol, body, err := getStringData(body)
+		var protocol string
+		protocol, body, err = getStringData(body)
 		if err != nil {
 			return nil, err
 		}
@@ -107,31 +108,42 @@ func decodeV311Packet(header byte, body []byte) (Packet, error) {
 		}
 		pkt.ProtoVersion = ProtoVersion(body[0])
 
-		if pkt.ClientID, body, err = getStringData(body[4:]); err != nil {
+		pkt.ClientID, body, err = getStringData(body[4:])
+		if err != nil {
 			return nil, err
 		}
 
 		if pkt.IsWill {
 			pkt.WillTopic, body, err = getStringData(body)
+			if err != nil {
+				return nil, err
+			}
+
 			pkt.WillMessage, body, err = getBinaryData(body)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if hasUsername {
 			pkt.Username, body, err = getStringData(body)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if hasPassword {
 			pkt.Password, _, err = getStringData(body)
-		}
-
-		if err != nil {
-			return nil, err
+			if err != nil {
+				return nil, err
+			}
 		}
 		return pkt, nil
 	case CtrlConnAck:
 		return &ConnAckPacket{Present: body[0]&0x01 == 0x01, Code: body[1]}, nil
 	case CtrlPublish:
-		topicName, body, err := getStringData(body)
+		var topicName string
+		topicName, body, err = getStringData(body)
 		if err != nil {
 			return nil, err
 		}
@@ -209,11 +221,16 @@ func decodeV311Packet(header byte, body []byte) (Packet, error) {
 }
 
 // decode mqtt v5 packets
+// nolint:gocyclo
 func decodeV5Packet(header byte, body []byte) (Packet, error) {
 	var err error
 	switch header >> 4 {
 	case CtrlConn:
-		protocol, next, err := getStringData(body)
+		var (
+			protocol string
+			next     []byte
+		)
+		protocol, next, err = getStringData(body)
 		if err != nil {
 			return nil, err
 		}
@@ -247,25 +264,35 @@ func decodeV5Packet(header byte, body []byte) (Packet, error) {
 		}
 		pkt.Props.setProps(props)
 
-		if pkt.ClientID, next, err = getStringData(next); err != nil {
+		pkt.ClientID, next, err = getStringData(next)
+		if err != nil {
 			return nil, err
 		}
 
 		if pkt.IsWill {
 			pkt.WillTopic, next, err = getStringData(next)
+			if err != nil {
+				return nil, err
+			}
+
 			pkt.WillMessage, next, err = getBinaryData(next)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if hasUsername {
 			pkt.Username, next, err = getStringData(next)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if hasPassword {
 			pkt.Password, _, err = getStringData(next)
-		}
-
-		if err != nil {
-			return nil, err
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		pkt.ProtoVersion = V5
@@ -277,7 +304,8 @@ func decodeV5Packet(header byte, body []byte) (Packet, error) {
 			Props:   &ConnAckProps{},
 		}
 
-		props, _, err := getRawProps(body[2:])
+		var props map[byte][]byte
+		props, _, err = getRawProps(body[2:])
 		if err != nil {
 			return nil, err
 		}

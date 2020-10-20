@@ -28,7 +28,6 @@ const (
 
 type message struct {
 	what msgType
-	code byte
 	msg  string
 	err  error
 	obj  interface{}

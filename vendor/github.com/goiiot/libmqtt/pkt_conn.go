@@ -31,8 +31,8 @@ type WillProps struct {
 
 	PayloadFormat uint8
 
-	// the lifetime of the Will Message in seconds and is sent as the Publication Expiry Interval
-	// when the Server publishes the Will Message.
+	// the lifetime of the Will Message in seconds and is sent as the Publication Expiry
+	// Interval when the Server publishes the Will Message.
 	MessageExpiryInterval uint32
 
 	// String describing the content of the Will Message
@@ -41,7 +41,8 @@ type WillProps struct {
 	// String which is used as the Topic Name for a response message
 	ResponseTopic string
 
-	//  The Correlation Data is used by the sender of the Request Message to identify which request the Response Message is for when it is received.
+	// The Correlation Data is used by the sender of the Request Message to identify
+	// which request the Response Message is for when it is received.
 	CorrelationData []byte
 
 	UserProps UserProps
@@ -64,6 +65,7 @@ func (p *WillProps) props() []byte {
 }
 
 // ConnPacket is the first packet sent by Client to Server
+// nolint:maligned
 type ConnPacket struct {
 	BasePacket
 	ProtoName string
@@ -86,8 +88,6 @@ type ConnPacket struct {
 	Keepalive   uint16
 	WillTopic   string
 	WillMessage []byte
-
-	mutex sync.RWMutex
 }
 
 // Type ConnPacket's type is CtrlConn
@@ -124,9 +124,6 @@ func (c *ConnPacket) WriteTo(w BufferedWriter) error {
 }
 
 func (c *ConnPacket) clone() *ConnPacket {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
 	willMessageCopy := make([]byte, len(c.WillMessage))
 	_ = copy(willMessageCopy, c.WillMessage)
 
@@ -193,7 +190,7 @@ func (c *ConnPacket) payload() []byte {
 				willProps := c.WillProps.props()
 				_ = writeVarInt(len(willProps), buf)
 				result = append(result, buf.Bytes()...)
-				result = append(willProps)
+				result = append(result, willProps...)
 			}
 		}
 
@@ -232,7 +229,8 @@ type ConnProps struct {
 	// The Maximum Packet Size the Client is willing to accept
 	//
 	// If the Maximum Packet Size is not present,
-	// no limit on the packet size is imposed beyond the limitations in the protocol as a result of the remaining length encoding and the protocol header sizes
+	// no limit on the packet size is imposed beyond the limitations in the protocol as a
+	// result of the remaining length encoding and the protocol header sizes
 	MaxPacketSize uint32
 
 	// This value indicates the highest value that the Client will accept
@@ -296,10 +294,9 @@ func (c *ConnProps) clone() *ConnProps {
 
 	userPropsCopy := make(UserProps)
 	for k, v := range c.UserProps {
-		userPropsCopy[k] = make([]string, 0)
-		for _, val := range v {
-			userPropsCopy[k] = append(userPropsCopy[k], val)
-		}
+		buf := make([]string, len(v))
+		_ = copy(buf, v)
+		userPropsCopy[k] = buf
 	}
 
 	return &ConnProps{
@@ -403,44 +400,29 @@ func (c *ConnAckPacket) WriteTo(w BufferedWriter) error {
 
 // ConnAckProps defines connect acknowledge properties
 type ConnAckProps struct {
-	// If the Session Expiry Interval is absent the value in the ConnPacket used.
-	// The server uses this property to inform the Client that it is using
-	// a value other than that sent by the Client in the ConnAck
-	SessionExpiryInterval uint32
-
-	// The Server uses this value to limit the number of QoS 1 and QoS 2 publications
-	// that it is willing to process concurrently for the Client.
-	//
-	// It does not provide a mechanism to limit the QoS 0 publications that
-	// the Client might try to send
-	MaxRecv uint16
-
-	MaxQos QosLevel
-
-	// Declares whether the Server supports retained messages.
-	// true means that retained messages are not supported.
-	// false means retained messages are supported
-	RetainAvail *bool
-
-	// Maximum Packet Size the Server is willing to accept.
-	// If the Maximum Packet Size is not present, there is no limit on the
-	// packet size imposed beyond the limitations in the protocol as a
-	// result of the remaining length encoding and the protocol header sizes
-	MaxPacketSize uint32
+	// The contents of this data are defined by the authentication method.
+	AuthData []byte
 
 	// The Client Identifier which was assigned by the Server
 	// because a zero length Client Identifier was found in the ConnPacket
 	AssignedClientID string
 
-	// This value indicates the highest value that the Server will accept
-	// as a Topic Alias sent by the Client.
-	//
-	// The Server uses this value to limit the number of Topic Aliases
-	// that it is willing to hold on this Connection.
-	MaxTopicAlias uint16
-
 	// Human readable string designed for diagnostics
 	Reason string
+
+	// Response Information
+	RespInfo string
+
+	// Can be used by the Client to identify another Server to use
+	ServerRef string
+
+	// The name of the authentication method
+	AuthMethod string
+
+	// Declares whether the Server supports retained messages.
+	// true means that retained messages are not supported.
+	// false means retained messages are supported
+	RetainAvail *bool
 
 	// User defines Properties
 	UserProps UserProps
@@ -466,20 +448,35 @@ type ConnAckProps struct {
 	// default is true
 	SharedSubAvail *bool
 
+	// If the Session Expiry Interval is absent the value in the ConnPacket used.
+	// The server uses this property to inform the Client that it is using
+	// a value other than that sent by the Client in the ConnAck
+	SessionExpiryInterval uint32
+
+	// Maximum Packet Size the Server is willing to accept.
+	// If the Maximum Packet Size is not present, there is no limit on the
+	// packet size imposed beyond the limitations in the protocol as a
+	// result of the remaining length encoding and the protocol header sizes
+	MaxPacketSize uint32
+
+	// The Server uses this value to limit the number of QoS 1 and QoS 2 publications
+	// that it is willing to process concurrently for the Client.
+	//
+	// It does not provide a mechanism to limit the QoS 0 publications that
+	// the Client might try to send
+	MaxRecv uint16
+
+	// This value indicates the highest value that the Server will accept
+	// as a Topic Alias sent by the Client.
+	//
+	// The Server uses this value to limit the number of Topic Aliases
+	// that it is willing to hold on this Connection.
+	MaxTopicAlias uint16
+
 	// Keep Alive time assigned by the Server
 	ServerKeepalive uint16
 
-	// Response Information
-	RespInfo string
-
-	// Can be used by the Client to identify another Server to use
-	ServerRef string
-
-	// The name of the authentication method
-	AuthMethod string
-
-	// The contents of this data are defined by the authentication method.
-	AuthData []byte
+	MaxQos QosLevel
 }
 
 func (c *ConnAckProps) props() []byte {

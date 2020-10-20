@@ -19,10 +19,11 @@ package libmqtt
 import (
 	"fmt"
 	"io"
-	"sync"
 )
 
 var (
+	// TODO: set default
+	// nolint:deadcode,unused,varcheck
 	propsDefaultBoolValue = map[byte]bool{
 		propKeyRetainAvail:      true,
 		propKeyWildcardSubAvail: true,
@@ -73,7 +74,7 @@ func (p propertySet) add(propKey byte, propValue interface{}) {
 			putUint32(val, v)
 		}
 	case UserProps:
-		v.encodeTo(val)
+		v.encodeTo(&val)
 	case nil:
 		return
 	default:
@@ -133,15 +134,14 @@ func (u UserProps) Del(key string) {
 	delete(u, key)
 }
 
-func (u UserProps) encodeTo(result []byte) []byte {
+func (u UserProps) encodeTo(result *([]byte)) {
 	for k, v := range u {
 		for _, val := range v {
 			// result = append(result, propKeyUserProps)
-			result = append(result, encodeStringWithLen(k)...)
-			result = append(result, encodeStringWithLen(val)...)
+			*result = append(*result, encodeStringWithLen(k)...)
+			*result = append(*result, encodeStringWithLen(val)...)
 		}
 	}
-	return result
 }
 
 // Packet is MQTT control packet
@@ -164,7 +164,6 @@ type Packet interface {
 // BasePacket for packet encoding and MQTT version note
 type BasePacket struct {
 	ProtoVersion ProtoVersion
-	mutex        sync.RWMutex
 }
 
 func (b *BasePacket) write(w io.Writer, first byte, varHeader, payload []byte) error {
@@ -211,16 +210,11 @@ func (b *BasePacket) writeV5(w io.Writer, first byte, varHeader, props, payload 
 }
 
 func (b *BasePacket) SetVersion(version ProtoVersion) {
-	b.mutex.Lock()
 	b.ProtoVersion = version
-	b.mutex.Unlock()
 }
 
 // Version is the MQTT version of this packet
 func (b *BasePacket) Version() ProtoVersion {
-	b.mutex.RLock()
-	defer b.mutex.RUnlock()
-
 	if b.ProtoVersion != 0 {
 		return b.ProtoVersion
 	}
@@ -281,10 +275,6 @@ const (
 	Qos2 QosLevel = 0x02 // Qos2 = 2
 )
 
-var (
-	mqtt = []byte{0x00, 0x04, 'M', 'Q', 'T', 'T'}
-)
-
 const (
 	SubOkMaxQos0 = 0    // SubOkMaxQos0 QoS 0 is used by server
 	SubOkMaxQos1 = 1    // SubOkMaxQos1 QoS 1 is used by server
@@ -319,7 +309,7 @@ const (
 	CodeProtoError                          = 130 // Packet: ConnAck, DisConn
 	CodeImplementationSpecificError         = 131 // Packet: ConnAck, PubAck, PubRecv, SubAck, UnSubAck, DisConn
 	CodeUnsupportedProtoVersion             = 132 // Packet: ConnAck
-	CodeClientIdNotValid                    = 133 // Packet: ConnAck
+	CodeClientIDNotValid                    = 133 // Packet: ConnAck
 	CodeBadUserPass                         = 134 // Packet: ConnAck
 	CodeNotAuthorized                       = 135 // Packet: ConnAck, PubAck, PubRecv, SubAck, UnSubAck, DisConn
 	CodeServerUnavail                       = 136 // Packet: ConnAck
@@ -353,6 +343,7 @@ const (
 
 // property identifiers
 
+// nolint:lll
 const (
 	propKeyPayloadFormatIndicator = 1  // byte, Packet: Will, Publish
 	propKeyMessageExpiryInterval  = 2  // Uint (4 bytes), Packet: Will, Publish

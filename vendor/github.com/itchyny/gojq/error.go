@@ -2,7 +2,6 @@ package gojq
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -123,7 +122,7 @@ type hasKeyTypeError struct {
 }
 
 func (err *hasKeyTypeError) Error() string {
-	return fmt.Sprintf("cannot check wether %s has a key: %s", typeErrorPreview(err.l), typeErrorPreview(err.r))
+	return fmt.Sprintf("cannot check whether %s has a key: %s", typeErrorPreview(err.l), typeErrorPreview(err.r))
 }
 
 type unaryTypeError struct {
@@ -185,7 +184,11 @@ func (err *formatShError) Error() string {
 	return fmt.Sprintf("cannot escape for shell: %s", typeErrorPreview(err.v))
 }
 
-var errTooManyVariableValues = errors.New("too many variable values provided")
+type tooManyVariableValuesError struct{}
+
+func (err *tooManyVariableValuesError) Error() string {
+	return "too many variable values provided"
+}
 
 type expectedVariableError struct {
 	n string
@@ -225,19 +228,6 @@ type stringLiteralError struct {
 
 func (err *stringLiteralError) Error() string {
 	return fmt.Sprintf("expected a string but got: %s", err.s)
-}
-
-type stringQueryError struct {
-	s   string
-	err error
-}
-
-func (err *stringQueryError) Error() string {
-	return fmt.Sprintf("invalid query in string interpolation %s: %s", err.s, err.err)
-}
-
-func (err *stringQueryError) QueryParseError() (string, string, string, error) {
-	return "query in string interpolation", "<string>", err.s, err.err
 }
 
 type tryEndError struct {

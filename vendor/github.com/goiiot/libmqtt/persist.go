@@ -242,9 +242,9 @@ func NewFilePersist(dirPath string, strategy *PersistStrategy) PersistMethod {
 type filePersist struct {
 	dirPath   string
 	inMemBuf  *sync.Map
-	inMemSize uint32
 	bytesBuf  *bytes.Buffer
 	strategy  *PersistStrategy
+	inMemSize uint32
 	n         uint32
 }
 
