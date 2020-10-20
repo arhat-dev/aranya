@@ -26,7 +26,7 @@ spec:
         - name: config
           configMap:
             name: {{ include "aranya.fullname" . }}
-        {{- if .Values.config.virtualnode.node.storage.enabled }}
+        {{- if .Values.config.virtualnode.storage.enabled }}
         - name: kubelet-plugins-dir
           hostPath:
             path: /var/lib/kubelet/plugins
@@ -49,7 +49,7 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: aranya
-          {{- if .Values.config.virtualnode.node.storage.enabled }}
+          {{- if .Values.config.virtualnode.storage.enabled }}
           securityContext:
             privileged: true
           {{- else }}
@@ -99,7 +99,7 @@ spec:
             - name: config
               mountPath: /etc/aranya/config.yaml
               subPath: config.yaml
-            {{- if .Values.config.virtualnode.node.storage.enabled }}
+            {{- if .Values.config.virtualnode.storage.enabled }}
             - name: kubelet-plugins-dir
               mountPath: /var/lib/kubelet/plugins
             - name: kubelet-registration-dir

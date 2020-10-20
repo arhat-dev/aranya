@@ -836,6 +836,8 @@ data:
           burst: 10
           enabled: true
           qps: 5
+      network:
+        enabled: true
       node:
         cert:
           autoApprove: true
@@ -844,21 +846,52 @@ data:
           enabled: false
           updateInterval: 10s
         metrics:
-          collect:
+        - collect:
           - arp,bcache,bonding,conntrack,cpu,cpufreq,diskstats,edac,entropy,filefd
           - filesystem,hwmon,infiniband,ipvs,loadavg,mdadm,meminfo,netclass,netdev
           - netstat,nfs,nfsd,pressure,rapl,schedstat,sockstat,softnet,stat,zfs,ntp
           - thermal_zone,time,timex,udp_queues,uname,vmstat,xfs,processes
           enabled: true
-        recreateIfPatchFailed: false
-        storage:
+          extraArgs: []
+          os: linux
+        - collect:
+          - boottime,cpu,filesystem,diskstats,loadavg,meminfo
+          - netdev,uname,ntp,time
           enabled: true
-          kubeletPluginsDir: /var/lib/kubelet/plugins
-          kubeletRegistrationDir: /var/lib/kubelet/plugins_registry
-          rootDir: /var/lib/aranya
-          sftp:
-            enabled: true
-            hostKeyFile: /etc/ssh/ssh_host_ed25519_key
+          extraArgs: []
+          os: darwin
+        - collect:
+          - cpu,diskstats,loadavg,uname,ntp,time
+          enabled: true
+          extraArgs: []
+          os: freebsd
+        - collect:
+          - cpu,diskstats,loadavg,uname,ntp,time
+          enabled: true
+          extraArgs: []
+          os: openbsd
+        - collect:
+          - cpu,diskstats,loadavg,uname,ntp,time
+          enabled: true
+          extraArgs: []
+          os: netbsd
+        - collect:
+          - ad,adfs,cpu,cs,container,dhcp,dns,exchange,fsrmquota,hyperv
+          - iis,logical_disk,logon,memory,msmq,mssql,net,os,process
+          - remote_fx,service,system,tcp,thermalzone,terminal_services
+          - vmware
+          - netframework_clrexceptions
+          - netframework_clrinterop
+          - netframework_clrjit
+          - netframework_clrloading
+          - netframework_clrlocksandthreads
+          - netframework_clrmemory
+          - netframework_clrremoting
+          - netframework_clrsecurity
+          enabled: true
+          extraArgs: []
+          os: windows
+        recreateIfPatchFailed: false
         timers:
           forceSyncInterval: 10m
           mirrorSyncInterval: 10s
@@ -877,6 +910,14 @@ data:
           resyncInterval: 60s
           streamCreationTimeout: 30s
           streamIdleTimeout: 30m
+      storage:
+        enabled: true
+        kubeletPluginsDir: /var/lib/kubelet/plugins
+        kubeletRegistrationDir: /var/lib/kubelet/plugins_registry
+        rootDir: /var/lib/aranya
+        sftp:
+          enabled: true
+          hostKeyFile: /etc/ssh/ssh_host_ed25519_key
 ---
 # Source: aranya/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1

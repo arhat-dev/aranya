@@ -167,19 +167,9 @@ config:
         mirrorSyncInterval: 10s
         # force sync node status from edge device after
         forceSyncInterval: 10m
-      storage:
-        # enable storage support for edge devices
-        enabled: true
-        # rootDir is the directory to host edge device pod volumes
-        rootDir: /var/lib/aranya
-        kubeletPluginsDir: /var/lib/kubelet/plugins
-        kubeletRegistrationDir: /var/lib/kubelet/plugins_registry
-        # sftp server
-        sftp:
-          enabled: true
-          hostKeyFile: /etc/ssh/ssh_host_ed25519_key
 
       metrics:
+      - os: linux
         # enable node metrics collection by default for all devices connected
         enabled: true
         collect:
@@ -187,6 +177,71 @@ config:
         - filesystem,hwmon,infiniband,ipvs,loadavg,mdadm,meminfo,netclass,netdev
         - netstat,nfs,nfsd,pressure,rapl,schedstat,sockstat,softnet,stat,zfs,ntp
         - thermal_zone,time,timex,udp_queues,uname,vmstat,xfs,processes
+        # - textfile
+        extraArgs: []
+        # - --collector.textfile.directory
+        # - /path/to/somewhere
+        # - --collector.perf.cpus
+        # - 1-10:5
+        # - --collector.perf.tracepoint
+        # - sched:sched_process_exec
+      - os: darwin
+        enabled: true
+        collect:
+        - boottime,cpu,filesystem,diskstats,loadavg,meminfo
+        - netdev,uname,ntp,time
+        # - textfile
+        extraArgs: []
+        # - --collector.textfile.directory
+        # - /path/to/somewhere
+      - os: freebsd
+        enabled: true
+        collect:
+        - cpu,diskstats,loadavg,uname,ntp,time
+        # - textfile
+        extraArgs: []
+        # - --collector.textfile.directory
+        # - /path/to/somewhere
+      - os: openbsd
+        enabled: true
+        collect:
+        - cpu,diskstats,loadavg,uname,ntp,time
+        # - textfile
+        extraArgs: []
+        # - --collector.textfile.directory
+        # - /path/to/somewhere
+      - os: netbsd
+        enabled: true
+        collect:
+        - cpu,diskstats,loadavg,uname,ntp,time
+        # - textfile
+        extraArgs: []
+        # - --collector.textfile.directory
+        # - /path/to/somewhere
+      - os: windows
+        enabled: true
+        collect:
+        - ad,adfs,cpu,cs,container,dhcp,dns,exchange,fsrmquota,hyperv
+        - iis,logical_disk,logon,memory,msmq,mssql,net,os,process
+        - remote_fx,service,system,tcp,thermalzone,terminal_services
+        # - textfile
+        - vmware
+        - netframework_clrexceptions
+        - netframework_clrinterop
+        - netframework_clrjit
+        - netframework_clrloading
+        - netframework_clrlocksandthreads
+        - netframework_clrmemory
+        - netframework_clrremoting
+        - netframework_clrsecurity
+        extraArgs: []
+        # - --collector.textfile.directory
+        # - C:\\Path\to\somewhere
+        # - --collector.service.services-where
+        # - Name='windows_exporter'
+        # - --collector.process.whitelist
+        # - firefox.+
+
     pod:
       allocatable: 10
       timers:
@@ -208,3 +263,19 @@ config:
         - cluster.local
         options:
         - ndots:5
+
+    storage:
+      # enable storage support for edge devices
+      enabled: true
+      # rootDir is the directory to host edge device pod volumes
+      rootDir: /var/lib/aranya
+      kubeletPluginsDir: /var/lib/kubelet/plugins
+      kubeletRegistrationDir: /var/lib/kubelet/plugins_registry
+      # sftp server
+      sftp:
+        enabled: true
+        hostKeyFile: /etc/ssh/ssh_host_ed25519_key
+
+    network:
+      # enabled mesh network among nodes in the same namespace
+      enabled: true

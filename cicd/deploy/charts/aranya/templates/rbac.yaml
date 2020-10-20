@@ -70,7 +70,7 @@ rules:
   verbs:
   - approve
 {{- end }}
-{{- if .Values.config.virtualnode.node.storage.enabled }}
+{{- if .Values.config.virtualnode.storage.enabled }}
 - apiGroups:
   - storage.k8s.io
   resources:
