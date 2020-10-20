@@ -187,5 +187,5 @@ require (
 	k8s.io/csi-translation-lib v0.18.9
 	k8s.io/kubelet v0.18.9
 	k8s.io/kubernetes v1.18.9
-	k8s.io/utils 420da100c033
+	k8s.io/utils v0.0.0-20201015054608-420da100c033
 )

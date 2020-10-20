@@ -1032,7 +1032,7 @@ k8s.io/kubernetes/pkg/volume/util/subpath
 k8s.io/kubernetes/pkg/volume/util/types
 k8s.io/kubernetes/pkg/volume/util/volumepathhandler
 k8s.io/kubernetes/third_party/forked/golang/expansion
-# k8s.io/utils v0.0.0-20200821003339-5e75c0163111 => github.com/kubernetes/utils v0.0.0-20200821003339-5e75c0163111
+# k8s.io/utils v0.0.0-20201015054608-420da100c033 => github.com/kubernetes/utils v0.0.0-20200821003339-5e75c0163111
 ## explicit
 k8s.io/utils/buffer
 k8s.io/utils/exec
