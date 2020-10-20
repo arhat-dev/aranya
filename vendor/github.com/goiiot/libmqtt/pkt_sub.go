@@ -96,9 +96,9 @@ func (s *SubscribeProps) props() []byte {
 		result = append(result, subIDBytes...)
 	}
 
-	if s.UserProps != nil {
+	if len(s.UserProps) != 0 {
 		result = append(result, propKeyUserProps)
-		s.UserProps.encodeTo(result)
+		s.UserProps.encodeTo(&result)
 	}
 	return result
 }

@@ -6,7 +6,8 @@ services:
   - docker
 
 go:
-  - 1.13.x
+  - 1.14.x
+  - 1.15.x
 
 addons:
   apt:
@@ -19,6 +20,7 @@ before_install:
   - export GO111MODULE=on
 
 before_script:
+  - go mod download
   - make test_reconnect
   - bash <(curl -s https://codecov.io/bash)
   - docker run -d -p 1883:1883 -p 8883:8883 -p 8083:8083 -p 8084:8084 emqx/emqx:v3.0.0

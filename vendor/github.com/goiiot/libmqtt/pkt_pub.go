@@ -21,14 +21,14 @@ import "bytes"
 // PublishPacket is sent from a Client to a Server or from Server to a Client
 // to transport an Application Message.
 type PublishPacket struct {
-	BasePacket
-	IsDup     bool
-	Qos       QosLevel
-	IsRetain  bool
-	TopicName string
 	Payload   []byte
-	PacketID  uint16
+	TopicName string
 	Props     *PublishProps
+	PacketID  uint16
+	BasePacket
+	IsDup    bool
+	Qos      QosLevel
+	IsRetain bool
 }
 
 // Type of PublishPacket is CtrlPublish
@@ -72,10 +72,25 @@ func (p *PublishPacket) payload() []byte {
 
 // PublishProps properties for PublishPacket
 type PublishProps struct {
-	// PayloadFormat Indicator
-	// 0, Indicates that the Payload is unspecified bytes, which is equivalent to not sending a Payload Format Indicator
-	// 1, Indicates that the Payload is UTF-8 Encoded Character Data. The UTF-8 data in the Payload
-	PayloadFormat byte // required in server
+	// CorrelationData used by the sender of the Request Message to identify
+	// which request the Response Message is for when it is received
+	CorrelationData []byte
+
+	// SubIDs the identifier of the subscription (always no 0)
+	//
+	// Multiple Subscription Identifiers will be included if the publication
+	// is the result of a match to more than one subscription, in this case
+	// their order is not significant
+	SubIDs []int
+
+	// RespTopic Used as the Topic Name for a response message
+	RespTopic string
+
+	// ContentType describe the content of the Application Message
+	ContentType string
+
+	// User defined Properties
+	UserProps UserProps
 
 	// MessageExpiryInterval
 	// Lifetime of the Application Message in seconds
@@ -90,24 +105,10 @@ type PublishProps struct {
 	// within a Network Connection
 	TopicAlias uint16
 
-	// RespTopic Used as the Topic Name for a response message
-	RespTopic string
-
-	// CorrelationData used by the sender of the Request Message to identify which request the Response Message is for when it is received
-	CorrelationData []byte
-
-	// User defined Properties
-	UserProps UserProps
-
-	// SubIDs the identifier of the subscription (always no 0)
-	//
-	// Multiple Subscription Identifiers will be included if the publication
-	// is the result of a match to more than one subscription, in this case
-	// their order is not significant
-	SubIDs []int
-
-	// ContentType describe the content of the Application Message
-	ContentType string
+	// PayloadFormat Indicator
+	// 0, Indicates that the Payload is unspecified bytes, which is equivalent to not sending a Payload Format Indicator
+	// 1, Indicates that the Payload is UTF-8 Encoded Character Data. The UTF-8 data in the Payload
+	PayloadFormat byte // required in server
 }
 
 func (p *PublishProps) props() []byte {

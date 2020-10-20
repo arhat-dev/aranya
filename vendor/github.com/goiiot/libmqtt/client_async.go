@@ -132,7 +132,8 @@ func (c *AsyncClient) Connect(h ConnHandler) {
 		options := c.options.clone()
 		options.connHandler = connHandler
 
-		c.addWorker(func() { options.connect(c, s, c.options.protoVersion, c.options.firstDelay) })
+		srv := s
+		c.addWorker(func() { options.connect(c, srv, c.options.protoVersion, c.options.firstDelay) })
 	}
 
 	for _, s := range c.secureServers {
@@ -142,7 +143,8 @@ func (c *AsyncClient) Connect(h ConnHandler) {
 			ServerName: strings.SplitN(s, ":", 1)[0],
 		}
 
-		c.addWorker(func() { secureOptions.connect(c, s, secureOptions.protoVersion, secureOptions.firstDelay) })
+		srv := s
+		c.addWorker(func() { secureOptions.connect(c, srv, secureOptions.protoVersion, secureOptions.firstDelay) })
 	}
 }
 

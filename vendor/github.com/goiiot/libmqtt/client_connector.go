@@ -29,11 +29,21 @@ import (
 	"nhooyr.io/websocket"
 )
 
-type Connector func(ctx context.Context, address string, timeout time.Duration, tlsConfig *tls.Config) (net.Conn, error)
+type Connector func(
+	ctx context.Context,
+	address string,
+	timeout time.Duration,
+	tlsConfig *tls.Config,
+) (net.Conn, error)
 
 func WithTCPConnector(handshakeTimeout time.Duration) Option {
 	return func(c *AsyncClient, options *connectOptions) error {
-		options.newConnection = func(ctx context.Context, address string, timeout time.Duration, tlsConfig *tls.Config) (conn net.Conn, e error) {
+		options.newConnection = func(
+			ctx context.Context,
+			address string,
+			timeout time.Duration,
+			tlsConfig *tls.Config,
+		) (conn net.Conn, e error) {
 			return tcpConnect(ctx, address, timeout, handshakeTimeout, tlsConfig)
 		}
 		return nil
@@ -42,7 +52,12 @@ func WithTCPConnector(handshakeTimeout time.Duration) Option {
 
 func WithWebSocketConnector(handshakeTimeout time.Duration, headers http.Header) Option {
 	return func(c *AsyncClient, options *connectOptions) error {
-		options.newConnection = func(ctx context.Context, address string, timeout time.Duration, tlsConfig *tls.Config) (conn net.Conn, e error) {
+		options.newConnection = func(
+			ctx context.Context,
+			address string,
+			timeout time.Duration,
+			tlsConfig *tls.Config,
+		) (conn net.Conn, e error) {
 			return websocketConnect(ctx, address, timeout, handshakeTimeout, headers, tlsConfig)
 		}
 		return nil
@@ -62,7 +77,12 @@ func (tlsTimeoutError) Error() string   { return "tls: timed out" }
 func (tlsTimeoutError) Timeout() bool   { return true }
 func (tlsTimeoutError) Temporary() bool { return true }
 
-func tcpConnect(ctx context.Context, address string, timeout, handshakeTimeout time.Duration, tlsConfig *tls.Config) (net.Conn, error) {
+func tcpConnect(
+	ctx context.Context,
+	address string,
+	timeout, handshakeTimeout time.Duration,
+	tlsConfig *tls.Config,
+) (net.Conn, error) {
 	dialer := &net.Dialer{
 		Timeout: timeout,
 	}
@@ -174,6 +194,7 @@ func (c *wsConn) SetWriteDeadline(t time.Time) error {
 	return errNotSupported
 }
 
+// nolint:deadcode,unused
 func quicConnector(address string, timeout, handshakeTimeout time.Duration, tlsConfig *tls.Config) (net.Conn, error) {
 	// TODO: TBD
 	return nil, nil

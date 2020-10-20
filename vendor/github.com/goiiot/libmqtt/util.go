@@ -123,11 +123,11 @@ func (g *idGenerator) getExtra(id uint16) (interface{}, bool) {
 }
 
 func putUint16(d []byte, v uint16) {
-	binary.BigEndian.PutUint16(d[:], v)
+	binary.BigEndian.PutUint16(d, v)
 }
 
 func putUint32(d []byte, v uint32) {
-	binary.BigEndian.PutUint32(d[:], v)
+	binary.BigEndian.PutUint32(d, v)
 }
 
 func encodeStringWithLen(str string) []byte {
@@ -222,7 +222,7 @@ func getRemainLength(r io.ByteReader) (length int, byteCount int) {
 		m += 7
 	}
 
-	return int(length), int(m/7 + 1)
+	return length, int(m/7 + 1)
 }
 
 func getUint16(d []byte) uint16 {
@@ -236,6 +236,7 @@ func getUint32(d []byte) uint32 {
 // | prop length |
 // | prop body.. |
 // |   payload   |
+// nolint:gocyclo
 func getRawProps(data []byte) (props map[byte][]byte, next []byte, err error) {
 	defer func() {
 		e := recover()

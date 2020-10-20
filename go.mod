@@ -147,7 +147,7 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gogo/protobuf v1.3.1
-	github.com/goiiot/libmqtt v0.9.5
+	github.com/goiiot/libmqtt v0.9.6
 	github.com/google/cadvisor v0.37.0
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0 // indirect

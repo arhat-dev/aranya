@@ -29,7 +29,13 @@ import (
 	"nhooyr.io/websocket"
 )
 
-func websocketConnect(ctx context.Context, address string, dialTimeout, handShakeTimeout time.Duration, headers http.Header, tlsConfig *tls.Config) (net.Conn, error) {
+func websocketConnect(
+	ctx context.Context,
+	address string,
+	dialTimeout, handShakeTimeout time.Duration,
+	headers http.Header,
+	tlsConfig *tls.Config,
+) (net.Conn, error) {
 	netDialer := &net.Dialer{
 		Timeout: dialTimeout,
 	}
@@ -39,6 +45,7 @@ func websocketConnect(ctx context.Context, address string, dialTimeout, handShak
 		urlSchema = "wss"
 	}
 
+	// nolint:bodyclose
 	conn, _, err := websocket.Dial(ctx, urlSchema+"://"+address, &websocket.DialOptions{
 		HTTPHeader:   headers,
 		Subprotocols: []string{"mqtt"},

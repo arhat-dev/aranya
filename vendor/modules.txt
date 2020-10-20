@@ -127,7 +127,7 @@ github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 github.com/gogo/protobuf/sortkeys
-# github.com/goiiot/libmqtt v0.9.5
+# github.com/goiiot/libmqtt v0.9.6
 ## explicit
 github.com/goiiot/libmqtt
 # github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
@@ -196,6 +196,8 @@ github.com/json-iterator/go
 github.com/jstemmer/go-junit-report
 github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
+# github.com/klauspost/compress v1.10.3
+github.com/klauspost/compress/flate
 # github.com/kr/fs v0.1.0
 github.com/kr/fs
 # github.com/lestrrat-go/strftime v1.0.1
@@ -384,7 +386,7 @@ golang.org/x/lint/golint
 # golang.org/x/mod v0.3.0
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20200707034311-ab3426394381 => github.com/golang/net v0.0.0-20200707034311-ab3426394381
+# golang.org/x/net v0.0.0-20200930145003-4acb6c075d10 => github.com/golang/net v0.0.0-20200707034311-ab3426394381
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
@@ -1046,10 +1048,12 @@ k8s.io/utils/path
 k8s.io/utils/pointer
 k8s.io/utils/strings
 k8s.io/utils/trace
-# nhooyr.io/websocket v1.7.4
+# nhooyr.io/websocket v1.8.6
 nhooyr.io/websocket
 nhooyr.io/websocket/internal/bpool
+nhooyr.io/websocket/internal/errd
 nhooyr.io/websocket/internal/wsjs
+nhooyr.io/websocket/internal/xsync
 # sigs.k8s.io/structured-merge-diff/v3 v3.0.0
 sigs.k8s.io/structured-merge-diff/v3/value
 # sigs.k8s.io/yaml v1.2.0
