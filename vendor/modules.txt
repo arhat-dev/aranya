@@ -1,4 +1,4 @@
-# arhat.dev/aranya-proto v0.0.0-20200929205310-ef91c409ad90
+# arhat.dev/aranya-proto v0.0.0-20201011024038-2f21fe0513f1
 ## explicit
 arhat.dev/aranya-proto/aranyagopb
 arhat.dev/aranya-proto/aranyagopb/aranyagoconst
