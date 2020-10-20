@@ -229,7 +229,7 @@ github.com/openzipkin/zipkin-go/model
 github.com/pbnjay/strptime
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
-# github.com/pkg/sftp v1.10.1
+# github.com/pkg/sftp v1.12.0
 ## explicit
 github.com/pkg/sftp
 # github.com/pmezard/go-difflib v1.0.0
@@ -363,7 +363,7 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
-# golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de => github.com/golang/crypto v0.0.0-20200728195943-123391ffb6de
+# golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a => github.com/golang/crypto v0.0.0-20200728195943-123391ffb6de
 ## explicit
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/chacha20

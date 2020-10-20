@@ -159,7 +159,7 @@ require (
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onsi/ginkgo v1.14.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/pkg/sftp v1.10.1
+	github.com/pkg/sftp v1.12.0
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.10.0
 	github.com/spf13/cobra v1.0.0
@@ -169,7 +169,7 @@ require (
 	go.etcd.io/bbolt v1.3.5 // indirect
 	go.etcd.io/etcd v0.0.0-20200401174654-e694b7bb0875 // indirect
 	go.uber.org/multierr v1.5.0
-	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
+	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/sys v0.0.0-20200824131525-c12d262b63d8 // indirect
 	golang.org/x/tools v0.0.0-20200811032001-fd80f4dbb3ea // indirect
 	google.golang.org/api v0.30.0
