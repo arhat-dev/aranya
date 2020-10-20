@@ -1,5 +1,13 @@
-# gojq [![CI Status](https://github.com/itchyny/gojq/workflows/CI/badge.svg)](https://github.com/itchyny/gojq/actions)
-Pure Go implementation of [jq](https://github.com/stedolan/jq).
+# gojq
+[![CI Status](https://github.com/itchyny/gojq/workflows/CI/badge.svg)](https://github.com/itchyny/gojq/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/itchyny/gojq)](https://goreportcard.com/report/github.com/itchyny/gojq)
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/itchyny/gojq/blob/master/LICENSE)
+[![release](https://img.shields.io/github/release/itchyny/gojq/all.svg)](https://github.com/itchyny/gojq/releases)
+[![pkg.go.dev](https://pkg.go.dev/badge/github.com/itchyny/gojq)](https://pkg.go.dev/github.com/itchyny/gojq)
+
+### Pure Go implementation of [jq](https://github.com/stedolan/jq)
+This is an implementation of jq command written in Go language.
+You can also embed gojq as a library to your Go products.
 
 ## Usage
 ```sh
@@ -49,8 +57,13 @@ brew install itchyny/tap/gojq
 ```
 
 ### Build from source
-```bash
-env GO111MODULE=on go get github.com/itchyny/gojq/cmd/gojq
+```sh
+go get github.com/itchyny/gojq/cmd/gojq
+```
+
+### Docker
+```sh
+docker run -i --rm itchyny/gojq
 ```
 
 ## Difference to jq

@@ -154,7 +154,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.14.6 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/imdario/mergo v0.3.9 // indirect
-	github.com/itchyny/gojq v0.10.4
+	github.com/itchyny/gojq v0.11.2
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onsi/ginkgo v1.14.0 // indirect
@@ -170,7 +170,6 @@ require (
 	go.etcd.io/etcd v0.0.0-20200401174654-e694b7bb0875 // indirect
 	go.uber.org/multierr v1.5.0
 	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
-	golang.org/x/sys v0.0.0-20200824131525-c12d262b63d8 // indirect
 	golang.org/x/tools v0.0.0-20200811032001-fd80f4dbb3ea // indirect
 	google.golang.org/api v0.30.0
 	google.golang.org/grpc v1.31.1

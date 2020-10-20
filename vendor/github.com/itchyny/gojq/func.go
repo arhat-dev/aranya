@@ -10,11 +10,11 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/lestrrat-go/strftime"
-	"github.com/pbnjay/strptime"
+	"github.com/itchyny/timefmt-go"
 )
 
 //go:generate go run _tools/gen_builtin.go -i builtin.jq -o builtin.go
@@ -180,30 +180,34 @@ func init() {
 }
 
 func argFunc0(fn func(interface{}) interface{}) function {
-	return function{argcount0, func(v interface{}, _ []interface{}) interface{} {
-		return fn(v)
-	},
+	return function{
+		argcount0, func(v interface{}, _ []interface{}) interface{} {
+			return fn(v)
+		},
 	}
 }
 
 func argFunc1(fn func(interface{}, interface{}) interface{}) function {
-	return function{argcount1, func(v interface{}, args []interface{}) interface{} {
-		return fn(v, args[0])
-	},
+	return function{
+		argcount1, func(v interface{}, args []interface{}) interface{} {
+			return fn(v, args[0])
+		},
 	}
 }
 
 func argFunc2(fn func(interface{}, interface{}, interface{}) interface{}) function {
-	return function{argcount2, func(v interface{}, args []interface{}) interface{} {
-		return fn(v, args[0], args[1])
-	},
+	return function{
+		argcount2, func(v interface{}, args []interface{}) interface{} {
+			return fn(v, args[0], args[1])
+		},
 	}
 }
 
 func argFunc3(fn func(interface{}, interface{}, interface{}, interface{}) interface{}) function {
-	return function{argcount3, func(v interface{}, args []interface{}) interface{} {
-		return fn(v, args[0], args[1], args[2])
-	},
+	return function{
+		argcount3, func(v interface{}, args []interface{}) interface{} {
+			return fn(v, args[0], args[1], args[2])
+		},
 	}
 }
 
@@ -385,7 +389,7 @@ func funcAdd(v interface{}) interface{} {
 	return v
 }
 
-var numberPattern = regexp.MustCompile("^[-+]?" + numberPatternStr + "$")
+var numberPattern = regexp.MustCompile(`^[-+]?(?:(?:\d*\.)?\d+|\d+\.)(?:[eE][-+]?\d+)?$`)
 
 func funcToNumber(v interface{}) interface{} {
 	switch v := v.(type) {
@@ -560,6 +564,12 @@ func funcToJSON(v interface{}) interface{} {
 }
 
 func encodeJSON(v interface{}) (string, error) {
+	switch v := v.(type) {
+	case int:
+		return strconv.FormatInt(int64(v), 10), nil
+	case *big.Int:
+		return v.String(), nil
+	}
 	buf := new(bytes.Buffer)
 	enc := json.NewEncoder(buf)
 	enc.SetEscapeHTML(false)
@@ -820,6 +830,7 @@ func funcSlice(_, v, end, start interface{}) (r interface{}) {
 				r = implode([]interface{}{s})
 			case nil:
 				r = ""
+			case error:
 			default:
 				panic(r)
 			}
@@ -897,8 +908,11 @@ func toIndex(a []interface{}, i int) int {
 	}
 }
 
-func funcBreak(x interface{}) interface{} {
-	return &breakError{x.(string)}
+func funcBreak(v interface{}) interface{} {
+	if v, ok := v.(string); ok {
+		return &breakError{v}
+	}
+	return &funcTypeError{"_break", v}
 }
 
 func funcMinBy(v, x interface{}) interface{} {
@@ -1408,11 +1422,7 @@ func funcStrftime(v, x interface{}) interface{} {
 			if err != nil {
 				return err
 			}
-			got, err := strftime.Format(format, t)
-			if err != nil {
-				return err
-			}
-			return got
+			return timefmt.Format(t, format)
 		}
 		return &funcTypeError{"strftime", x}
 	}
@@ -1429,11 +1439,7 @@ func funcStrflocaltime(v, x interface{}) interface{} {
 			if err != nil {
 				return err
 			}
-			got, err := strftime.Format(format, t)
-			if err != nil {
-				return err
-			}
-			return got
+			return timefmt.Format(t, format)
 		}
 		return &funcTypeError{"strflocaltime", x}
 	}
@@ -1443,7 +1449,7 @@ func funcStrflocaltime(v, x interface{}) interface{} {
 func funcStrptime(v, x interface{}) interface{} {
 	if v, ok := v.(string); ok {
 		if format, ok := x.(string); ok {
-			t, err := strptime.Parse(v, format)
+			t, err := timefmt.Parse(v, format)
 			if err != nil {
 				return err
 			}
@@ -1601,8 +1607,9 @@ func funcHalt(interface{}) interface{} {
 }
 
 func funcHaltError(v interface{}, args []interface{}) interface{} {
-	code, ok := 5, false
+	code := 5
 	if len(args) > 0 {
+		var ok bool
 		if code, ok = toInt(args[0]); !ok {
 			return &funcTypeError{"halt_error", args[0]}
 		}
@@ -1637,7 +1644,10 @@ func funcBuiltins(interface{}) interface{} {
 }
 
 func internalfuncTypeError(v, x interface{}) interface{} {
-	return &funcTypeError{x.(string), v}
+	if x, ok := x.(string); ok {
+		return &funcTypeError{x, v}
+	}
+	return &funcTypeError{"_type_error", v}
 }
 
 func toInt(x interface{}) (int, bool) {

@@ -78,9 +78,6 @@ github.com/DataDog/sketches-go/ddsketch
 ## explicit
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
-# github.com/alecthomas/participle v0.5.0 => github.com/alecthomas/participle v0.5.0
-github.com/alecthomas/participle
-github.com/alecthomas/participle/lexer
 # github.com/apache/thrift v0.13.0
 github.com/apache/thrift/lib/go/thrift
 # github.com/beorn7/perks v1.0.1
@@ -183,11 +180,13 @@ github.com/hashicorp/golang-lru/simplelru
 github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
-# github.com/itchyny/astgen-go v0.0.0-20200519013840-cf3ea398f645
+# github.com/itchyny/astgen-go v0.0.0-20200815150004-12a293722290
 github.com/itchyny/astgen-go
-# github.com/itchyny/gojq v0.10.4
+# github.com/itchyny/gojq v0.11.2
 ## explicit
 github.com/itchyny/gojq
+# github.com/itchyny/timefmt-go v0.1.1
+github.com/itchyny/timefmt-go
 # github.com/jpillora/backoff v1.0.0
 github.com/jpillora/backoff
 # github.com/json-iterator/go v1.1.10
@@ -198,8 +197,6 @@ github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
 # github.com/kr/fs v0.1.0
 github.com/kr/fs
-# github.com/lestrrat-go/strftime v1.0.1
-github.com/lestrrat-go/strftime
 # github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mitchellh/mapstructure v1.3.3
@@ -225,8 +222,6 @@ github.com/open-telemetry/opentelemetry-proto/gen/go/trace/v1
 github.com/opencontainers/go-digest
 # github.com/openzipkin/zipkin-go v0.2.2
 github.com/openzipkin/zipkin-go/model
-# github.com/pbnjay/strptime v0.0.0-20140226051138-5c05b0d668c9
-github.com/pbnjay/strptime
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pkg/sftp v1.10.1
@@ -403,8 +398,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208 => github.com/golang/sync v0.0.0-20200317015054-43a5402ce75a
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200824131525-c12d262b63d8 => github.com/golang/sys v0.0.0-20200821140526-fda516888d29
-## explicit
+# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f => github.com/golang/sys v0.0.0-20200821140526-fda516888d29
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
