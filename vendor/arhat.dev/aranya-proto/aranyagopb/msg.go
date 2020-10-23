@@ -77,12 +77,6 @@ func NewCredentialStatusMsg(sshPrivateKeySha256Hex string) *CredentialStatusMsg 
 	}
 }
 
-func NewHostNetworkStatusMsg(interfaces []*HostNetworkInterface) *HostNetworkStatusMsg {
-	return &HostNetworkStatusMsg{
-		Interfaces: interfaces,
-	}
-}
-
 func newError(k ErrorMsg_Kind, description string, code int64) *ErrorMsg {
 	return &ErrorMsg{
 		Kind:        k,

@@ -100,11 +100,10 @@ func NewPodContainerDeleteCmd(podUID string, containers []string) *PodDeleteCmd 
 	}
 }
 
-func NewPodListCmd(namespace, name string, all bool) *PodListCmd {
+func NewPodListCmd(all bool, names ...string) *PodListCmd {
 	return &PodListCmd{
-		Namespace: namespace,
-		Name:      name,
-		All:       all,
+		All:   all,
+		Names: names,
 	}
 }
 
@@ -190,17 +189,6 @@ func NewMetricsConfigCmd(t MetricsTarget, collect, extraArgs []string) *MetricsC
 		Target:    t,
 		Collect:   collect,
 		ExtraArgs: extraArgs,
-	}
-}
-
-func NewContainerNetworkListCmd() *ContainerNetworkListCmd {
-	return &ContainerNetworkListCmd{}
-}
-
-func NewContainerNetworkEnsureCmd(ipv4CIDR, ipv6CIDR string) *ContainerNetworkEnsureCmd {
-	return &ContainerNetworkEnsureCmd{
-		Ipv4Cidr: ipv4CIDR,
-		Ipv6Cidr: ipv6CIDR,
 	}
 }
 
