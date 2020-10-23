@@ -23,12 +23,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/backoff"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
-	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -278,22 +276,22 @@ func (m *Manager) Close() {
 }
 
 // nolint:unused
-func (m *Manager) updateDeviceNetwork() error {
-	cmd := aranyagopb.NewContainerNetworkEnsureCmd(m.netMgr.GetPodCIDR(false), m.netMgr.GetPodCIDR(true))
-	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_CTR_NET_ENSURE, cmd)
-	if err != nil {
-		return fmt.Errorf("failed to post network update cmd: %w", err)
-	}
-
-	var retErr error
-	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
-		// if there is no abbot container running in the edge device (ERR_NOT_SUPPORTED)
-		// we can assume the edge device is not using cluster network, no more action required
-		if msgErr := msg.GetError(); msgErr != nil && msgErr.Kind != aranyagopb.ERR_NOT_SUPPORTED {
-			retErr = multierr.Append(retErr, msgErr)
-		}
-
-		return false
-	}, nil, connectivity.HandleUnknownMessage(m.Log))
-	return nil
-}
+//func (m *Manager) updateDeviceNetwork() error {
+//	cmd := aranyagopb.NewContainerNetworkEnsureCmd(m.netMgr.GetPodCIDR(false), m.netMgr.GetPodCIDR(true))
+//	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_CTR_NET_ENSURE, cmd)
+//	if err != nil {
+//		return fmt.Errorf("failed to post network update cmd: %w", err)
+//	}
+//
+//	var retErr error
+//	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
+//		// if there is no abbot container running in the edge device (ERR_NOT_SUPPORTED)
+//		// we can assume the edge device is not using cluster network, no more action required
+//		if msgErr := msg.GetError(); msgErr != nil && msgErr.Kind != aranyagopb.ERR_NOT_SUPPORTED {
+//			retErr = multierr.Append(retErr, msgErr)
+//		}
+//
+//		return false
+//	}, nil, connectivity.HandleUnknownMessage(m.Log))
+//	return nil
+//}

@@ -19,15 +19,14 @@ package pod
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
+	"arhat.dev/abbot-proto/abbotgopb"
 	"arhat.dev/aranya-proto/aranyagopb"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	kubebandwidth "k8s.io/kubernetes/pkg/util/bandwidth"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
@@ -140,7 +139,6 @@ func resolveContainerStatus(
 // nolint:gocyclo
 func (m *Manager) translatePodCreateOptions(
 	pod *corev1.Pod,
-	ipv4PodCIDR, ipv6PodCIDR string,
 	envs map[string]map[string]string,
 	authConfigs map[string]*aranyagopb.ImageAuthConfig,
 	volumeData map[string]*aranyagopb.NamedData,
@@ -154,10 +152,8 @@ func (m *Manager) translatePodCreateOptions(
 ) {
 	var (
 		sharePid             bool
-		bandwidth            *aranyagopb.Bandwidth
 		hosts                = make(map[string]string)
 		containers           = make([]*aranyagopb.ContainerSpec, len(pod.Spec.Containers))
-		ports                = make(map[string]*aranyagopb.ContainerPortSpec)
 		sysctls              = make(map[string]string)
 		hostPaths            = make(map[string]string)
 		imagePull            = make(map[string]*aranyagopb.ImagePullSpec)
@@ -165,25 +161,19 @@ func (m *Manager) translatePodCreateOptions(
 		hostPathsForWorkCtr  = make(map[string]string)
 	)
 
-	ingress, egress, _ := kubebandwidth.ExtractPodBandwidthResources(pod.Annotations)
-	if ingress != nil || egress != nil {
-		bandwidth = new(aranyagopb.Bandwidth)
+	netOpts := translatePodNetworkOptions(pod, m.netMgr.GetPodCIDR(false), m.netMgr.GetPodCIDR(true), dnsConfig)
+	netReq, err := abbotgopb.NewRequest(netOpts)
+	if err != nil {
+		return nil, nil, nil, false, false, fmt.Errorf("failed to create network request: %w", err)
+	}
 
-		if ingress != nil {
-			bandwidth.IngressRate = int32(ingress.Value() / 1000)
-			//bandwidth.IngressBurst = math.MaxUint64 // no limit
-		}
-
-		if egress != nil {
-			bandwidth.EgressRate = int32(egress.Value() / 1000)
-			//bandwidth.EgressBurst = math.MaxUint64 // no limit
-		}
+	netReqBytes, err := netReq.Marshal()
+	if err != nil {
+		return nil, nil, nil, false, false, fmt.Errorf("failed to encode network request: %w", err)
 	}
 
 	for _, alias := range pod.Spec.HostAliases {
-		for _, name := range alias.Hostnames {
-			hosts[name] = alias.IP
-		}
+		hosts[alias.IP] = strings.Join(alias.Hostnames, " ")
 	}
 
 	for _, vol := range pod.Spec.Volumes {
@@ -225,8 +215,7 @@ func (m *Manager) translatePodCreateOptions(
 
 	hostExecImageFound := 0
 	for i, ctr := range pod.Spec.Containers {
-		var containerPorts map[string]*aranyagopb.ContainerPortSpec
-		containers[i], containerPorts = translateContainerSpec(pod, envs, &pod.Spec.Containers[i])
+		containers[i] = translateContainerSpec(pod, envs, &pod.Spec.Containers[i])
 
 		// check if is virtual image
 		if ctr.Image == constant.VirtualImageNameHostExec {
@@ -238,10 +227,6 @@ func (m *Manager) translatePodCreateOptions(
 				AuthConfig: authConfigs[ctr.Image],
 				PullPolicy: translateImagePullPolicy(ctr.ImagePullPolicy),
 			}
-		}
-
-		for portName, portSpec := range containerPorts {
-			ports[portName] = portSpec
 		}
 
 		for _, vol := range ctr.VolumeMounts {
@@ -269,8 +254,7 @@ func (m *Manager) translatePodCreateOptions(
 		)
 
 		for i, ctr := range pod.Spec.InitContainers {
-			var containerPorts map[string]*aranyagopb.ContainerPortSpec
-			initContainers[i], containerPorts = translateContainerSpec(pod, envs, &pod.Spec.InitContainers[i])
+			initContainers[i] = translateContainerSpec(pod, envs, &pod.Spec.InitContainers[i])
 
 			if ctr.Image == constant.VirtualImageNameHostExec {
 				initHostExec = true
@@ -281,10 +265,6 @@ func (m *Manager) translatePodCreateOptions(
 					AuthConfig: authConfigs[ctr.Image],
 					PullPolicy: translateImagePullPolicy(ctr.ImagePullPolicy),
 				}
-			}
-
-			for portName, portSpec := range containerPorts {
-				ports[portName] = portSpec
 			}
 
 			for _, vol := range ctr.VolumeMounts {
@@ -320,15 +300,14 @@ func (m *Manager) translatePodCreateOptions(
 			SharePid:    sharePid,
 
 			// network options
+
 			Network: &aranyagopb.PodNetworkSpec{
-				CidrIpv4:      ipv4PodCIDR,
-				CidrIpv6:      ipv6PodCIDR,
-				Bandwidth:     bandwidth,
-				NameServers:   dnsConfig.Servers,
-				SearchDomains: dnsConfig.Searches,
-				Hosts:         hosts,
-				Ports:         ports,
-				DnsOptions:    dnsConfig.Options,
+				Nameservers: dnsConfig.Servers,
+				DnsSearches: dnsConfig.Searches,
+				DnsOptions:  dnsConfig.Options,
+				Hosts:       hosts,
+
+				AbbotRequestBytes: netReqBytes,
 			},
 
 			Containers: initContainers,
@@ -382,15 +361,14 @@ func (m *Manager) translatePodCreateOptions(
 			SharePid:    sharePid,
 
 			// network options
+
 			Network: &aranyagopb.PodNetworkSpec{
-				CidrIpv4:      ipv4PodCIDR,
-				CidrIpv6:      ipv6PodCIDR,
-				Bandwidth:     bandwidth,
-				NameServers:   dnsConfig.Servers,
-				SearchDomains: dnsConfig.Searches,
-				Hosts:         hosts,
-				Ports:         ports,
-				DnsOptions:    dnsConfig.Options,
+				Nameservers: dnsConfig.Servers,
+				DnsSearches: dnsConfig.Searches,
+				DnsOptions:  dnsConfig.Options,
+				Hosts:       hosts,
+
+				AbbotRequestBytes: netReqBytes,
 			},
 
 			Containers: containers,
@@ -423,28 +401,15 @@ func translateContainerSpec(
 	pod *corev1.Pod,
 	envs map[string]map[string]string,
 	ctr *corev1.Container,
-) (*aranyagopb.ContainerSpec, map[string]*aranyagopb.ContainerPortSpec) {
+) *aranyagopb.ContainerSpec {
 	var (
-		podPorts = make(map[string]*aranyagopb.ContainerPortSpec)
 		ctrPorts = make(map[string]int32)
 	)
 
-	for i, p := range ctr.Ports {
-		if p.Name == "" {
-			p.Name = strconv.FormatInt(int64(i), 10)
-		} else {
+	for _, p := range ctr.Ports {
+		if p.Name != "" {
 			ctrPorts[p.Name] = p.ContainerPort
 		}
-
-		podPortName := fmt.Sprintf("%s/%s", ctr.Name, p.Name)
-
-		port := &aranyagopb.ContainerPortSpec{
-			Protocol:      string(p.Protocol),
-			HostPort:      p.HostPort,
-			ContainerPort: p.ContainerPort,
-		}
-
-		podPorts[podPortName] = port
 	}
 
 	mounts := make(map[string]*aranyagopb.ContainerMountSpec)
@@ -512,7 +477,7 @@ func translateContainerSpec(
 		spec.HookPostStart = translateHandler(ctr.Lifecycle.PostStart, ctrPorts)
 	}
 
-	return spec, podPorts
+	return spec
 }
 
 func translateProbe(p *corev1.Probe, ports map[string]int32) *aranyagopb.ContainerProbeSpec {

@@ -241,5 +241,5 @@ func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.PodEnsureCmd) (*ara
 		}
 	}
 
-	return aranyagopb.NewPodStatusMsg(opts.PodUid, "", "", containerStatus), nil
+	return aranyagopb.NewPodStatusMsg(opts.PodUid, nil, containerStatus), nil
 }

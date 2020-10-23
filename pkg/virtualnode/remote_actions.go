@@ -116,9 +116,7 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 		if err != nil {
 			logger.I("failed to sync mirror node status", log.Error(err))
 		}
-	case aranyagopb.MSG_CTR_NET_STATUS:
-	case aranyagopb.MSG_CTR_NET_STATUS_LIST:
-	case aranyagopb.MSG_HOST_NET_STATUS:
+	case aranyagopb.MSG_NET:
 	case aranyagopb.MSG_PERIPHERAL_STATUS:
 	case aranyagopb.MSG_PERIPHERAL_STATUS_LIST:
 	case aranyagopb.MSG_STORAGE_STATUS:

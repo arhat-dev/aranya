@@ -1,5 +1,7 @@
-arhat.dev/aranya-proto v0.0.0-20201020220704-63f196bbc84e h1:ZYNh3upjCFHRiMUQQAyZcqSh6ApXqmu3vZ+S5C6EnzU=
-arhat.dev/aranya-proto v0.0.0-20201020220704-63f196bbc84e/go.mod h1:i0z8IxSkl1JhvwJQjrTu5K3kZwkQDNb7FbzBpOBc/kM=
+arhat.dev/abbot-proto v0.1.0 h1:wW2aPeetAtGkR+cY1lVblq3FvIts3VTuezDqPh8ZX4E=
+arhat.dev/abbot-proto v0.1.0/go.mod h1:Z9UjRS2oRNKXyWghyKKw37HRMZCCjGXAJaoMvYHhHmk=
+arhat.dev/aranya-proto v0.1.1 h1:hZ8WXeclszENCmYR+uRKcSV1ZtFruuqRt4+Mm+iW2d0=
+arhat.dev/aranya-proto v0.1.1/go.mod h1:qAZHl3cbkhjAiuD6fQpDZFpNh6L+BhWZcKpsWdmrzGQ=
 arhat.dev/pkg v0.0.0-20201011023427-3d85bac95f31 h1:tVhAUtXhp4U8mCgHIrlMbW29QgnuJEJoM/HCqiJsJQg=
 arhat.dev/pkg v0.0.0-20201011023427-3d85bac95f31/go.mod h1:a5qmenmejj79BYY2Xe8RaHwJA/HChEYWuzbqdmqnYc4=
 bitbucket.org/bertimus9/systemstat v0.0.0-20180207000608-0eeff89b0690/go.mod h1:Ulb78X89vxKYgdL24HMTiXYHlyHEvruOj1ZPlqeNEZM=

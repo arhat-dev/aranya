@@ -19,10 +19,10 @@ package pod
 import (
 	"errors"
 	"fmt"
+	"net"
 	"time"
 
-	"arhat.dev/aranya/pkg/util/convert"
-
+	"arhat.dev/abbot-proto/abbotgopb"
 	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"arhat.dev/aranya/pkg/constant"
+	"arhat.dev/aranya/pkg/util/convert"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
@@ -73,14 +74,38 @@ func (m *Manager) UpdateMirrorPod(
 			)
 		}
 
-		pod.Status.PodIP, pod.Status.PodIPs = convert.GetPodIPs(devicePodStatus.Ipv4, devicePodStatus.Ipv6)
+		netResp := new(abbotgopb.ContainerNetworkStatusResponse)
+		err := netResp.Unmarshal(devicePodStatus.Network)
+		if err == nil {
+			var ipv4, ipv6 string
+			for _, iface := range netResp.Interfaces {
+				if iface.Name == "lo0" {
+					continue
+				}
+
+				for _, addr := range iface.Addresses {
+					_, cidr, err2 := net.ParseCIDR(addr)
+					if err2 != nil {
+						continue
+					}
+
+					if cidr.IP.To4() == nil {
+						ipv6 = addr
+					} else {
+						ipv4 = addr
+					}
+				}
+			}
+
+			pod.Status.PodIP, pod.Status.PodIPs = convert.GetPodIPs(ipv4, ipv6)
+		}
 		logger.D("resolved device container status", log.Any("podIPs", pod.Status.PodIPs))
 	}
 
-	_, err2 := m.UpdatePodStatus(pod)
-	if err2 != nil {
-		logger.I("failed to update pod status", log.Error(err2))
-		return err2
+	_, err := m.UpdatePodStatus(pod)
+	if err != nil {
+		logger.I("failed to update pod status", log.Error(err))
+		return err
 	}
 	return nil
 }
@@ -152,8 +177,6 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 
 	imgOpts, initOpts, workOpts, initHostExec, workHostExec, err := m.translatePodCreateOptions(
 		pod,
-		m.netMgr.GetPodCIDR(false),
-		m.netMgr.GetPodCIDR(true),
 		envs,
 		imagePullAuthConfig,
 		volumeData,
@@ -439,7 +462,7 @@ func (m *Manager) SyncDevicePods() error {
 
 	logger.I("syncing device pods")
 	msgCh, _, err := m.ConnectivityManager.PostCmd(
-		0, aranyagopb.CMD_POD_LIST, aranyagopb.NewPodListCmd("", "", true),
+		0, aranyagopb.CMD_POD_LIST, aranyagopb.NewPodListCmd(true),
 	)
 	if err != nil {
 		logger.I("failed to post pod list cmd", log.Error(err))
