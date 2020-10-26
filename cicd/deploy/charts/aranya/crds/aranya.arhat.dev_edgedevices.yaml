@@ -244,164 +244,16 @@ spec:
                       type: string
                   type: object
               type: object
-            devices:
-              description: Devices managed by this EdgeDevice
-              items:
-                description: DeviceSpec is the physical device related to (managed
-                  by) this edge device (e.g. sensors, switches)
-                properties:
-                  connector:
-                    description: Connector instructs how to connect this device
-                    properties:
-                      method:
-                        description: Method interacting with this physical device
-                        type: string
-                      params:
-                        additionalProperties:
-                          type: string
-                        description: Params for this connectivity (can be overridden
-                          by the )
-                        type: object
-                      target:
-                        description: Target value for transport, its value depends
-                          on the transport method you chose
-                        type: string
-                      tls:
-                        description: TLS config for network related connectivity
-                        properties:
-                          certSecretRef:
-                            description: CertSecretRef for pem encoded x.509 certificate
-                              key pair
-                            properties:
-                              name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
-                                type: string
-                            type: object
-                          cipherSuites:
-                            items:
-                              type: string
-                            type: array
-                          insecureSkipVerify:
-                            type: boolean
-                          maxVersion:
-                            type: string
-                          minVersion:
-                            type: string
-                          nextProtos:
-                            items:
-                              type: string
-                            type: array
-                          preSharedKey:
-                            properties:
-                              identityHint:
-                                description: the client hint provided to server, base64
-                                  encoded value
-                                type: string
-                              serverHintMapping:
-                                description: map server hint(s) to pre shared key(s)
-                                  column separated base64 encoded key value pairs
-                                items:
-                                  type: string
-                                type: array
-                            type: object
-                          serverName:
-                            type: string
-                        type: object
-                    type: object
-                  metrics:
-                    description: Metrics collection/report from this device
-                    items:
-                      description: DeviceMetric to upload device metrics for prometheus
-                      properties:
-                        deviceParams:
-                          additionalProperties:
-                            type: string
-                          description: DeviceParams to override ..connectivity.params
-                            to retrieve this metric
-                          type: object
-                        name:
-                          description: Name of the metrics for prometheus
-                          pattern: '[a-z0-9]([_a-z0-9]*[a-z0-9])?'
-                          type: string
-                        reportMethod:
-                          description: ReportMethod for this metrics
-                          enum:
-                          - WithNodeMetrics
-                          - WithArhatConnectivity
-                          - WithStandaloneClient
-                          type: string
-                        reporterName:
-                          description: ReporterName the name reference to a metrics
-                            reporter used when ReportMethod is standalone
-                          type: string
-                        reporterParams:
-                          additionalProperties:
-                            type: string
-                          description: ReporterParams
-                          type: object
-                        valueType:
-                          description: ValueType of this metric
-                          enum:
-                          - counter
-                          - ""
-                          - gauge
-                          - unknown
-                          type: string
-                      required:
-                      - name
-                      type: object
-                    type: array
-                    x-kubernetes-list-map-keys:
-                    - name
-                    x-kubernetes-list-type: map
-                  name:
-                    description: 'Name of the physical device, and this name will
-                      become available in virtual pod as a container name NOTE: name
-                      `host` is reserved by the aranya'
-                    pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
-                    type: string
-                  operations:
-                    description: Operations supported by this device
-                    items:
-                      description: DeviceOperation defines operation we can perform
-                        on the device
-                      properties:
-                        name:
-                          description: Name of the operation (e.g. "on", "off" ...)
-                          type: string
-                        params:
-                          additionalProperties:
-                            type: string
-                          description: Params to override ..connectivity.params
-                          type: object
-                        pseudoCommand:
-                          description: PseudoCommand used to trigger this operation,
-                            so you can trigger this operation by executing `kubectl
-                            exec <virtual pod> -c <device name> -- <pseudo command>`
-                            Defaults to operation name
-                          type: string
-                      required:
-                      - name
-                      type: object
-                    type: array
-                    x-kubernetes-list-map-keys:
-                    - name
-                    x-kubernetes-list-type: map
-                required:
-                - name
-                type: object
-              type: array
             metricsReporters:
-              description: MetricsReporters are devices used to push metrics
+              description: MetricsReporters are virtual peripherals used to push metrics
+                collected from peripherals
               items:
                 properties:
                   connector:
-                    description: Connector instructs how to connect this device
+                    description: Connector instructs how to connect this peripheral
                     properties:
                       method:
-                        description: Method interacting with this physical device
+                        description: Method interacting with this peripheral
                         type: string
                       params:
                         additionalProperties:
@@ -458,17 +310,23 @@ spec:
                         type: object
                     type: object
                   name:
-                    description: 'Name of the physical device, and this name will
-                      become available in virtual pod as a container name NOTE: name
-                      `host` is reserved by the aranya'
+                    description: 'Name of the peripheral, and this name will become
+                      available in virtual pod as a container name NOTE: name `host`
+                      is reserved by the aranya'
                     pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
                     type: string
                 required:
                 - name
                 type: object
               type: array
+            network:
+              description: Network settings for network mesh in same namespace
+              properties:
+                enabled:
+                  type: boolean
+              type: object
             node:
-              description: Node related settings
+              description: Node related settings for kubernetes node resource
               properties:
                 annotations:
                   additionalProperties:
@@ -560,12 +418,6 @@ spec:
                         verbs for this node
                       type: object
                   type: object
-                storage:
-                  description: Storage config
-                  properties:
-                    enabled:
-                      type: boolean
-                  type: object
                 taints:
                   description: Taints add extra taints in addition to default taint
                     arhat.dev/namespace=<EdgeDevice Namespace>:NoSchedule
@@ -600,8 +452,159 @@ spec:
                       type: string
                   type: object
               type: object
+            peripherals:
+              description: Peripherals managed by this EdgeDevice
+              items:
+                description: PeripheralSpec is the peripheral to be managed by this
+                  edge device (e.g. sensors, switches)
+                properties:
+                  connector:
+                    description: Connector instructs how to connect this peripheral
+                    properties:
+                      method:
+                        description: Method interacting with this peripheral
+                        type: string
+                      params:
+                        additionalProperties:
+                          type: string
+                        description: Params for this connectivity (can be overridden
+                          by the )
+                        type: object
+                      target:
+                        description: Target value for transport, its value depends
+                          on the transport method you chose
+                        type: string
+                      tls:
+                        description: TLS config for network related connectivity
+                        properties:
+                          certSecretRef:
+                            description: CertSecretRef for pem encoded x.509 certificate
+                              key pair
+                            properties:
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind,
+                                  uid?'
+                                type: string
+                            type: object
+                          cipherSuites:
+                            items:
+                              type: string
+                            type: array
+                          insecureSkipVerify:
+                            type: boolean
+                          maxVersion:
+                            type: string
+                          minVersion:
+                            type: string
+                          nextProtos:
+                            items:
+                              type: string
+                            type: array
+                          preSharedKey:
+                            properties:
+                              identityHint:
+                                description: the client hint provided to server, base64
+                                  encoded value
+                                type: string
+                              serverHintMapping:
+                                description: map server hint(s) to pre shared key(s)
+                                  column separated base64 encoded key value pairs
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          serverName:
+                            type: string
+                        type: object
+                    type: object
+                  metrics:
+                    description: Metrics collection/report from this peripheral
+                    items:
+                      description: PeripheralMetricSpec to upload peripheral metrics
+                        for prometheus
+                      properties:
+                        name:
+                          description: Name of the metrics for prometheus
+                          pattern: '[a-z0-9]([_a-z0-9]*[a-z0-9])?'
+                          type: string
+                        params:
+                          additionalProperties:
+                            type: string
+                          description: Params to override ..connectivity.params to
+                            retrieve this metric
+                          type: object
+                        reportMethod:
+                          description: ReportMethod for this metrics
+                          enum:
+                          - WithNodeMetrics
+                          - WithArhatConnectivity
+                          - WithStandaloneClient
+                          type: string
+                        reporterName:
+                          description: ReporterName the name reference to a metrics
+                            reporter used when ReportMethod is standalone
+                          type: string
+                        reporterParams:
+                          additionalProperties:
+                            type: string
+                          description: ReporterParams
+                          type: object
+                        valueType:
+                          description: ValueType of this metric
+                          enum:
+                          - counter
+                          - ""
+                          - gauge
+                          - unknown
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                  name:
+                    description: 'Name of the peripheral, and this name will become
+                      available in virtual pod as a container name NOTE: name `host`
+                      is reserved by the aranya'
+                    pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                    type: string
+                  operations:
+                    description: Operations supported by this peripheral
+                    items:
+                      description: PeripheralOperationSpec defines operation we can
+                        perform on the peripheral
+                      properties:
+                        name:
+                          description: Name of the operation (e.g. "on", "off" ...)
+                          type: string
+                        params:
+                          additionalProperties:
+                            type: string
+                          description: Params to override ..connectivity.params
+                          type: object
+                        pseudoCommand:
+                          description: PseudoCommand used to trigger this operation,
+                            so you can trigger this operation by executing `kubectl
+                            exec <virtual pod> -c <peripheral name> -- <pseudo command>`
+                            Defaults to operation name
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                required:
+                - name
+                type: object
+              type: array
             pod:
-              description: Pod related settings
+              description: Pod related settings for kubernetes pod creation in edge
+                device
               properties:
                 allocatable:
                   minimum: 0
@@ -720,27 +723,11 @@ spec:
                       type: string
                   type: object
               type: object
-            reverseProxy:
+            storage:
+              description: Storage settings for remote CSI integration
               properties:
-                portMappings:
-                  items:
-                    properties:
-                      port:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        x-kubernetes-int-or-string: true
-                      protocol:
-                        type: string
-                      proxyPort:
-                        format: int32
-                        type: integer
-                    type: object
-                  type: array
-                selector:
-                  additionalProperties:
-                    type: string
-                  type: object
+                enabled:
+                  type: boolean
               type: object
           type: object
         status:
