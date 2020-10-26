@@ -57,3 +57,7 @@ const (
 const (
 	TLSCaCertKey = "ca.crt"
 )
+
+const (
+	NetworkBackendDriverWireugard = "wireguard"
+)

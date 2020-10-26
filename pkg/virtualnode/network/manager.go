@@ -12,11 +12,24 @@ import (
 )
 
 type Options struct {
+	Provider  string
+	PublicIP  string
+	Addresses []string
+
+	WireguardOpts *WireguardOpts
 }
 
-func NewManager(ctx context.Context, nodeName string, connectivityMgr connectivity.Manager, options *Options) *Manager {
+func NewManager(
+	ctx context.Context,
+	nodeName string,
+	connectivityMgr connectivity.Manager,
+	options *Options,
+) *Manager {
+
 	mgr := &Manager{
 		BaseManager: manager.NewBaseManager(ctx, nodeName, connectivityMgr),
+
+		meshDriver: nil,
 
 		podIPv4CIDRStore: new(atomic.Value),
 		podIPv6CIDRStore: new(atomic.Value),
@@ -42,11 +55,23 @@ func NewManager(ctx context.Context, nodeName string, connectivityMgr connectivi
 		},
 	}.ResolveNil())
 
+	switch {
+	case options.WireguardOpts != nil:
+		mgr.meshDriver = newWireguardMeshDriver(
+			mgr.Log, options.Provider, options.PublicIP,
+			options.Addresses, options.WireguardOpts,
+		)
+	default:
+		// no mesh driver
+	}
+
 	return mgr
 }
 
 type Manager struct {
 	*manager.BaseManager
+
+	meshDriver MeshDriver
 
 	netRec *reconcile.Core
 
@@ -56,11 +81,17 @@ type Manager struct {
 	options *Options
 
 	initialized chan struct{}
-	mu          *sync.RWMutex
+
+	mu *sync.RWMutex
 }
 
 func (m *Manager) Start() error {
 	return m.OnStart(func() error {
+		// nolint:staticcheck
+		if m.meshDriver != nil {
+			// detect mtu and determine mesh device name
+		}
+
 		// nolint:gosimple
 		select {
 		case <-m.Context().Done():
@@ -70,7 +101,7 @@ func (m *Manager) Start() error {
 	})
 }
 
-func (m Manager) Close() {
+func (m *Manager) Close() {
 	m.OnClose(nil)
 }
 

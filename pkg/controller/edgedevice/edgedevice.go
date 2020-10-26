@@ -43,6 +43,7 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 	"arhat.dev/aranya/pkg/virtualnode/metrics"
+	"arhat.dev/aranya/pkg/virtualnode/network"
 	"arhat.dev/aranya/pkg/virtualnode/peripheral"
 	"arhat.dev/aranya/pkg/virtualnode/pod"
 	"arhat.dev/aranya/pkg/virtualnode/storage"
@@ -166,6 +167,7 @@ func (c *Controller) onEdgeDeviceResDeleted(obj interface{}) *reconcile.Result {
 //   - Create virtualnode
 //   - Ensure NodeVerbs object
 //	 - Start virtualnode
+// nolint:gocyclo
 func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 	var (
 		logger = c.Log.WithFields(log.String("name", name))
@@ -234,9 +236,8 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 	}()
 
 	// prepare all required options
+	vnConfig := c.vnConfig.OverrideWith(ed.Spec)
 	{
-		vnConfig := c.vnConfig.OverrideWith(ed.Spec)
-
 		logger.D("preparing connectivity options")
 		opts.ConnectivityOptions, err = c.prepareConnectivityOptions(ed, vnConfig)
 		if err != nil {
@@ -276,6 +277,13 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 		opts.StorageOptions, err = c.prepareStorageOptions(ed, vnConfig, opts.EventBroadcaster)
 		if err != nil {
 			logger.I("failed to prepare storage options", log.Error(err))
+			return err
+		}
+
+		logger.D("preparing network options")
+		opts.NetworkOptions, err = c.prepareNetworkOptions(ed, vnConfig)
+		if err != nil {
+			logger.I("failed to prepare network options", log.Error(err))
 			return err
 		}
 	}
@@ -347,6 +355,15 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 	if err != nil {
 		logger.I("failed to request virtual pod ensure", log.Error(err))
 		return err
+	}
+
+	if vnConfig.Network.Enabled {
+		logger.D("requesting network ensure")
+		err = c.requestNetworkEnsure(name)
+		if err != nil {
+			logger.I("failed to request network ensure", log.Error(err))
+			return err
+		}
 	}
 
 	if vn.ConnectivityServerListener() != nil && c.svcReqRec != nil {
@@ -709,6 +726,31 @@ func (c *Controller) prepareStorageOptions(
 			scheme.Scheme,
 			corev1.EventSource{Component: fmt.Sprintf("aranya-storage-manager,%s", edgeDevice.Name)},
 		),
+	}
+
+	return opts, nil
+}
+
+// nolint:unparam
+func (c *Controller) prepareNetworkOptions(
+	edgeDevice *aranyaapi.EdgeDevice,
+	vnConfig *conf.VirtualnodeConfig,
+) (_ *network.Options, err error) {
+	if !vnConfig.Network.Enabled {
+		return nil, nil
+	}
+
+	opts := &network.Options{
+		WireguardOpts: nil,
+	}
+
+	switch d := vnConfig.Network.Backend.Driver; d {
+	case constant.NetworkBackendDriverWireugard:
+		opts.WireguardOpts = &network.WireguardOpts{
+			PrivateKey: "",
+		}
+	default:
+		return nil, fmt.Errorf("unknown backend driver: %s", d)
 	}
 
 	return opts, nil

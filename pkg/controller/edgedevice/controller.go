@@ -569,9 +569,9 @@ func NewController(
 			ctrl.virtualPodRoles = make(map[string]aranyaapi.PodRolePermissions)
 		}
 
-		ctrl.roleClient = kubeClient.RbacV1().Roles(envhelper.ThisPodNS())
+		ctrl.roleClient = kubeClient.RbacV1().Roles(constant.WatchNS())
 
-		ctrl.roleInformer = informersrbacv1.New(watchInformerFactory, envhelper.ThisPodNS(),
+		ctrl.roleInformer = informersrbacv1.New(watchInformerFactory, constant.WatchNS(),
 			newTweakListOptionsFunc(
 				labels.SelectorFromSet(map[string]string{
 					constant.LabelRole: constant.LabelRoleValuePodRole,
@@ -680,6 +680,100 @@ func NewController(
 		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.crReqRec.ReconcileUntil)
 	}
 
+	if config.VirtualNode.Network.Enabled {
+		// watch abbot endpoints
+		ctrl.abbotEndpointsInformer = informerscorev1.New(watchInformerFactory, constant.WatchNS(),
+			func(options *metav1.ListOptions) {
+				options.FieldSelector = fields.OneTermEqualSelector(
+					"metadata.name", config.VirtualNode.Network.AbbotService.Name,
+				).String()
+			},
+		).Endpoints().Informer()
+		ctrl.abbotEndpointsRec = reconcile.NewKubeInformerReconciler(appCtx, ctrl.abbotEndpointsInformer,
+			reconcile.Options{
+				Logger:          ctrl.Log.WithName("rec:net:abbot"),
+				BackoffStrategy: nil,
+				Workers:         1,
+				RequireCache:    true,
+				Handlers: reconcile.HandleFuncs{
+					OnAdded: nil,
+				},
+				OnBackoffStart: nil,
+				OnBackoffReset: nil,
+			},
+		)
+		ctrl.recStart = append(ctrl.recStart, ctrl.abbotEndpointsRec.Start)
+		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.abbotEndpointsRec.ReconcileUntil)
+
+		// monitor managed network service
+		ctrl.netSvcInformer = informerscorev1.New(watchInformerFactory, constant.WatchNS(),
+			func(options *metav1.ListOptions) {
+				options.FieldSelector = fields.OneTermEqualSelector(
+					"metadata.name", config.VirtualNode.Network.NetworkService.Name,
+				).String()
+			},
+		).Endpoints().Informer()
+		ctrl.netSvcRec = reconcile.NewKubeInformerReconciler(appCtx, ctrl.netSvcInformer,
+			reconcile.Options{
+				Logger:          ctrl.Log.WithName("rec:net:svc"),
+				BackoffStrategy: nil,
+				Workers:         1,
+				RequireCache:    true,
+				Handlers: reconcile.HandleFuncs{
+					OnAdded: nil,
+				},
+				OnBackoffStart: nil,
+				OnBackoffReset: nil,
+			},
+		)
+		ctrl.recStart = append(ctrl.recStart, ctrl.netSvcRec.Start)
+		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.netSvcRec.ReconcileUntil)
+
+		// monitor managed network service endpoints
+		ctrl.netEndpointsInformer = informerscorev1.New(watchInformerFactory, constant.WatchNS(),
+			func(options *metav1.ListOptions) {
+				options.FieldSelector = fields.OneTermEqualSelector(
+					"metadata.name", config.VirtualNode.Network.NetworkService.Name,
+				).String()
+			},
+		).Endpoints().Informer()
+		ctrl.netEndpointsRec = reconcile.NewKubeInformerReconciler(appCtx, ctrl.netEndpointsInformer,
+			reconcile.Options{
+				Logger:          ctrl.Log.WithName("rec:net:ep"),
+				BackoffStrategy: nil,
+				Workers:         1,
+				RequireCache:    true,
+				Handlers: reconcile.HandleFuncs{
+					OnAdded: nil,
+				},
+				OnBackoffStart: nil,
+				OnBackoffReset: nil,
+			},
+		)
+		ctrl.recStart = append(ctrl.recStart, ctrl.netEndpointsRec.Start)
+		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.netEndpointsRec.ReconcileUntil)
+
+		// handle EdgeDevice add/delete
+		ctrl.netReqRec = reconcile.NewCore(appCtx, reconcile.Options{
+			Logger:          ctrl.Log.WithName("rec:net:req"),
+			BackoffStrategy: nil,
+			Workers:         1,
+			RequireCache:    false,
+			Handlers: reconcile.HandleFuncs{
+				OnAdded: ctrl.onNetworkEnsureRequested,
+				OnUpdated: func(old, newObj interface{}) *reconcile.Result {
+					return ctrl.onNetworkEnsureRequested(newObj)
+				},
+				OnDeleted: ctrl.onNetworkDeleteRequested,
+			},
+			OnBackoffStart: nil,
+			OnBackoffReset: nil,
+		}.ResolveNil())
+
+		ctrl.recStart = append(ctrl.recStart, ctrl.netReqRec.Start)
+		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.netReqRec.ReconcileUntil)
+	}
+
 	return ctrl, nil
 }
 
@@ -753,6 +847,17 @@ type Controller struct {
 
 	// Storage management
 	csiDriverLister *kubehelper.CSIDriverLister
+
+	// Network management
+	abbotEndpointsInformer kubecache.SharedIndexInformer
+	abbotEndpointsRec      *reconcile.KubeInformerReconciler
+
+	netSvcInformer       kubecache.SharedIndexInformer
+	netSvcRec            *reconcile.KubeInformerReconciler
+	netEndpointsInformer kubecache.SharedIndexInformer
+	netEndpointsRec      *reconcile.KubeInformerReconciler
+
+	netReqRec *reconcile.Core
 
 	// unused fields
 	nodeController          *cloud.CloudNodeController
