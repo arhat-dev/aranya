@@ -69,7 +69,6 @@ _do_gen_clients() {
     "arhat.dev/aranya/pkg/apis/${group_name}/generated" \
     arhat.dev/aranya/pkg/apis "${group_name}:${group_version}" \
     --go-header-file "$(pwd)/scripts/gen/boilerplate.go.txt" \
-    --plural-exceptions "Maintenance:Maintenance" \
     -v 2 2>&1 | tee build/gen_clients.log | grep -E -e '(Assembling)|(violation)'
 
   rm -rf "./pkg/apis/${group_name}/generated"
@@ -97,7 +96,7 @@ _do_gen_deepcopy() {
 _do_gen_crd_manifests() {
   group_name="$1"
 
-  "${CONTROLLER_GEN}" crd:preserveUnknownFields=true output:dir=./cicd/deploy/charts/aranya/crds/ paths="./pkg/apis/${group_name}/..."
+  "${CONTROLLER_GEN}" crd:preserveUnknownFields=true,crdVersions=v1beta1 output:dir=./cicd/deploy/charts/aranya/crds/ paths="./pkg/apis/${group_name}/..."
 }
 
 gen() {
@@ -106,12 +105,12 @@ gen() {
   group_name="$(printf "%s" "${cmd}" | cut -d\  -f3)"
   group_version="$(printf "%s" "${cmd}" | cut -d\  -f4)"
 
-  _do_gen_deepcopy "${group_name}"
+  # _do_gen_deepcopy "${group_name}"
   _do_gen_crd_manifests "${group_name}"
 
-  _do_sync_gopath
+  # _do_sync_gopath
 
-  _do_gen_clients "${group_name}" "${group_version}"
+  # _do_gen_clients "${group_name}" "${group_version}"
 }
 
 # shellcheck disable=SC2068

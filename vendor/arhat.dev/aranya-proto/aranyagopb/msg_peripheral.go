@@ -1,4 +1,4 @@
-// +build !nodev
+// +build !noperipheral
 
 package aranyagopb
 

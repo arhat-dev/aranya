@@ -122,7 +122,7 @@ replace (
 
 require (
 	arhat.dev/abbot-proto v0.1.0
-	arhat.dev/aranya-proto v0.1.1
+	arhat.dev/aranya-proto v0.1.4
 	arhat.dev/pkg v0.0.0-20201011023427-3d85bac95f31
 	cloud.google.com/go/pubsub v1.3.1
 	github.com/Azure/azure-amqp-common-go/v3 v3.0.0

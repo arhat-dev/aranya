@@ -27,17 +27,14 @@ func NewManager(
 	return &Manager{
 		BaseManager: manager.NewBaseManager(parentCtx, fmt.Sprintf("device.%s", name), connectivityManager),
 
-		requestedMRs:         options.MetricsReporters,
-		requestedPeripherals: options.Peripherals,
+		options: options,
 	}
 }
 
 type Manager struct {
 	*manager.BaseManager
 
-	requestedMRs map[string]*aranyagopb.PeripheralEnsureCmd
-
-	requestedPeripherals map[string]*aranyagopb.PeripheralEnsureCmd
+	options *Options
 }
 
 // nolint:gocyclo
@@ -89,7 +86,7 @@ func (m *Manager) Start() error {
 				for _, ds := range sl.Peripherals {
 					switch ds.Kind {
 					case aranyagopb.PERIPHERAL_TYPE_NORMAL:
-						if d, ok := m.requestedPeripherals[ds.Name]; ok {
+						if d, ok := m.options.Peripherals[ds.Name]; ok {
 							if ds.Name == d.Name && ds.State == aranyagopb.PERIPHERAL_STATE_CONNECTED {
 								ensuredPeripherals[d.Name] = d
 							} else {
@@ -99,7 +96,7 @@ func (m *Manager) Start() error {
 							devicesToRemove.Insert(ds.Name)
 						}
 					case aranyagopb.PERIPHERAL_TYPE_METRICS_REPORTER:
-						if d, ok := m.requestedPeripherals[ds.Name]; ok {
+						if d, ok := m.options.MetricsReporters[ds.Name]; ok {
 							if ds.Name == d.Name && ds.State == aranyagopb.PERIPHERAL_STATE_CONNECTED {
 								ensuredMRs[d.Name] = d
 							} else {
