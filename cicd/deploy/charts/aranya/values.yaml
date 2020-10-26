@@ -281,7 +281,7 @@ config:
       enabled: true
       mesh:
         # set ip cidrs for mesh devices, if not set, will disable according ip network
-        ipv4CIDR: "100.64.0.0/10"
+        ipv4CIDR: 100.64.0.0/10
         ipv6CIDR: ""
       backend:
         driver: wireguard
@@ -326,6 +326,7 @@ config:
         #
         # NOTE: the `abbotService` is only the service name, NOT including namespace, and the service
         #       MUST be in the `.Values.watchNamespace` if .Values.watchNamespace is specified
+        # yamllint disable-line rule:quoted-strings
         name: '{{ include "abbot.fullname" $ }}'
         # port name of the port used the abbot service
         portName: abbot
