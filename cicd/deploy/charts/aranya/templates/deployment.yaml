@@ -59,9 +59,9 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
-          - /aranya
-          - -c
-          - /etc/aranya/config.yaml
+            - /aranya
+            - -c
+            - /etc/aranya/config.yaml
           env:
             - name: GODEBUG
               value: madvdontneed=1

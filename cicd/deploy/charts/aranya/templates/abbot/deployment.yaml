@@ -1,0 +1,74 @@
+{{- if and .Values.abbot.enabled .Values.config.virtualnode.network.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "abbot.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "abbot.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.abbot.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "abbot.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.abbot.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "abbot.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "abbot.fullname" . }}
+      securityContext:
+        {{- toYaml .Values.abbot.podSecurityContext | nindent 8 }}
+      containers:
+        - name: abbot
+          securityContext:
+            {{- toYaml .Values.abbot.securityContext | nindent 12 }}
+          image: "{{ .Values.abbot.image.repository }}:{{ .Values.abbot.image.tag }}"
+          imagePullPolicy: {{ .Values.abbot.image.pullPolicy }}
+          command:
+            - /abbot
+            - -c
+            - /etc/abbot/config.yaml
+          env:
+            - name: GODEBUG
+              value: madvdontneed=1
+          ports:
+            - name: abbot
+              containerPort: {{ .Values.abbot.config.listenPort }}
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.abbot.config.listenPort }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.abbot.config.listenPort }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/abbot/config.yaml
+              subPath: config.yaml
+          resources:
+            {{- toYaml .Values.abbot.resources | nindent 12 }}
+      {{- with .Values.abbot.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.abbot.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.abbot.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,17 @@
+{{- if and .Values.abbot.enabled .Values.config.virtualnode.network.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "abbot.fullname" . }}
+  namespace: {{ .Values.watchNamespace | default .Release.Namespace }}
+  labels:
+    {{- include "abbot.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    abbot:
+      log:
+      - level: {{ .Values.abbot.config.logLevel }}
+        format: {{ .Values.abbot.config.logLevel }}
+        file: stderr
+      listen: tcp://0.0.0.0:{{ .Values.abbot.config.listenPort }}
+{{- end }}

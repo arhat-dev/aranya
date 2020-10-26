@@ -7,4 +7,4 @@ metadata:
     {{- include "aranya.labels" . | nindent 4 }}
 data:
   config.yaml: |
-    {{- .Values.config | toYaml | nindent 4 -}}
+    {{- tpl (toYaml .Values.config) $ | nindent 4 }}

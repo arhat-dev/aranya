@@ -1,0 +1,20 @@
+{{- if and .Values.abbot.enabled .Values.config.virtualnode.network.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ tpl (toYaml .Values.config.virtualnode.network.abbotService.name) $ }}
+  namespace: {{ .Values.watchNamespace | default .Release.Namespace }}
+  labels:
+    {{- include "abbot.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - port: 8080
+      targetPort: abbot
+      protocol: TCP
+      name: abbot
+  selector:
+    app.kubernetes.io/component: abbot
+    {{- include "abbot.selectorLabels" . | nindent 4 }}
+{{- end }}
