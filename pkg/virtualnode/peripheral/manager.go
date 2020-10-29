@@ -25,7 +25,7 @@ func NewManager(
 	options *Options,
 ) *Manager {
 	return &Manager{
-		BaseManager: manager.NewBaseManager(parentCtx, fmt.Sprintf("device.%s", name), connectivityManager),
+		BaseManager: manager.NewBaseManager(parentCtx, fmt.Sprintf("peripheral.%s", name), connectivityManager),
 
 		options: options,
 	}
