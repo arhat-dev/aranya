@@ -259,17 +259,33 @@ type (
 	}
 
 	NetworkMeshSpec struct {
+		// +optional
+		InterfaceName string `json:"interfaceName"`
+
+		// +optional
+		MTU int `json:"mtu"`
+
+		// ListenPort for receiving traffic from other mesh members
+		// +optional
+		ListenPort int `json:"port"`
+
+		// +optional
+		RoutingTable int `json:"routingTable"`
+
+		// +optional
+		FirewallMark int `json:"firewallMark"`
+
 		// IPv4 address of the mesh interface endpoint (usually the vpn endpoint address)
 		// +optional
-		IPv4 string `json:"ipv4"`
+		IPv4Addr string `json:"ipv4Addr"`
 
 		// IPv6 address of the mesh interface endpoint (usually the vpn endpoint address)
 		// +optional
-		IPv6 string `json:"ipv6"`
+		IPv6Addr string `json:"ipv6Addr"`
 
-		// AllowedCIDRs in addition to pod cidr
+		// ExtraAllowedCIDRs in addition to pod CIDR(s)
 		// +optional
-		AllowedCIDRs []string `json:"allowedCIDRs"`
+		ExtraAllowedCIDRs []string `json:"extraAllowedCIDRs"`
 	}
 )
 
@@ -313,10 +329,10 @@ type (
 		PodCIDRv6 string `json:"podCIDRv6"`
 
 		// +optional
-		MeshIPv4 string `json:"meshIPv4"`
+		MeshIPv4Addr string `json:"meshIPv4Addr"`
 
 		// +optional
-		MeshIPv6 string `json:"meshIPv6"`
+		MeshIPv6Addr string `json:"meshIPv6Addr"`
 	}
 )
 

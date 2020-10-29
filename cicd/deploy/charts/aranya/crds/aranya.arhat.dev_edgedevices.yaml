@@ -326,19 +326,31 @@ spec:
                   type: boolean
                 mesh:
                   properties:
-                    allowedCIDRs:
-                      description: AllowedCIDRs in addition to pod cidr
+                    extraAllowedCIDRs:
+                      description: ExtraAllowedCIDRs in addition to pod CIDR(s)
                       items:
                         type: string
                       type: array
-                    ipv4:
+                    firewallMark:
+                      type: integer
+                    interfaceName:
+                      type: string
+                    ipv4Addr:
                       description: IPv4 address of the mesh interface endpoint (usually
                         the vpn endpoint address)
                       type: string
-                    ipv6:
+                    ipv6Addr:
                       description: IPv6 address of the mesh interface endpoint (usually
                         the vpn endpoint address)
                       type: string
+                    mtu:
+                      type: integer
+                    port:
+                      description: ListenPort for receiving traffic from other mesh
+                        members
+                      type: integer
+                    routingTable:
+                      type: integer
                   type: object
               type: object
             node:
@@ -753,9 +765,9 @@ spec:
               type: string
             network:
               properties:
-                meshIPv4:
+                meshIPv4Addr:
                   type: string
-                meshIPv6:
+                meshIPv6Addr:
                   type: string
                 podCIDRv4:
                   type: string
