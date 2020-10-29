@@ -253,6 +253,23 @@ type (
 	NetworkSpec struct {
 		// +optional
 		Enabled bool `json:"enabled"`
+
+		// +optional
+		Mesh NetworkMeshSpec `json:"mesh"`
+	}
+
+	NetworkMeshSpec struct {
+		// IPv4 address of the mesh interface endpoint (usually the vpn endpoint address)
+		// +optional
+		IPv4 string `json:"ipv4"`
+
+		// IPv6 address of the mesh interface endpoint (usually the vpn endpoint address)
+		// +optional
+		IPv6 string `json:"ipv6"`
+
+		// AllowedCIDRs in addition to pod cidr
+		// +optional
+		AllowedCIDRs []string `json:"allowedCIDRs"`
 	}
 )
 
@@ -287,10 +304,29 @@ type EdgeDeviceSpec struct {
 	MetricsReporters []PeripheralBaseSpec `json:"metricsReporters,omitempty"`
 }
 
+type (
+	NetworkStatus struct {
+		// +optional
+		PodCIDRv4 string `json:"podCIDRv4"`
+
+		// +optional
+		PodCIDRv6 string `json:"podCIDRv6"`
+
+		// +optional
+		MeshIPv4 string `json:"meshIPv4"`
+
+		// +optional
+		MeshIPv6 string `json:"meshIPv6"`
+	}
+)
+
 // EdgeDeviceStatus defines the observed state of EdgeDevice
 type EdgeDeviceStatus struct {
 	// +optional
-	HostNode string `json:"hostNode,omitempty"`
+	HostNode string `json:"hostNode"`
+
+	// +optional
+	Network NetworkStatus `json:"network"`
 }
 
 // +genclient

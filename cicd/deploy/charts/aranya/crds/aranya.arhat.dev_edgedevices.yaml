@@ -324,6 +324,22 @@ spec:
               properties:
                 enabled:
                   type: boolean
+                mesh:
+                  properties:
+                    allowedCIDRs:
+                      description: AllowedCIDRs in addition to pod cidr
+                      items:
+                        type: string
+                      type: array
+                    ipv4:
+                      description: IPv4 address of the mesh interface endpoint (usually
+                        the vpn endpoint address)
+                      type: string
+                    ipv6:
+                      description: IPv6 address of the mesh interface endpoint (usually
+                        the vpn endpoint address)
+                      type: string
+                  type: object
               type: object
             node:
               description: Node related settings for kubernetes node resource
@@ -735,6 +751,17 @@ spec:
           properties:
             hostNode:
               type: string
+            network:
+              properties:
+                meshIPv4:
+                  type: string
+                meshIPv6:
+                  type: string
+                podCIDRv4:
+                  type: string
+                podCIDRv6:
+                  type: string
+              type: object
           type: object
       type: object
   version: v1alpha1
