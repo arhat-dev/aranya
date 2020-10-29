@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"arhat.dev/pkg/log"
@@ -12,12 +13,111 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/client-go/informers"
+	kubeclient "k8s.io/client-go/kubernetes"
+	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	listerscorev1 "k8s.io/client-go/listers/core/v1"
+	kubecache "k8s.io/client-go/tools/cache"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
 )
+
+type podController struct {
+	podClient   clientcorev1.PodInterface
+	podInformer kubecache.SharedIndexInformer
+	managedPods sets.String
+	podsMu      *sync.RWMutex
+	vpReqRec    *reconcile.Core
+
+	watchSecretInformer kubecache.SharedIndexInformer
+	watchCMInformer     kubecache.SharedIndexInformer
+	watchSvcInformer    kubecache.SharedIndexInformer
+}
+
+func (c *podController) init(
+	ctrl *Controller,
+	config *conf.Config,
+	kubeClient kubeclient.Interface,
+	watchInformerFactory informers.SharedInformerFactory,
+) error {
+	c.managedPods = sets.NewString()
+	c.podsMu = new(sync.RWMutex)
+
+	c.podClient = kubeClient.CoreV1().Pods(constant.WatchNS())
+
+	c.podInformer = watchInformerFactory.Core().V1().Pods().Informer()
+	c.watchSecretInformer = watchInformerFactory.Core().V1().Secrets().Informer()
+	c.watchCMInformer = watchInformerFactory.Core().V1().ConfigMaps().Informer()
+	c.watchSvcInformer = watchInformerFactory.Core().V1().Services().Informer()
+
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs,
+		c.podInformer.HasSynced,
+		c.watchCMInformer.HasSynced,
+		c.watchSecretInformer.HasSynced,
+		c.watchSvcInformer.HasSynced,
+	)
+
+	ctrl.listActions = append(ctrl.listActions, func() error {
+		_, err := listerscorev1.NewPodLister(c.podInformer.GetIndexer()).List(labels.Everything())
+		if err != nil {
+			return fmt.Errorf("failed to list pods in namespace %q: %w", constant.WatchNS(), err)
+		}
+
+		_, err = listerscorev1.NewConfigMapLister(c.watchCMInformer.GetIndexer()).List(labels.Everything())
+		if err != nil {
+			return fmt.Errorf("failed to list configmaps in namespace %q: %w", constant.WatchNS(), err)
+		}
+
+		_, err = listerscorev1.NewSecretLister(c.watchSecretInformer.GetIndexer()).List(labels.Everything())
+		if err != nil {
+			return fmt.Errorf("failed to list secrets in namespace %q: %w", constant.WatchNS(), err)
+		}
+
+		_, err = listerscorev1.NewServiceLister(c.watchSvcInformer.GetIndexer()).List(labels.Everything())
+		if err != nil {
+			return fmt.Errorf("failed to list services in namespace %q: %w", constant.WatchNS(), err)
+		}
+		return nil
+	})
+
+	podRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.podInformer, reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:pod"),
+		BackoffStrategy: nil,
+		Workers:         1,
+		RequireCache:    true,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded:    ctrl.onPodAdded,
+			OnUpdated:  ctrl.onPodUpdated,
+			OnDeleting: ctrl.onPodDeleting,
+			OnDeleted:  ctrl.onPodDeleted,
+		},
+		OnBackoffStart: nil,
+		OnBackoffReset: nil,
+	})
+	ctrl.recStart = append(ctrl.recStart, podRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, podRec.ReconcileUntil)
+
+	c.vpReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:pod_req"),
+		BackoffStrategy: nil,
+		Workers:         1,
+		RequireCache:    true,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded: ctrl.onVirtualPodEnsueRequested,
+		},
+		OnBackoffStart: nil,
+		OnBackoffReset: nil,
+	}.ResolveNil())
+	ctrl.recStart = append(ctrl.recStart, c.vpReqRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.vpReqRec.ReconcileUntil)
+
+	return nil
+}
 
 func (c *Controller) checkVirtualPodUpToDate(realPod, expectedPod *corev1.Pod) (match bool) {
 	switch {

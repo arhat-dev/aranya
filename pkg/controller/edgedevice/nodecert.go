@@ -34,15 +34,36 @@ import (
 	"strings"
 
 	"arhat.dev/pkg/envhelper"
+	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeclient "k8s.io/client-go/kubernetes"
+	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	certapi "k8s.io/kubernetes/pkg/apis/certificates"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
 )
+
+type nodeCertController struct {
+	certSecretClient clientcorev1.SecretInterface
+	csrClient        *kubehelper.CertificateSigningRequestClient
+}
+
+func (c *nodeCertController) init(
+	ctrl *Controller,
+	config *conf.Config,
+	kubeClient kubeclient.Interface,
+	preferredResources []*metav1.APIResourceList,
+) error {
+	c.certSecretClient = kubeClient.CoreV1().Secrets(envhelper.ThisPodNS())
+	c.csrClient = kubehelper.CreateCertificateSigningRequestClient(preferredResources, kubeClient)
+
+	return nil
+}
 
 func generatePEMEncodedCSR(template *x509.CertificateRequest, privateKey interface{}) ([]byte, error) {
 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, template, privateKey)

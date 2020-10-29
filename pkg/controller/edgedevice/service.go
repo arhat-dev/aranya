@@ -29,11 +29,94 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/informers"
+	informerscorev1 "k8s.io/client-go/informers/core/v1"
+	kubeclient "k8s.io/client-go/kubernetes"
+	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	listerscorev1 "k8s.io/client-go/listers/core/v1"
 
+	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
 )
+
+type connectivityServiceController struct {
+	svcReqRec           *reconcile.Core
+	sysSvcClient        clientcorev1.ServiceInterface
+	connectivityService string
+}
+
+func (c *connectivityServiceController) init(
+	ctrl *Controller,
+	config *conf.Config,
+	kubeClient kubeclient.Interface,
+	sysInformerFactory informers.SharedInformerFactory,
+) error {
+	c.connectivityService = config.Aranya.Managed.ConnectivityService.Name
+	if c.connectivityService == "" {
+		return nil
+	}
+
+	// client
+	c.sysSvcClient = kubeClient.CoreV1().Services(envhelper.ThisPodNS())
+
+	// informer and sync
+	setLabelSelector := newTweakListOptionsFunc(
+		labels.SelectorFromSet(map[string]string{
+			constant.LabelRole: constant.LabelRoleValueConnectivity,
+		}),
+	)
+
+	fieldSelector := fields.OneTermEqualSelector("metadata.name", c.connectivityService).String()
+	informer := informerscorev1.New(sysInformerFactory, envhelper.ThisPodNS(), func(options *metav1.ListOptions) {
+		setLabelSelector(options)
+		options.FieldSelector = fieldSelector
+	}).Services().Informer()
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, informer.HasSynced)
+
+	ctrl.listActions = append(ctrl.listActions, func() error {
+		_, err2 := listerscorev1.NewServiceLister(informer.GetIndexer()).List(labels.Everything())
+		if err2 != nil {
+			return fmt.Errorf("failed to list services in namespace %q: %w", envhelper.ThisPodNS(), err2)
+		}
+		return nil
+	})
+
+	// reconciler
+	serviceRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), informer, reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:svc"),
+		BackoffStrategy: nil,
+		Workers:         0,
+		RequireCache:    true,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded:    nextActionUpdate,
+			OnUpdated:  ctrl.onServiceUpdated,
+			OnDeleting: ctrl.onServiceDeleting,
+			OnDeleted:  ctrl.onServiceDeleted,
+		},
+	})
+	ctrl.recStart = append(ctrl.recStart, serviceRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, serviceRec.ReconcileUntil)
+
+	c.svcReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:svc_req"),
+		BackoffStrategy: nil,
+		Workers:         1,
+		RequireCache:    false,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded: ctrl.onServiceEnsureRequested,
+		},
+		OnBackoffStart: nil,
+		OnBackoffReset: nil,
+	}.ResolveNil())
+	ctrl.recStart = append(ctrl.recStart, c.svcReqRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.svcReqRec.ReconcileUntil)
+
+	return nil
+}
 
 func (c *Controller) checkServiceUpToDate(
 	svc *corev1.Service,

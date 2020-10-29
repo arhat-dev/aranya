@@ -33,10 +33,16 @@ import (
 	"google.golang.org/grpc/credentials"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/scheme"
+	kubecache "k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 
+	aranyaclient "arhat.dev/aranya/pkg/apis/aranya/generated/clientset/versioned"
+	clientaranyav1a1 "arhat.dev/aranya/pkg/apis/aranya/generated/clientset/versioned/typed/aranya/v1alpha1"
+	aranyainformers "arhat.dev/aranya/pkg/apis/aranya/generated/informers/externalversions"
+	listersaranyav1a1 "arhat.dev/aranya/pkg/apis/aranya/generated/listers/aranya/v1alpha1"
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
@@ -48,6 +54,54 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode/pod"
 	"arhat.dev/aranya/pkg/virtualnode/storage"
 )
+
+type edgeDeviceController struct {
+	edgeDeviceClient   clientaranyav1a1.EdgeDeviceInterface
+	edgeDeviceInformer kubecache.SharedIndexInformer
+}
+
+func (c edgeDeviceController) init(
+	ctrl *Controller,
+	config *conf.Config,
+	aranyaClient aranyaclient.Interface,
+) error {
+	edgeDeviceInformerFactory := aranyainformers.NewSharedInformerFactoryWithOptions(
+		aranyaClient, 0, aranyainformers.WithNamespace(constant.WatchNS()))
+
+	ctrl.informerFactoryStart = append(ctrl.informerFactoryStart, edgeDeviceInformerFactory.Start)
+
+	c.edgeDeviceClient = aranyaClient.AranyaV1alpha1().EdgeDevices(constant.WatchNS())
+	c.edgeDeviceInformer = edgeDeviceInformerFactory.Aranya().V1alpha1().EdgeDevices().Informer()
+
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.edgeDeviceInformer.HasSynced)
+
+	ctrl.listActions = append(ctrl.listActions, func() error {
+		_, err := listersaranyav1a1.
+			NewEdgeDeviceLister(c.edgeDeviceInformer.GetIndexer()).List(labels.Everything())
+		if err != nil {
+			return fmt.Errorf("failed to list edgedevice in namespace %q: %w", constant.WatchNS(), err)
+		}
+
+		return nil
+	})
+
+	edgeDeviceRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.edgeDeviceInformer, reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:ed"),
+		BackoffStrategy: nil,
+		Workers:         1,
+		RequireCache:    true,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded:    ctrl.onEdgeDeviceResAdded,
+			OnUpdated:  ctrl.onEdgeDeviceResUpdated,
+			OnDeleting: ctrl.onEdgeDeviceResDeleting,
+			OnDeleted:  ctrl.onEdgeDeviceResDeleted,
+		},
+	})
+	ctrl.recStart = append(ctrl.recStart, edgeDeviceRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, edgeDeviceRec.ReconcileUntil)
+
+	return nil
+}
 
 func (c *Controller) onEdgeDeviceResAdded(obj interface{}) *reconcile.Result {
 	var (
@@ -740,7 +794,36 @@ func (c *Controller) prepareNetworkOptions(
 		return nil, nil
 	}
 
+	var (
+		ipv4 = edgeDevice.Spec.Network.Mesh.IPv4
+		ipv6 = edgeDevice.Spec.Network.Mesh.IPv6
+	)
+
+	// allocate dynamic ipv4 address
+	if ipv4 == "" && c.meshIPAMv4 != nil {
+		ipv4, err = c.meshIPAMv4.Allocate()
+		if err != nil {
+			return nil, fmt.Errorf("failed to allocate ipv4 address: %s", err)
+		}
+	}
+
+	// allocate dynamic ipv6 address
+	if ipv6 == "" && c.meshIPAMv6 != nil {
+		ipv6, err = c.meshIPAMv6.Allocate()
+		if err != nil {
+			return nil, fmt.Errorf("failed to allocate ipv4 address: %s", err)
+		}
+	}
+
+	if ipv4 == "" && ipv6 == "" {
+		return nil, fmt.Errorf("no ip address allocated")
+	}
+
 	opts := &network.Options{
+		Provider:  fmt.Sprintf("aranya:%s", edgeDevice.Name),
+		PublicIP:  c.vnConfig.Network.NetworkService.IP,
+		Addresses: []string{},
+
 		WireguardOpts: nil,
 	}
 

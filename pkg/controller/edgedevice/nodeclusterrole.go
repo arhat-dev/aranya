@@ -8,13 +8,97 @@ import (
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/informers"
+	informersrbacv1 "k8s.io/client-go/informers/rbac/v1"
+	kubeclient "k8s.io/client-go/kubernetes"
+	clientrbacv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
+	listersrbacv1 "k8s.io/client-go/listers/rbac/v1"
+	kubecache "k8s.io/client-go/tools/cache"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
 )
+
+type nodeClusterRoleController struct {
+	crInformer       kubecache.SharedIndexInformer
+	crClient         clientrbacv1.ClusterRoleInterface
+	crReqRec         *reconcile.Core
+	nodeClusterRoles map[string]aranyaapi.NodeClusterRolePermissions
+}
+
+func (c *nodeClusterRoleController) init(
+	ctrl *Controller,
+	config *conf.Config,
+	kubeClient kubeclient.Interface,
+	clusterInformerFactory informers.SharedInformerFactory,
+) error {
+	// watch cluster roles managed by us
+	if len(config.Aranya.Managed.NodeClusterRoles) > 0 {
+		return nil
+	}
+
+	c.nodeClusterRoles = config.Aranya.Managed.NodeClusterRoles
+	// client
+	c.crClient = kubeClient.RbacV1().ClusterRoles()
+
+	// informer and sync
+	c.crInformer = informersrbacv1.New(clusterInformerFactory, corev1.NamespaceAll,
+		newTweakListOptionsFunc(
+			labels.SelectorFromSet(map[string]string{
+				constant.LabelRole:      constant.LabelRoleValueNodeClusterRole,
+				constant.LabelNamespace: constant.WatchNS(),
+			}),
+		),
+	).ClusterRoles().Informer()
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.crInformer.HasSynced)
+
+	ctrl.listActions = append(ctrl.listActions, func() error {
+		_, err2 := listersrbacv1.NewClusterRoleLister(c.crInformer.GetIndexer()).List(labels.Everything())
+		if err2 != nil {
+			return fmt.Errorf("failed to list cluster roles: %w", err2)
+		}
+
+		return nil
+	})
+
+	// reconciler for cluster role resources
+	crRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.crInformer, reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:cr"),
+		BackoffStrategy: nil,
+		Workers:         1,
+		RequireCache:    true,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded:    nextActionUpdate,
+			OnUpdated:  ctrl.onNodeClusterRoleUpdated,
+			OnDeleting: ctrl.onNodeClusterRoleDeleting,
+			OnDeleted:  ctrl.onNodeClusterRoleDeleted,
+		},
+	})
+	ctrl.recStart = append(ctrl.recStart, crRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, crRec.ReconcileUntil)
+
+	c.crReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:cr_req"),
+		BackoffStrategy: nil,
+		Workers:         1,
+		RequireCache:    false,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded: ctrl.onNodeClusterRoleEnsureRequested,
+		},
+		OnBackoffStart: nil,
+		OnBackoffReset: nil,
+	}.ResolveNil())
+	ctrl.recStart = append(ctrl.recStart, c.crReqRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.crReqRec.ReconcileUntil)
+
+	return nil
+}
 
 func (c *Controller) checkNodeClusterRoleUpToDate(obj *rbacv1.ClusterRole) bool {
 	crSpec, ok := c.nodeClusterRoles[obj.Name]

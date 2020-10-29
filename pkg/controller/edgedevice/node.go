@@ -23,24 +23,259 @@ import (
 	"net"
 	"reflect"
 	"strings"
+	"time"
 
+	"arhat.dev/pkg/backoff"
+	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/patchhelper"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
 	"arhat.dev/pkg/textquery"
 	"github.com/itchyny/gojq"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/informers"
+	informerscorev1 "k8s.io/client-go/informers/core/v1"
+	kubeclient "k8s.io/client-go/kubernetes"
+	clientcodv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
+	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	listerscodv1 "k8s.io/client-go/listers/coordination/v1"
+	listerscodv1b1 "k8s.io/client-go/listers/coordination/v1beta1"
+	listerscorev1 "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/rest"
+	kubecache "k8s.io/client-go/tools/cache"
 	utilnode "k8s.io/kubernetes/pkg/util/node"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/convert"
 	"arhat.dev/aranya/pkg/virtualnode"
 )
+
+type nodeController struct {
+	vnRec         *reconcile.Core
+	virtualNodes  *virtualnode.Manager
+	sshPrivateKey []byte
+	vnConfig      *conf.VirtualnodeConfig
+	vnKubeconfig  *rest.Config
+
+	// Node management
+	nodeClient    clientcorev1.NodeInterface
+	nodeInformer  kubecache.SharedIndexInformer
+	nodeStatusRec *reconcile.KubeInformerReconciler
+	nodeReqRec    *reconcile.Core
+
+	nodeLeaseInformer kubecache.SharedIndexInformer
+	nodeLeaseClient   clientcodv1.LeaseInterface
+	nodeLeaseReqRec   *reconcile.Core
+}
+
+func (c *nodeController) init(
+	ctrl *Controller,
+	config *conf.Config,
+	kubeClient kubeclient.Interface,
+	nodeInformerTyped informerscorev1.NodeInformer,
+	sshPrivateKey []byte,
+	preferredResources []*metav1.APIResourceList,
+) error {
+	_, kubeConfigForVirtualNode, err := config.VirtualNode.KubeClient.NewKubeClient(nil, true)
+	if err != nil {
+		return fmt.Errorf("failed to get kubeconfig for virtualnode: %w", err)
+	}
+
+	c.nodeInformer = nodeInformerTyped.Informer()
+
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.nodeInformer.HasSynced)
+	ctrl.listActions = append(ctrl.listActions, func() error {
+		_, err := listerscorev1.NewNodeLister(c.nodeInformer.GetIndexer()).List(labels.Everything())
+		if err != nil {
+			return fmt.Errorf("failed to list nodes: %w", err)
+		}
+
+		return nil
+	})
+
+	c.vnKubeconfig = kubeConfigForVirtualNode
+	c.nodeClient = kubeClient.CoreV1().Nodes()
+	c.nodeLeaseClient = kubeClient.CoordinationV1().Leases(corev1.NamespaceNodeLease)
+	c.sshPrivateKey = sshPrivateKey
+	c.vnConfig = &config.VirtualNode
+
+	var getLeaseFunc func(name string) *coordinationv1.Lease
+	if config.VirtualNode.Node.Lease.Enabled {
+		// informer and sync
+		nodeLeaseInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClient, 0,
+			informers.WithNamespace(corev1.NamespaceNodeLease),
+			informers.WithTweakListOptions(
+				newTweakListOptionsFunc(
+					labels.SelectorFromSet(map[string]string{
+						constant.LabelRole:      constant.LabelRoleValueNodeLease,
+						constant.LabelNamespace: constant.WatchNS(),
+					}),
+				),
+			),
+		)
+
+		ctrl.informerFactoryStart = append(ctrl.informerFactoryStart, nodeLeaseInformerFactory.Start)
+
+		leaseClient := kubehelper.CreateLeaseClient(preferredResources, kubeClient, corev1.NamespaceNodeLease)
+		switch {
+		case leaseClient.V1Client != nil:
+			c.nodeLeaseInformer = nodeLeaseInformerFactory.Coordination().V1().Leases().Informer()
+			ctrl.listActions = append(ctrl.listActions, func() error {
+				_, err2 := listerscodv1.NewLeaseLister(c.nodeLeaseInformer.GetIndexer()).List(labels.Everything())
+				if err2 != nil {
+					return fmt.Errorf("failed to list cluster roles: %w", err2)
+				}
+
+				return nil
+			})
+		case leaseClient.V1b1Client != nil:
+			c.nodeLeaseInformer = nodeLeaseInformerFactory.Coordination().V1beta1().Leases().Informer()
+			ctrl.listActions = append(ctrl.listActions, func() error {
+				_, err2 := listerscodv1b1.NewLeaseLister(c.nodeLeaseInformer.GetIndexer()).List(labels.Everything())
+				if err2 != nil {
+					return fmt.Errorf("failed to list cluster roles: %w", err2)
+				}
+
+				return nil
+			})
+		default:
+			return fmt.Errorf("no lease api support in kubernetes cluster")
+		}
+
+		ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.nodeLeaseInformer.HasSynced)
+
+		getLeaseFunc = func(name string) *coordinationv1.Lease {
+			obj, ok, err2 := c.nodeLeaseInformer.GetIndexer().GetByKey(corev1.NamespaceNodeLease + "/" + name)
+			if err2 != nil {
+				// ignore this error
+				return nil
+			}
+
+			if !ok {
+				return nil
+			}
+
+			lease, ok := obj.(*coordinationv1.Lease)
+			if !ok {
+				return nil
+			}
+
+			return lease
+		}
+
+		nodeLeaseRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.nodeLeaseInformer, reconcile.Options{
+			Logger:          ctrl.Log.WithName("rec:nl"),
+			BackoffStrategy: nil,
+			Workers:         1,
+			RequireCache:    true,
+			Handlers: reconcile.HandleFuncs{
+				OnAdded:    nextActionUpdate,
+				OnUpdated:  ctrl.onNodeLeaseUpdated,
+				OnDeleting: ctrl.onNodeLeaseDeleting,
+				OnDeleted:  ctrl.onNodeLeaseDeleted,
+			},
+			OnBackoffStart: nil,
+			OnBackoffReset: nil,
+		})
+		ctrl.recStart = append(ctrl.recStart, nodeLeaseRec.Start)
+		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, nodeLeaseRec.ReconcileUntil)
+
+		c.nodeLeaseReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+			Logger:          ctrl.Log.WithName("rec:nl_req"),
+			BackoffStrategy: nil,
+			Workers:         1,
+			RequireCache:    true,
+			Handlers: reconcile.HandleFuncs{
+				OnAdded: ctrl.onNodeLeaseEnsureRequest,
+			},
+			OnBackoffStart: nil,
+			OnBackoffReset: nil,
+		}.ResolveNil())
+		ctrl.recStart = append(ctrl.recStart, c.nodeLeaseReqRec.Start)
+		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.nodeLeaseReqRec.ReconcileUntil)
+	} else {
+		getLeaseFunc = func(name string) *coordinationv1.Lease {
+			return nil
+		}
+	}
+
+	c.virtualNodes = virtualnode.NewVirtualNodeManager(
+		ctrl.Context(),
+		&config.VirtualNode,
+		getLeaseFunc,
+		c.nodeLeaseClient,
+	)
+
+	nodeRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:node"),
+		BackoffStrategy: nil,
+		Workers:         1,
+		RequireCache:    true,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded:    ctrl.onNodeAdd,
+			OnUpdated:  ctrl.onNodeUpdated,
+			OnDeleting: ctrl.onNodeDeleting,
+			OnDeleted:  ctrl.onNodeDeleted,
+		},
+	})
+	ctrl.recStart = append(ctrl.recStart, nodeRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, nodeRec.ReconcileUntil)
+
+	c.nodeReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:node_req"),
+		BackoffStrategy: nil,
+		Workers:         1,
+		RequireCache:    true,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded: ctrl.onNodeEnsureRequested,
+		},
+		OnBackoffStart: nil,
+		OnBackoffReset: nil,
+	}.ResolveNil())
+	ctrl.recStart = append(ctrl.recStart, c.nodeReqRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.nodeReqRec.ReconcileUntil)
+
+	// start a standalone node status reconciler in addition to node reconciler to make it clear for node
+	c.nodeStatusRec = reconcile.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
+		Logger: ctrl.Log.WithName("rec:nodestatus"),
+		// no backoff
+		BackoffStrategy: backoff.NewStrategy(0, 0, 1, 0),
+		Workers:         1,
+		RequireCache:    true,
+		Handlers: reconcile.HandleFuncs{
+			OnUpdated: ctrl.onNodeStatusUpdated,
+		},
+		OnBackoffStart: nil,
+		OnBackoffReset: nil,
+	})
+	ctrl.recStart = append(ctrl.recStart, c.nodeStatusRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.nodeStatusRec.ReconcileUntil)
+
+	c.vnRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:vn"),
+		BackoffStrategy: backoff.NewStrategy(time.Second, time.Minute, 2, 1),
+		Workers:         config.Aranya.MaxVirtualnodeCreatingInParallel,
+		RequireCache:    true,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded:    ctrl.onEdgeDeviceCreationRequested,
+			OnUpdated:  ctrl.onEdgeDeviceUpdateRequested,
+			OnDeleting: ctrl.onEdgeDeviceDeletionRequested,
+			OnDeleted:  ctrl.onEdgeDeviceCleanup,
+		},
+	}.ResolveNil())
+	ctrl.recStart = append(ctrl.recStart, c.vnRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.vnRec.ReconcileUntil)
+
+	return nil
+}
 
 func (c *Controller) checkNodeQualified(node *corev1.Node, kubeletListener net.Listener) bool {
 	port, err := getListenerPort(kubeletListener)

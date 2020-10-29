@@ -12,11 +12,106 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/informers"
+	informersrbacv1 "k8s.io/client-go/informers/rbac/v1"
+	kubeclient "k8s.io/client-go/kubernetes"
+	clientrbacv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
+	listersrbacv1 "k8s.io/client-go/listers/rbac/v1"
+	kubecache "k8s.io/client-go/tools/cache"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
 )
+
+type podRoleController struct {
+	roleInformer    kubecache.SharedIndexInformer
+	roleClient      clientrbacv1.RoleInterface
+	roleReqRec      *reconcile.Core
+	podRoles        map[string]aranyaapi.PodRolePermissions
+	virtualPodRoles map[string]aranyaapi.PodRolePermissions
+}
+
+func (c *podRoleController) init(
+	ctrl *Controller,
+	config *conf.Config,
+	kubeClient kubeclient.Interface,
+	watchInformerFactory informers.SharedInformerFactory,
+) error {
+	if len(config.Aranya.Managed.PodRoles) == 0 && len(config.Aranya.Managed.VirtualPodRoles) == 0 {
+		return nil
+	}
+
+	c.podRoles = config.Aranya.Managed.PodRoles
+	c.virtualPodRoles = config.Aranya.Managed.VirtualPodRoles
+
+	if len(c.podRoles) != 0 {
+		delete(c.podRoles, "")
+	} else {
+		c.podRoles = make(map[string]aranyaapi.PodRolePermissions)
+	}
+
+	if len(c.virtualPodRoles) != 0 {
+		delete(c.virtualPodRoles, "")
+	} else {
+		c.virtualPodRoles = make(map[string]aranyaapi.PodRolePermissions)
+	}
+
+	c.roleClient = kubeClient.RbacV1().Roles(constant.WatchNS())
+
+	c.roleInformer = informersrbacv1.New(watchInformerFactory, constant.WatchNS(),
+		newTweakListOptionsFunc(
+			labels.SelectorFromSet(map[string]string{
+				constant.LabelRole: constant.LabelRoleValuePodRole,
+			}),
+		),
+	).Roles().Informer()
+
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.roleInformer.HasSynced)
+	ctrl.listActions = append(ctrl.listActions, func() error {
+		_, err2 := listersrbacv1.NewRoleLister(c.roleInformer.GetIndexer()).List(labels.Everything())
+		if err2 != nil {
+			return fmt.Errorf("failed to list watched roles: %w", err2)
+		}
+
+		return nil
+	})
+
+	roleRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.roleInformer, reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:role"),
+		BackoffStrategy: nil,
+		Workers:         1,
+		RequireCache:    true,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded:    nextActionUpdate,
+			OnUpdated:  ctrl.onPodRoleUpdated,
+			OnDeleting: ctrl.onPodRoleDeleting,
+			OnDeleted:  ctrl.onPodRoleDeleted,
+		},
+		OnBackoffStart: nil,
+		OnBackoffReset: nil,
+	})
+	ctrl.recStart = append(ctrl.recStart, roleRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, roleRec.ReconcileUntil)
+
+	c.roleReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:role_req"),
+		BackoffStrategy: nil,
+		Workers:         1,
+		RequireCache:    false,
+		Handlers: reconcile.HandleFuncs{
+			OnAdded: ctrl.onPodRoleEnsureRequested,
+		},
+		OnBackoffStart: nil,
+		OnBackoffReset: nil,
+	}.ResolveNil())
+	ctrl.recStart = append(ctrl.recStart, c.roleReqRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.roleReqRec.ReconcileUntil)
+
+	return nil
+}
 
 // nolint:gocyclo
 func (c *Controller) checkPodRoleUpToDate(obj *rbacv1.Role) bool {

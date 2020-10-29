@@ -31,6 +31,12 @@ type VirtualnodeNetworkBackendConfig struct {
 
 type VirtualnodeNetworkMeshConfig struct {
 	// allocate ip addresses to mesh network device
-	IPv4CIDR string `json:"ipv4CIDR" yaml:"ipv4CIDR"`
-	IPv6CIDR string `json:"ipv6CIDR" yaml:"ipv6CIDR"`
+	IPv4Blocks []AddressBlock `json:"ipv4Blocks" yaml:"ipv4Blocks"`
+	IPv6Blocks []AddressBlock `json:"ipv6Blocks" yaml:"ipv6Blocks"`
+}
+
+type AddressBlock struct {
+	CIDR  string `json:"cidr"`
+	Start string `json:"start"`
+	End   string `json:"end"`
 }

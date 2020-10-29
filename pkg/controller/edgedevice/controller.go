@@ -20,46 +20,28 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
-	"arhat.dev/pkg/backoff"
 	"arhat.dev/pkg/envhelper"
 	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
-	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/informers"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
-	informersrbacv1 "k8s.io/client-go/informers/rbac/v1"
 	kubeclient "k8s.io/client-go/kubernetes"
-	clientcodv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
-	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	clientrbacv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
-	listerscodv1 "k8s.io/client-go/listers/coordination/v1"
-	listerscodv1b1 "k8s.io/client-go/listers/coordination/v1beta1"
-	listerscorev1 "k8s.io/client-go/listers/core/v1"
-	listersrbacv1 "k8s.io/client-go/listers/rbac/v1"
-	"k8s.io/client-go/rest"
 	kubecache "k8s.io/client-go/tools/cache"
 	"k8s.io/kubernetes/pkg/controller/cloud"
 
 	aranyaclient "arhat.dev/aranya/pkg/apis/aranya/generated/clientset/versioned"
-	clientaranyav1a1 "arhat.dev/aranya/pkg/apis/aranya/generated/clientset/versioned/typed/aranya/v1alpha1"
-	aranyainformers "arhat.dev/aranya/pkg/apis/aranya/generated/informers/externalversions"
-	listersaranyav1a1 "arhat.dev/aranya/pkg/apis/aranya/generated/listers/aranya/v1alpha1"
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/manager"
-	"arhat.dev/aranya/pkg/virtualnode"
 )
 
 var (
@@ -119,12 +101,7 @@ func NewController(
 
 	aranyaClient, err := aranyaclient.NewForConfig(kubeConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create aranya client for controller: %w", err)
-	}
-
-	_, kubeConfigForVirtualNode, err := config.VirtualNode.KubeClient.NewKubeClient(nil, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get kubeconfig for virtualnode: %w", err)
+		return nil, fmt.Errorf("failed to create aranya client: %w", err)
 	}
 
 	// informer factory for all managed Service, Secret
@@ -141,323 +118,69 @@ func NewController(
 			}),
 		),
 	).Nodes()
-	nodeInformer := nodeInformerTyped.Informer()
 
 	// informer factory for all watched pods
 	watchInformerFactory := informers.NewSharedInformerFactoryWithOptions(
 		kubeClient, 0, informers.WithNamespace(constant.WatchNS()))
-	podInformer := watchInformerFactory.Core().V1().Pods().Informer()
-	secretInformer := watchInformerFactory.Core().V1().Secrets().Informer()
-	cmInformer := watchInformerFactory.Core().V1().ConfigMaps().Informer()
-	svcInformer := watchInformerFactory.Core().V1().Services().Informer()
 
 	// informer factory for EdgeDevices
-	edgeDeviceInformerFactory := aranyainformers.NewSharedInformerFactoryWithOptions(
-		aranyaClient, 0, aranyainformers.WithNamespace(constant.WatchNS()))
-	edgeDeviceInformer := edgeDeviceInformerFactory.Aranya().V1alpha1().EdgeDevices().Informer()
 
 	ctrl := &Controller{
 		BaseManager: manager.NewBaseManager(appCtx, "controller", nil),
 
-		connectivityService: config.Aranya.Managed.ConnectivityService.Name,
-		nodeClusterRoles:    config.Aranya.Managed.NodeClusterRoles,
-		podRoles:            config.Aranya.Managed.PodRoles,
-		virtualPodRoles:     config.Aranya.Managed.VirtualPodRoles,
-
-		vnKubeconfig:     kubeConfigForVirtualNode,
-		kubeClient:       kubeClient,
-		edgeDeviceClient: aranyaClient.AranyaV1alpha1().EdgeDevices(constant.WatchNS()),
-		nodeClient:       kubeClient.CoreV1().Nodes(),
-		podClient:        kubeClient.CoreV1().Pods(constant.WatchNS()),
-		csrClient:        kubehelper.CreateCertificateSigningRequestClient(preferredResources, kubeClient),
-		certSecretClient: kubeClient.CoreV1().Secrets(envhelper.ThisPodNS()),
-		nodeLeaseClient:  kubeClient.CoordinationV1().Leases(corev1.NamespaceNodeLease),
-
-		watchSecretInformer: secretInformer,
-		watchCMInformer:     cmInformer,
-		watchSvcInformer:    svcInformer,
-
+		kubeClient:        kubeClient,
 		hostNodeName:      hostNodeName,
 		hostname:          hostname,
 		hostIP:            hostIP,
 		hostNodeAddresses: hostNodeAddresses,
 		thisPodLabels:     thisPodLabels,
 
-		nodeInformer:       nodeInformer,
-		podInformer:        podInformer,
-		edgeDeviceInformer: edgeDeviceInformer,
-
-		cacheSyncWaitFuncs: []kubecache.InformerSynced{
-			edgeDeviceInformer.HasSynced,
-			podInformer.HasSynced,
-			nodeInformer.HasSynced,
-			cmInformer.HasSynced,
-			secretInformer.HasSynced,
-			svcInformer.HasSynced,
-		},
-
 		informerFactoryStart: []func(<-chan struct{}){
-			edgeDeviceInformerFactory.Start,
 			clusterInformerFactory.Start,
 			sysInformerFactory.Start,
 			watchInformerFactory.Start,
 		},
-		listActions: []func() error{
-			func() error {
-				_, err2 := listersaranyav1a1.
-					NewEdgeDeviceLister(edgeDeviceInformer.GetIndexer()).List(labels.Everything())
-				if err2 != nil {
-					return fmt.Errorf("failed to list edgedevice in namespace %q: %w", constant.WatchNS(), err2)
-				}
-
-				_, err2 = listerscorev1.NewNodeLister(nodeInformer.GetIndexer()).List(labels.Everything())
-				if err2 != nil {
-					return fmt.Errorf("failed to list nodes: %w", err2)
-				}
-
-				_, err2 = listerscorev1.NewPodLister(podInformer.GetIndexer()).List(labels.Everything())
-				if err2 != nil {
-					return fmt.Errorf("failed to list pods in namespace %q: %w", constant.WatchNS(), err2)
-				}
-
-				_, err2 = listerscorev1.NewConfigMapLister(cmInformer.GetIndexer()).List(labels.Everything())
-				if err2 != nil {
-					return fmt.Errorf("failed to list configmaps in namespace %q: %w", constant.WatchNS(), err2)
-				}
-
-				_, err2 = listerscorev1.NewSecretLister(secretInformer.GetIndexer()).List(labels.Everything())
-				if err2 != nil {
-					return fmt.Errorf("failed to list secrets in namespace %q: %w", constant.WatchNS(), err2)
-				}
-
-				_, err2 = listerscorev1.NewServiceLister(svcInformer.GetIndexer()).List(labels.Everything())
-				if err2 != nil {
-					return fmt.Errorf("failed to list services in namespace %q: %w", constant.WatchNS(), err2)
-				}
-
-				return nil
-			},
-		},
-
-		sshPrivateKey: sshPrivateKey,
-		vnConfig:      &config.VirtualNode,
-
-		managedPods: sets.NewString(),
-		podsMu:      new(sync.RWMutex),
 	}
 
-	var getLeaseFunc func(name string) *coordinationv1.Lease
-	if config.VirtualNode.Node.Lease.Enabled {
-		// informer and sync
-		nodeLeaseInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClient, 0,
-			informers.WithNamespace(corev1.NamespaceNodeLease),
-			informers.WithTweakListOptions(
-				newTweakListOptionsFunc(
-					labels.SelectorFromSet(map[string]string{
-						constant.LabelRole:      constant.LabelRoleValueNodeLease,
-						constant.LabelNamespace: constant.WatchNS(),
-					}),
-				),
-			),
-		)
-
-		ctrl.informerFactoryStart = append(ctrl.informerFactoryStart, nodeLeaseInformerFactory.Start)
-
-		leaseClient := kubehelper.CreateLeaseClient(preferredResources, kubeClient, corev1.NamespaceNodeLease)
-		switch {
-		case leaseClient.V1Client != nil:
-			ctrl.nodeLeaseInformer = nodeLeaseInformerFactory.Coordination().V1().Leases().Informer()
-			ctrl.listActions = append(ctrl.listActions, func() error {
-				_, err2 := listerscodv1.NewLeaseLister(ctrl.nodeLeaseInformer.GetIndexer()).List(labels.Everything())
-				if err2 != nil {
-					return fmt.Errorf("failed to list cluster roles: %w", err2)
-				}
-
-				return nil
-			})
-		case leaseClient.V1b1Client != nil:
-			ctrl.nodeLeaseInformer = nodeLeaseInformerFactory.Coordination().V1beta1().Leases().Informer()
-			ctrl.listActions = append(ctrl.listActions, func() error {
-				_, err2 := listerscodv1b1.NewLeaseLister(ctrl.nodeLeaseInformer.GetIndexer()).List(labels.Everything())
-				if err2 != nil {
-					return fmt.Errorf("failed to list cluster roles: %w", err2)
-				}
-
-				return nil
-			})
-		default:
-			return nil, fmt.Errorf("no lease api support in kubernetes cluster")
-		}
-
-		ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, ctrl.nodeLeaseInformer.HasSynced)
-
-		getLeaseFunc = func(name string) *coordinationv1.Lease {
-			obj, ok, err2 := ctrl.nodeLeaseInformer.GetIndexer().GetByKey(corev1.NamespaceNodeLease + "/" + name)
-			if err2 != nil {
-				// ignore this error
-				return nil
-			}
-
-			if !ok {
-				return nil
-			}
-
-			lease, ok := obj.(*coordinationv1.Lease)
-			if !ok {
-				return nil
-			}
-
-			return lease
-		}
-
-		nodeLeaseRec := reconcile.NewKubeInformerReconciler(appCtx, ctrl.nodeLeaseInformer, reconcile.Options{
-			Logger:          ctrl.Log.WithName("rec:nl"),
-			BackoffStrategy: nil,
-			Workers:         1,
-			RequireCache:    true,
-			Handlers: reconcile.HandleFuncs{
-				OnAdded:    nextActionUpdate,
-				OnUpdated:  ctrl.onNodeLeaseUpdated,
-				OnDeleting: ctrl.onNodeLeaseDeleting,
-				OnDeleted:  ctrl.onNodeLeaseDeleted,
-			},
-			OnBackoffStart: nil,
-			OnBackoffReset: nil,
-		})
-		ctrl.recStart = append(ctrl.recStart, nodeLeaseRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, nodeLeaseRec.ReconcileUntil)
-
-		ctrl.nodeLeaseReqRec = reconcile.NewCore(appCtx, reconcile.Options{
-			Logger:          ctrl.Log.WithName("rec:nl_req"),
-			BackoffStrategy: nil,
-			Workers:         1,
-			RequireCache:    true,
-			Handlers: reconcile.HandleFuncs{
-				OnAdded: ctrl.onNodeLeaseEnsureRequest,
-			},
-			OnBackoffStart: nil,
-			OnBackoffReset: nil,
-		}.ResolveNil())
-		ctrl.recStart = append(ctrl.recStart, ctrl.nodeLeaseReqRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.nodeLeaseReqRec.ReconcileUntil)
-	} else {
-		getLeaseFunc = func(name string) *coordinationv1.Lease {
-			return nil
-		}
+	err = ctrl.edgeDeviceController.init(ctrl, config, aranyaClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create edgedevice controller: %w", err)
 	}
 
-	ctrl.virtualNodes = virtualnode.NewVirtualNodeManager(
-		appCtx,
-		&config.VirtualNode,
-		getLeaseFunc,
-		ctrl.nodeLeaseClient,
-	)
+	err = ctrl.connectivityServiceController.init(ctrl, config, kubeClient, sysInformerFactory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create connectivity service controller: %w", err)
+	}
 
-	edgeDeviceRec := reconcile.NewKubeInformerReconciler(appCtx, edgeDeviceInformer, reconcile.Options{
-		Logger:          ctrl.Log.WithName("rec:ed"),
-		BackoffStrategy: nil,
-		Workers:         1,
-		RequireCache:    true,
-		Handlers: reconcile.HandleFuncs{
-			OnAdded:    ctrl.onEdgeDeviceResAdded,
-			OnUpdated:  ctrl.onEdgeDeviceResUpdated,
-			OnDeleting: ctrl.onEdgeDeviceResDeleting,
-			OnDeleted:  ctrl.onEdgeDeviceResDeleted,
-		},
-	})
-	ctrl.recStart = append(ctrl.recStart, edgeDeviceRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, edgeDeviceRec.ReconcileUntil)
+	err = ctrl.nodeController.init(ctrl, config, kubeClient, nodeInformerTyped, sshPrivateKey, preferredResources)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create node controller: %w", err)
+	}
 
-	nodeRec := reconcile.NewKubeInformerReconciler(appCtx, nodeInformer, reconcile.Options{
-		Logger:          ctrl.Log.WithName("rec:node"),
-		BackoffStrategy: nil,
-		Workers:         1,
-		RequireCache:    true,
-		Handlers: reconcile.HandleFuncs{
-			OnAdded:    ctrl.onNodeAdd,
-			OnUpdated:  ctrl.onNodeUpdated,
-			OnDeleting: ctrl.onNodeDeleting,
-			OnDeleted:  ctrl.onNodeDeleted,
-		},
-	})
-	ctrl.recStart = append(ctrl.recStart, nodeRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, nodeRec.ReconcileUntil)
+	err = ctrl.nodeCertController.init(ctrl, config, kubeClient, preferredResources)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create node cert controller: %w", err)
+	}
 
-	ctrl.nodeReqRec = reconcile.NewCore(appCtx, reconcile.Options{
-		Logger:          ctrl.Log.WithName("rec:node_req"),
-		BackoffStrategy: nil,
-		Workers:         1,
-		RequireCache:    true,
-		Handlers: reconcile.HandleFuncs{
-			OnAdded: ctrl.onNodeEnsureRequested,
-		},
-		OnBackoffStart: nil,
-		OnBackoffReset: nil,
-	}.ResolveNil())
-	ctrl.recStart = append(ctrl.recStart, ctrl.nodeReqRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.nodeReqRec.ReconcileUntil)
+	err = ctrl.podController.init(ctrl, config, kubeClient, watchInformerFactory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create pod controller: %w", err)
+	}
 
-	// start a standalone node status reconciler in addition to node reconciler to make it clear for node
-	ctrl.nodeStatusRec = reconcile.NewKubeInformerReconciler(appCtx, nodeInformer, reconcile.Options{
-		Logger: ctrl.Log.WithName("rec:nodestatus"),
-		// no backoff
-		BackoffStrategy: backoff.NewStrategy(0, 0, 1, 0),
-		Workers:         1,
-		RequireCache:    true,
-		Handlers: reconcile.HandleFuncs{
-			OnUpdated: ctrl.onNodeStatusUpdated,
-		},
-		OnBackoffStart: nil,
-		OnBackoffReset: nil,
-	})
-	ctrl.recStart = append(ctrl.recStart, ctrl.nodeStatusRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.nodeStatusRec.ReconcileUntil)
+	err = ctrl.podRoleController.init(ctrl, config, kubeClient, watchInformerFactory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create pod role controller: %w", err)
+	}
 
-	podRec := reconcile.NewKubeInformerReconciler(appCtx, podInformer, reconcile.Options{
-		Logger:          ctrl.Log.WithName("rec:pod"),
-		BackoffStrategy: nil,
-		Workers:         1,
-		RequireCache:    true,
-		Handlers: reconcile.HandleFuncs{
-			OnAdded:    ctrl.onPodAdded,
-			OnUpdated:  ctrl.onPodUpdated,
-			OnDeleting: ctrl.onPodDeleting,
-			OnDeleted:  ctrl.onPodDeleted,
-		},
-		OnBackoffStart: nil,
-		OnBackoffReset: nil,
-	})
-	ctrl.recStart = append(ctrl.recStart, podRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, podRec.ReconcileUntil)
+	err = ctrl.nodeClusterRoleController.init(ctrl, config, kubeClient, clusterInformerFactory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create node cluster role controller: %w", err)
+	}
 
-	ctrl.vpReqRec = reconcile.NewCore(appCtx, reconcile.Options{
-		Logger:          ctrl.Log.WithName("rec:pod_req"),
-		BackoffStrategy: nil,
-		Workers:         1,
-		RequireCache:    true,
-		Handlers: reconcile.HandleFuncs{
-			OnAdded: ctrl.onVirtualPodEnsueRequested,
-		},
-		OnBackoffStart: nil,
-		OnBackoffReset: nil,
-	}.ResolveNil())
-	ctrl.recStart = append(ctrl.recStart, ctrl.vpReqRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.vpReqRec.ReconcileUntil)
-
-	ctrl.vnRec = reconcile.NewCore(appCtx, reconcile.Options{
-		Logger:          ctrl.Log.WithName("rec:vn"),
-		BackoffStrategy: backoff.NewStrategy(time.Second, time.Minute, 2, 1),
-		Workers:         config.Aranya.MaxVirtualnodeCreatingInParallel,
-		RequireCache:    true,
-		Handlers: reconcile.HandleFuncs{
-			OnAdded:    ctrl.onEdgeDeviceCreationRequested,
-			OnUpdated:  ctrl.onEdgeDeviceUpdateRequested,
-			OnDeleting: ctrl.onEdgeDeviceDeletionRequested,
-			OnDeleted:  ctrl.onEdgeDeviceCleanup,
-		},
-	}.ResolveNil())
-	ctrl.recStart = append(ctrl.recStart, ctrl.vnRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.vnRec.ReconcileUntil)
+	err = ctrl.networkController.init(ctrl, config, watchInformerFactory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create network controller: %w", err)
+	}
 
 	if config.VirtualNode.Storage.Enabled {
 		csiDriverClient := kubehelper.CreateCSIDriverClient(preferredResources, kubeClient)
@@ -486,292 +209,18 @@ func NewController(
 
 	if config.Aranya.RunAsCloudProvider {
 		var err2 error
-		ctrl.nodeController, err2 = cloud.NewCloudNodeController(nodeInformerTyped, kubeClient, ctrl, 10*time.Second)
+		ctrl.cloudNodeController, err2 = cloud.NewCloudNodeController(
+			nodeInformerTyped, kubeClient, ctrl, 10*time.Second,
+		)
 		if err2 != nil {
 			return nil, fmt.Errorf("failed to create cloud node controller: %w", err2)
 		}
 
-		ctrl.nodeLifecycleController, err2 = cloud.NewCloudNodeLifecycleController(
+		ctrl.cloudNodeLifecycleController, err2 = cloud.NewCloudNodeLifecycleController(
 			nodeInformerTyped, kubeClient, ctrl, 5*time.Second)
 		if err2 != nil {
 			return nil, fmt.Errorf("failed to create cloud lifecycle controller: %w", err2)
 		}
-	}
-
-	// watch service for device connectivity (gRPC)
-	if ctrl.connectivityService != "" {
-		// client
-		ctrl.sysSvcClient = kubeClient.CoreV1().Services(envhelper.ThisPodNS())
-
-		// informer and sync
-		setLabelSelector := newTweakListOptionsFunc(
-			labels.SelectorFromSet(map[string]string{
-				constant.LabelRole: constant.LabelRoleValueConnectivity,
-			}),
-		)
-
-		fieldSelector := fields.OneTermEqualSelector("metadata.name", ctrl.connectivityService).String()
-		informer := informerscorev1.New(sysInformerFactory, envhelper.ThisPodNS(), func(options *metav1.ListOptions) {
-			setLabelSelector(options)
-			options.FieldSelector = fieldSelector
-		}).Services().Informer()
-		ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, informer.HasSynced)
-
-		ctrl.listActions = append(ctrl.listActions, func() error {
-			_, err2 := listerscorev1.NewServiceLister(informer.GetIndexer()).List(labels.Everything())
-			if err2 != nil {
-				return fmt.Errorf("failed to list services in namespace %q: %w", envhelper.ThisPodNS(), err2)
-			}
-			return nil
-		})
-
-		// reconciler
-		serviceRec := reconcile.NewKubeInformerReconciler(appCtx, informer, reconcile.Options{
-			Logger:          ctrl.Log.WithName("rec:svc"),
-			BackoffStrategy: nil,
-			Workers:         0,
-			RequireCache:    true,
-			Handlers: reconcile.HandleFuncs{
-				OnAdded:    nextActionUpdate,
-				OnUpdated:  ctrl.onServiceUpdated,
-				OnDeleting: ctrl.onServiceDeleting,
-				OnDeleted:  ctrl.onServiceDeleted,
-			},
-		})
-		ctrl.recStart = append(ctrl.recStart, serviceRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, serviceRec.ReconcileUntil)
-
-		ctrl.svcReqRec = reconcile.NewCore(appCtx, reconcile.Options{
-			Logger:          ctrl.Log.WithName("rec:svc_req"),
-			BackoffStrategy: nil,
-			Workers:         1,
-			RequireCache:    false,
-			Handlers: reconcile.HandleFuncs{
-				OnAdded: ctrl.onServiceEnsureRequested,
-			},
-			OnBackoffStart: nil,
-			OnBackoffReset: nil,
-		}.ResolveNil())
-		ctrl.recStart = append(ctrl.recStart, ctrl.svcReqRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.svcReqRec.ReconcileUntil)
-	}
-
-	if len(ctrl.podRoles) != 0 || len(ctrl.virtualPodRoles) != 0 {
-		if len(ctrl.podRoles) != 0 {
-			delete(ctrl.podRoles, "")
-		} else {
-			ctrl.podRoles = make(map[string]aranyaapi.PodRolePermissions)
-		}
-
-		if len(ctrl.virtualPodRoles) != 0 {
-			delete(ctrl.virtualPodRoles, "")
-		} else {
-			ctrl.virtualPodRoles = make(map[string]aranyaapi.PodRolePermissions)
-		}
-
-		ctrl.roleClient = kubeClient.RbacV1().Roles(constant.WatchNS())
-
-		ctrl.roleInformer = informersrbacv1.New(watchInformerFactory, constant.WatchNS(),
-			newTweakListOptionsFunc(
-				labels.SelectorFromSet(map[string]string{
-					constant.LabelRole: constant.LabelRoleValuePodRole,
-				}),
-			),
-		).Roles().Informer()
-
-		ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, ctrl.roleInformer.HasSynced)
-		ctrl.listActions = append(ctrl.listActions, func() error {
-			_, err2 := listersrbacv1.NewRoleLister(ctrl.roleInformer.GetIndexer()).List(labels.Everything())
-			if err2 != nil {
-				return fmt.Errorf("failed to list watched roles: %w", err2)
-			}
-
-			return nil
-		})
-
-		roleRec := reconcile.NewKubeInformerReconciler(appCtx, ctrl.roleInformer, reconcile.Options{
-			Logger:          ctrl.Log.WithName("rec:role"),
-			BackoffStrategy: nil,
-			Workers:         1,
-			RequireCache:    true,
-			Handlers: reconcile.HandleFuncs{
-				OnAdded:    nextActionUpdate,
-				OnUpdated:  ctrl.onPodRoleUpdated,
-				OnDeleting: ctrl.onPodRoleDeleting,
-				OnDeleted:  ctrl.onPodRoleDeleted,
-			},
-			OnBackoffStart: nil,
-			OnBackoffReset: nil,
-		})
-		ctrl.recStart = append(ctrl.recStart, roleRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, roleRec.ReconcileUntil)
-
-		ctrl.roleReqRec = reconcile.NewCore(appCtx, reconcile.Options{
-			Logger:          ctrl.Log.WithName("rec:role_req"),
-			BackoffStrategy: nil,
-			Workers:         1,
-			RequireCache:    false,
-			Handlers: reconcile.HandleFuncs{
-				OnAdded: ctrl.onPodRoleEnsureRequested,
-			},
-			OnBackoffStart: nil,
-			OnBackoffReset: nil,
-		}.ResolveNil())
-		ctrl.recStart = append(ctrl.recStart, ctrl.roleReqRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.roleReqRec.ReconcileUntil)
-	}
-
-	// watch cluster roles managed by us
-	if len(ctrl.nodeClusterRoles) != 0 {
-		// ensure no empty name
-		delete(ctrl.nodeClusterRoles, "")
-
-		// client
-		ctrl.crClient = kubeClient.RbacV1().ClusterRoles()
-
-		// informer and sync
-		ctrl.crInformer = informersrbacv1.New(clusterInformerFactory, corev1.NamespaceAll,
-			newTweakListOptionsFunc(
-				labels.SelectorFromSet(map[string]string{
-					constant.LabelRole:      constant.LabelRoleValueNodeClusterRole,
-					constant.LabelNamespace: constant.WatchNS(),
-				}),
-			),
-		).ClusterRoles().Informer()
-		ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, ctrl.crInformer.HasSynced)
-
-		ctrl.listActions = append(ctrl.listActions, func() error {
-			_, err2 := listersrbacv1.NewClusterRoleLister(ctrl.crInformer.GetIndexer()).List(labels.Everything())
-			if err2 != nil {
-				return fmt.Errorf("failed to list cluster roles: %w", err2)
-			}
-
-			return nil
-		})
-
-		// reconciler for cluster role resources
-		crRec := reconcile.NewKubeInformerReconciler(appCtx, ctrl.crInformer, reconcile.Options{
-			Logger:          ctrl.Log.WithName("rec:cr"),
-			BackoffStrategy: nil,
-			Workers:         1,
-			RequireCache:    true,
-			Handlers: reconcile.HandleFuncs{
-				OnAdded:    nextActionUpdate,
-				OnUpdated:  ctrl.onNodeClusterRoleUpdated,
-				OnDeleting: ctrl.onNodeClusterRoleDeleting,
-				OnDeleted:  ctrl.onNodeClusterRoleDeleted,
-			},
-		})
-		ctrl.recStart = append(ctrl.recStart, crRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, crRec.ReconcileUntil)
-
-		ctrl.crReqRec = reconcile.NewCore(appCtx, reconcile.Options{
-			Logger:          ctrl.Log.WithName("rec:cr_req"),
-			BackoffStrategy: nil,
-			Workers:         1,
-			RequireCache:    false,
-			Handlers: reconcile.HandleFuncs{
-				OnAdded: ctrl.onNodeClusterRoleEnsureRequested,
-			},
-			OnBackoffStart: nil,
-			OnBackoffReset: nil,
-		}.ResolveNil())
-		ctrl.recStart = append(ctrl.recStart, ctrl.crReqRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.crReqRec.ReconcileUntil)
-	}
-
-	if config.VirtualNode.Network.Enabled {
-		// watch abbot endpoints
-		ctrl.abbotEndpointsInformer = informerscorev1.New(watchInformerFactory, constant.WatchNS(),
-			func(options *metav1.ListOptions) {
-				options.FieldSelector = fields.OneTermEqualSelector(
-					"metadata.name", config.VirtualNode.Network.AbbotService.Name,
-				).String()
-			},
-		).Endpoints().Informer()
-		ctrl.abbotEndpointsRec = reconcile.NewKubeInformerReconciler(appCtx, ctrl.abbotEndpointsInformer,
-			reconcile.Options{
-				Logger:          ctrl.Log.WithName("rec:net:abbot"),
-				BackoffStrategy: nil,
-				Workers:         1,
-				RequireCache:    true,
-				Handlers: reconcile.HandleFuncs{
-					OnAdded: nil,
-				},
-				OnBackoffStart: nil,
-				OnBackoffReset: nil,
-			},
-		)
-		ctrl.recStart = append(ctrl.recStart, ctrl.abbotEndpointsRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.abbotEndpointsRec.ReconcileUntil)
-
-		// monitor managed network service
-		ctrl.netSvcInformer = informerscorev1.New(watchInformerFactory, constant.WatchNS(),
-			func(options *metav1.ListOptions) {
-				options.FieldSelector = fields.OneTermEqualSelector(
-					"metadata.name", config.VirtualNode.Network.NetworkService.Name,
-				).String()
-			},
-		).Endpoints().Informer()
-		ctrl.netSvcRec = reconcile.NewKubeInformerReconciler(appCtx, ctrl.netSvcInformer,
-			reconcile.Options{
-				Logger:          ctrl.Log.WithName("rec:net:svc"),
-				BackoffStrategy: nil,
-				Workers:         1,
-				RequireCache:    true,
-				Handlers: reconcile.HandleFuncs{
-					OnAdded: nil,
-				},
-				OnBackoffStart: nil,
-				OnBackoffReset: nil,
-			},
-		)
-		ctrl.recStart = append(ctrl.recStart, ctrl.netSvcRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.netSvcRec.ReconcileUntil)
-
-		// monitor managed network service endpoints
-		ctrl.netEndpointsInformer = informerscorev1.New(watchInformerFactory, constant.WatchNS(),
-			func(options *metav1.ListOptions) {
-				options.FieldSelector = fields.OneTermEqualSelector(
-					"metadata.name", config.VirtualNode.Network.NetworkService.Name,
-				).String()
-			},
-		).Endpoints().Informer()
-		ctrl.netEndpointsRec = reconcile.NewKubeInformerReconciler(appCtx, ctrl.netEndpointsInformer,
-			reconcile.Options{
-				Logger:          ctrl.Log.WithName("rec:net:ep"),
-				BackoffStrategy: nil,
-				Workers:         1,
-				RequireCache:    true,
-				Handlers: reconcile.HandleFuncs{
-					OnAdded: nil,
-				},
-				OnBackoffStart: nil,
-				OnBackoffReset: nil,
-			},
-		)
-		ctrl.recStart = append(ctrl.recStart, ctrl.netEndpointsRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.netEndpointsRec.ReconcileUntil)
-
-		// handle EdgeDevice add/delete
-		ctrl.netReqRec = reconcile.NewCore(appCtx, reconcile.Options{
-			Logger:          ctrl.Log.WithName("rec:net:req"),
-			BackoffStrategy: nil,
-			Workers:         1,
-			RequireCache:    false,
-			Handlers: reconcile.HandleFuncs{
-				OnAdded: ctrl.onNetworkEnsureRequested,
-				OnUpdated: func(old, newObj interface{}) *reconcile.Result {
-					return ctrl.onNetworkEnsureRequested(newObj)
-				},
-				OnDeleted: ctrl.onNetworkDeleteRequested,
-			},
-			OnBackoffStart: nil,
-			OnBackoffReset: nil,
-		}.ResolveNil())
-
-		ctrl.recStart = append(ctrl.recStart, ctrl.netReqRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.netReqRec.ReconcileUntil)
 	}
 
 	return ctrl, nil
@@ -793,75 +242,24 @@ type Controller struct {
 	recStart             []func() error
 	recReconcileUntil    []func(<-chan struct{})
 
-	// EdgeDevice management
-	edgeDeviceClient   clientaranyav1a1.EdgeDeviceInterface
-	edgeDeviceInformer kubecache.SharedIndexInformer
+	edgeDeviceController
+	connectivityServiceController
 
-	vnRec         *reconcile.Core
-	virtualNodes  *virtualnode.Manager
-	sshPrivateKey []byte
-	vnConfig      *conf.VirtualnodeConfig
-	vnKubeconfig  *rest.Config
+	nodeController
+	nodeCertController
+	nodeClusterRoleController
 
-	// Node management
-	nodeClient    clientcorev1.NodeInterface
-	nodeInformer  kubecache.SharedIndexInformer
-	nodeStatusRec *reconcile.KubeInformerReconciler
-	nodeReqRec    *reconcile.Core
+	podController
+	podRoleController
 
-	nodeLeaseInformer kubecache.SharedIndexInformer
-	nodeLeaseClient   clientcodv1.LeaseInterface
-	nodeLeaseReqRec   *reconcile.Core
-
-	// Pod management
-	podClient   clientcorev1.PodInterface
-	podInformer kubecache.SharedIndexInformer
-	managedPods sets.String
-	podsMu      *sync.RWMutex
-	vpReqRec    *reconcile.Core
-
-	watchSecretInformer kubecache.SharedIndexInformer
-	watchCMInformer     kubecache.SharedIndexInformer
-	watchSvcInformer    kubecache.SharedIndexInformer
-
-	// Service management
-	svcReqRec           *reconcile.Core
-	sysSvcClient        clientcorev1.ServiceInterface
-	connectivityService string
-
-	// Node Certificate management
-	certSecretClient clientcorev1.SecretInterface
-	csrClient        *kubehelper.CertificateSigningRequestClient
-
-	// RBAC management
-	crInformer       kubecache.SharedIndexInformer
-	crClient         clientrbacv1.ClusterRoleInterface
-	crReqRec         *reconcile.Core
-	nodeClusterRoles map[string]aranyaapi.NodeClusterRolePermissions
-
-	roleInformer    kubecache.SharedIndexInformer
-	roleClient      clientrbacv1.RoleInterface
-	roleReqRec      *reconcile.Core
-	podRoles        map[string]aranyaapi.PodRolePermissions
-	virtualPodRoles map[string]aranyaapi.PodRolePermissions
+	networkController
 
 	// Storage management
 	csiDriverLister *kubehelper.CSIDriverLister
 
-	// Network management
-	abbotEndpointsInformer kubecache.SharedIndexInformer
-	abbotEndpointsRec      *reconcile.KubeInformerReconciler
-
-	netSvcInformer       kubecache.SharedIndexInformer
-	netSvcRec            *reconcile.KubeInformerReconciler
-	netEndpointsInformer kubecache.SharedIndexInformer
-	netEndpointsRec      *reconcile.KubeInformerReconciler
-
-	netReqRec *reconcile.Core
-
 	// unused fields
-	nodeController          *cloud.CloudNodeController
-	nodeLifecycleController *cloud.CloudNodeLifecycleController
+	cloudNodeController          *cloud.CloudNodeController
+	cloudNodeLifecycleController *cloud.CloudNodeLifecycleController
 }
 
 func (c *Controller) Start() error {
@@ -896,9 +294,9 @@ func (c *Controller) Start() error {
 			go startReconcile(stopCh)
 		}
 
-		if c.nodeController != nil && c.nodeLifecycleController != nil {
-			go c.nodeController.Run(stopCh)
-			go c.nodeLifecycleController.Run(stopCh)
+		if c.cloudNodeController != nil && c.cloudNodeLifecycleController != nil {
+			go c.cloudNodeController.Run(stopCh)
+			go c.cloudNodeLifecycleController.Run(stopCh)
 		}
 
 		err = c.virtualNodes.Start()
