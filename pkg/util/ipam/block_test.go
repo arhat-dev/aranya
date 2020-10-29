@@ -111,6 +111,7 @@ func TestNewBlock(t *testing.T) {
 
 			assert.NoError(t, err)
 
+			b.allocated = nil
 			b.mu = nil
 			b.normalize = nil
 			assert.EqualValues(t, test.block, b)
