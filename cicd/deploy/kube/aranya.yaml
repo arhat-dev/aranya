@@ -1195,7 +1195,6 @@ spec:
       protocol: TCP
       name: abbot
   selector:
-    app.kubernetes.io/component: abbot
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/component: abbot

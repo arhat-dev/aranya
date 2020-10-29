@@ -15,6 +15,5 @@ spec:
       protocol: TCP
       name: abbot
   selector:
-    app.kubernetes.io/component: abbot
     {{- include "abbot.selectorLabels" . | nindent 4 }}
 {{- end }}
