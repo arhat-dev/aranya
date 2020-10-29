@@ -1,4 +1,4 @@
-package network
+package mesh
 
 import (
 	"encoding/base64"
@@ -25,23 +25,42 @@ type WireguardOpts struct {
 	FirewallMark     int32
 }
 
-func newWireguardMeshDriver(
+func NewWireguardMeshDriver(
 	logger log.Interface,
-	options *Options,
-) MeshDriver {
-	return &wireguardMeshDriver{
-		logger:  logger.WithFields(log.String("driver", "wireguard")),
+	ifname string,
+	mtu int,
+	provider string,
+	addresses []string,
+	publicAddresses []string,
+	options *WireguardOpts,
+) Driver {
+	return &WireguardMeshDriver{
+		logger: logger.WithFields(log.String("driver", "wireguard")),
+
+		ifname:          ifname,
+		mtu:             mtu,
+		provider:        provider,
+		addresses:       addresses,
+		publicAddresses: publicAddresses,
+
 		options: options,
 	}
 }
 
-type wireguardMeshDriver struct {
-	logger  log.Interface
-	options *Options
+type WireguardMeshDriver struct {
+	logger log.Interface
+
+	ifname          string
+	mtu             int
+	provider        string
+	addresses       []string
+	publicAddresses []string
+
+	options *WireguardOpts
 }
 
 // nolint:gocyclo
-func (d *wireguardMeshDriver) GenerateEnsureRequest(
+func (d *WireguardMeshDriver) GenerateEnsureRequest(
 	// os (GOOS)
 	os string,
 
@@ -59,7 +78,7 @@ func (d *wireguardMeshDriver) GenerateEnsureRequest(
 
 	// check cloud members
 	for _, memberIfaces := range cloudMembers {
-		addresses := sets.NewString(d.options.PublicAddresses...)
+		addresses := sets.NewString(d.publicAddresses...)
 
 		var managedIfaces []*abbotgopb.HostNetworkInterface
 		for i, iface := range memberIfaces {
@@ -100,7 +119,7 @@ func (d *wireguardMeshDriver) GenerateEnsureRequest(
 				continue
 			}
 
-			if len(pk) != wireguardKeyLength {
+			if len(pk) != constant.WireguardKeyLength {
 				d.logger.I("invalid wireguard cloud member private key length")
 				continue
 			}
@@ -108,10 +127,10 @@ func (d *wireguardMeshDriver) GenerateEnsureRequest(
 			for _, addr := range addresses.List() {
 				peers = append(peers, &abbotgopb.DriverWireguard_Peer{
 					PublicKey:    base64.StdEncoding.EncodeToString(wireguardKey(pk).PublicKey()),
-					PreSharedKey: d.options.WireguardOpts.PreSharedKey,
+					PreSharedKey: d.options.PreSharedKey,
 					Endpoint:     net.JoinHostPort(addr, strconv.FormatInt(int64(md.Wireguard.ListenPort), 10)),
 
-					PersistentKeepaliveInterval: d.options.WireguardOpts.KeepaliveSeconds,
+					PersistentKeepaliveInterval: d.options.KeepaliveSeconds,
 
 					AllowedIps: append(append([]string{}, meshCIDRs...), peerCIDRs[iface.Provider]...),
 				})
@@ -134,7 +153,7 @@ memberLoop:
 
 		var managedIfaces []*abbotgopb.HostNetworkInterface
 		for i, iface := range memberIfaces {
-			if iface.Provider == d.options.Provider {
+			if iface.Provider == d.provider {
 				// it's me, check driver
 
 				if _, ok := iface.Config.(*abbotgopb.HostNetworkInterface_Wireguard); ok {
@@ -184,7 +203,7 @@ memberLoop:
 				continue
 			}
 
-			if len(pk) != wireguardKeyLength {
+			if len(pk) != constant.WireguardKeyLength {
 				logger.I("invalid wireguard edge member private key length")
 				continue
 			}
@@ -193,10 +212,10 @@ memberLoop:
 			for _, addr := range memberAddresses.List() {
 				peers = append(peers, &abbotgopb.DriverWireguard_Peer{
 					PublicKey:    pubKey,
-					PreSharedKey: d.options.WireguardOpts.PreSharedKey,
+					PreSharedKey: d.options.PreSharedKey,
 					Endpoint:     net.JoinHostPort(addr, strconv.FormatInt(int64(md.Wireguard.ListenPort), 10)),
 
-					PersistentKeepaliveInterval: d.options.WireguardOpts.KeepaliveSeconds,
+					PersistentKeepaliveInterval: d.options.KeepaliveSeconds,
 
 					AllowedIps: []string{
 						// TODO: add cluster network address
@@ -206,44 +225,40 @@ memberLoop:
 		}
 	}
 
-	if d.options.InterfaceName != "" {
-		ifname = d.options.InterfaceName
+	if d.ifname != "" {
+		ifname = d.ifname
 	}
 
 	return abbotgopb.NewHostNetworkConfigEnsureRequest(&abbotgopb.HostNetworkInterface{
 		Metadata: &abbotgopb.NetworkInterface{
 			Name:            ifname,
-			Mtu:             int32(d.options.MTU),
+			Mtu:             int32(d.mtu),
 			HardwareAddress: "",
-			Addresses:       d.options.Addresses,
+			Addresses:       d.addresses,
 		},
-		Provider: d.options.Provider,
+		Provider: d.provider,
 		Config: &abbotgopb.HostNetworkInterface_Wireguard{
 			Wireguard: &abbotgopb.DriverWireguard{
-				LogLevel:   d.options.WireguardOpts.LogLevel,
-				PrivateKey: d.options.WireguardOpts.PrivateKey,
+				LogLevel:   d.options.LogLevel,
+				PrivateKey: d.options.PrivateKey,
 				Peers:      peers,
-				ListenPort: d.options.WireguardOpts.ListenPort,
+				ListenPort: d.options.ListenPort,
 				Routing: &abbotgopb.DriverWireguard_Routing{
 					Enabled:      true,
-					Table:        d.options.WireguardOpts.RoutingTable,
-					FirewallMark: d.options.WireguardOpts.FirewallMark,
+					Table:        d.options.RoutingTable,
+					FirewallMark: d.options.FirewallMark,
 				},
 			},
 		},
 	})
 }
 
-const (
-	wireguardKeyLength = 32
-)
-
 type wireguardKey []byte
 
 func (k wireguardKey) PublicKey() wireguardKey {
 	var (
-		pub  [wireguardKeyLength]byte
-		priv [wireguardKeyLength]byte
+		pub  [constant.WireguardKeyLength]byte
+		priv [constant.WireguardKeyLength]byte
 	)
 
 	_ = copy(priv[:], k)

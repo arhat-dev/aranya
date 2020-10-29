@@ -7,20 +7,21 @@ import (
 
 	"arhat.dev/pkg/reconcile"
 
+	"arhat.dev/aranya/pkg/mesh"
 	"arhat.dev/aranya/pkg/util/manager"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 type Options struct {
-	InterfaceName     string
-	MTU               int
-	Provider          string
+	InterfaceName string
+	MTU           int
+	Provider      string
+	Addresses     []string
+
 	ExtraAllowedCIDRs []string
-	Addresses         []string
+	PublicAddresses   []string
 
-	PublicAddresses []string
-
-	WireguardOpts *WireguardOpts
+	WireguardOpts *mesh.WireguardOpts
 }
 
 func NewManager(
@@ -61,7 +62,15 @@ func NewManager(
 
 	switch {
 	case options.WireguardOpts != nil:
-		mgr.meshDriver = newWireguardMeshDriver(mgr.Log, options)
+		mgr.meshDriver = mesh.NewWireguardMeshDriver(
+			mgr.Log,
+			options.InterfaceName,
+			options.MTU,
+			options.Provider,
+			options.Addresses,
+			options.PublicAddresses,
+			options.WireguardOpts,
+		)
 	default:
 		// no mesh driver
 	}
@@ -72,7 +81,7 @@ func NewManager(
 type Manager struct {
 	*manager.BaseManager
 
-	meshDriver MeshDriver
+	meshDriver mesh.Driver
 
 	netRec *reconcile.Core
 

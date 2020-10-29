@@ -47,6 +47,7 @@ import (
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
+	"arhat.dev/aranya/pkg/mesh"
 	"arhat.dev/aranya/pkg/virtualnode"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 	"arhat.dev/aranya/pkg/virtualnode/metrics"
@@ -888,7 +889,7 @@ func (c *Controller) prepareNetworkOptions(
 			return nil, fmt.Errorf("no private key for wireguard mesh")
 		}
 
-		opts.WireguardOpts = &network.WireguardOpts{
+		opts.WireguardOpts = &mesh.WireguardOpts{
 			LogLevel:         "debug",
 			PreSharedKey:     cfg.PreSharedKey,
 			PrivateKey:       base64.StdEncoding.EncodeToString(privateKey),

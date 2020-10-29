@@ -1,8 +1,8 @@
-package network
+package mesh
 
 import "arhat.dev/abbot-proto/abbotgopb"
 
-type MeshDriver interface {
+type Driver interface {
 	GenerateEnsureRequest(
 		// os (GOOS)
 		os string,

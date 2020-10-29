@@ -177,7 +177,7 @@ func NewController(
 		return nil, fmt.Errorf("failed to create node cluster role controller: %w", err)
 	}
 
-	err = ctrl.networkController.init(ctrl, config, watchInformerFactory)
+	err = ctrl.networkController.init(ctrl, config, kubeClient, watchInformerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create network controller: %w", err)
 	}

@@ -6,18 +6,19 @@ import (
 	"fmt"
 
 	"arhat.dev/pkg/envhelper"
-	corev1 "k8s.io/api/core/v1"
-
-	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
-
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
+	corev1 "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/informers"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
+	kubeclient "k8s.io/client-go/kubernetes"
+	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	kubecache "k8s.io/client-go/tools/cache"
 
+	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/ipam"
@@ -25,6 +26,8 @@ import (
 
 // network management
 type networkController struct {
+	meshSecretClient clientcorev1.SecretInterface
+
 	meshIPAMv4 *ipam.IPAddressManager
 	meshIPAMv6 *ipam.IPAddressManager
 
@@ -43,12 +46,15 @@ type networkController struct {
 func (c *networkController) init(
 	ctrl *Controller,
 	config *conf.Config,
+	kubeClient kubeclient.Interface,
 	watchInformerFactory informers.SharedInformerFactory,
 ) error {
 	netConf := config.VirtualNode.Network
 	if !netConf.Enabled {
 		return nil
 	}
+
+	c.meshSecretClient = kubeClient.CoreV1().Secrets(envhelper.ThisPodNS())
 
 	if blocks := netConf.Mesh.IPv4Blocks; len(blocks) != 0 {
 		c.meshIPAMv4 = ipam.NewIPAddressManager()
@@ -85,7 +91,8 @@ func (c *networkController) init(
 			Workers:         1,
 			RequireCache:    true,
 			Handlers: reconcile.HandleFuncs{
-				OnAdded: nil,
+				OnAdded:   nextActionUpdate,
+				OnUpdated: ctrl.onAbbotEndpointUpdated,
 			},
 			OnBackoffStart: nil,
 			OnBackoffReset: nil,
@@ -101,7 +108,7 @@ func (c *networkController) init(
 				"metadata.name", config.VirtualNode.Network.NetworkService.Name,
 			).String()
 		},
-	).Endpoints().Informer()
+	).Services().Informer()
 	c.netSvcRec = reconcile.NewKubeInformerReconciler(ctrl.Context(), c.netSvcInformer,
 		reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:net:svc"),
@@ -109,7 +116,8 @@ func (c *networkController) init(
 			Workers:         1,
 			RequireCache:    true,
 			Handlers: reconcile.HandleFuncs{
-				OnAdded: nil,
+				OnAdded:   nextActionUpdate,
+				OnUpdated: ctrl.onNetworkServiceUpdated,
 			},
 			OnBackoffStart: nil,
 			OnBackoffReset: nil,
@@ -133,7 +141,8 @@ func (c *networkController) init(
 			Workers:         1,
 			RequireCache:    true,
 			Handlers: reconcile.HandleFuncs{
-				OnAdded: nil,
+				OnAdded:   nextActionUpdate,
+				OnUpdated: ctrl.onNetworkEndpointUpdated,
 			},
 			OnBackoffStart: nil,
 			OnBackoffReset: nil,
@@ -149,11 +158,11 @@ func (c *networkController) init(
 		Workers:         1,
 		RequireCache:    false,
 		Handlers: reconcile.HandleFuncs{
-			OnAdded: ctrl.onNetworkEnsureRequested,
+			OnAdded: ctrl.onMeshMemberEnsureRequested,
 			OnUpdated: func(old, newObj interface{}) *reconcile.Result {
-				return ctrl.onNetworkEnsureRequested(newObj)
+				return ctrl.onMeshMemberEnsureRequested(newObj)
 			},
-			OnDeleted: ctrl.onNetworkDeleteRequested,
+			OnDeleted: ctrl.onMeshMemberDeleteRequested,
 		},
 		OnBackoffStart: nil,
 		OnBackoffReset: nil,
@@ -165,12 +174,24 @@ func (c *networkController) init(
 	return nil
 }
 
-// check existing abbot endpoints, EdgeDevices' network config (enabled or not)
-func (c *Controller) onNetworkEnsureRequested(obj interface{}) *reconcile.Result {
+func (c *Controller) onAbbotEndpointUpdated(oldObj, newObj interface{}) *reconcile.Result {
 	return nil
 }
 
-func (c *Controller) onNetworkDeleteRequested(obj interface{}) *reconcile.Result {
+func (c *Controller) onNetworkServiceUpdated(oldObj, newObj interface{}) *reconcile.Result {
+	return nil
+}
+
+func (c *Controller) onNetworkEndpointUpdated(oldObj, newObj interface{}) *reconcile.Result {
+	return nil
+}
+
+// check existing abbot endpoints, EdgeDevices' network config (enabled or not)
+func (c *Controller) onMeshMemberEnsureRequested(obj interface{}) *reconcile.Result {
+	return nil
+}
+
+func (c *Controller) onMeshMemberDeleteRequested(obj interface{}) *reconcile.Result {
 	return nil
 }
 
@@ -190,16 +211,74 @@ func (c *Controller) requestNetworkEnsure(name string) error {
 
 // nolint:unparam
 func (c *Controller) ensureMeshConfig(name string, config aranyaapi.NetworkSpec) (*corev1.Secret, error) {
-	// TODO: generate and store config for mesh network
+	if !c.vnConfig.Network.Enabled || !config.Enabled {
+		return nil, nil
+	}
 
+	var (
+		secretName = fmt.Sprintf("mesh-config.%s", name)
+		create     = false
+	)
+
+	meshSecret, err := c.meshSecretClient.Get(c.Context(), secretName, metav1.GetOptions{})
+	if err != nil {
+		if !kubeerrors.IsNotFound(err) {
+			return nil, fmt.Errorf("failed to retrieve mesh secret: %w", err)
+		}
+
+		create = true
+	}
+
+	if create {
+		meshSecret, err = newSecretForMesh(secretName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate mesh secret: %w", err)
+		}
+
+		meshSecret, err = c.meshSecretClient.Create(c.Context(), meshSecret, metav1.CreateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create mesh secret: %w", err)
+		}
+
+		return meshSecret, nil
+	}
+
+	// check and update
+
+	update := false
+	wgPk, ok := accessMap(meshSecret.StringData, meshSecret.Data, constant.MeshConfigKeyWireguardPrivateKey)
+	if !ok || len(wgPk) != constant.WireguardKeyLength {
+		update = true
+	}
+
+	if update {
+		var newSecret *corev1.Secret
+		newSecret, err = newSecretForMesh(secretName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate mesh secret for update: %w", err)
+		}
+
+		meshSecret.Data = newSecret.Data
+		meshSecret.StringData = newSecret.StringData
+
+		meshSecret, err = c.meshSecretClient.Update(c.Context(), meshSecret, metav1.UpdateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to update invalid mesh secret: %w", err)
+		}
+	}
+
+	return meshSecret, nil
+}
+
+func newSecretForMesh(secretName string) (*corev1.Secret, error) {
 	wgPk, err := generateWireguardPrivateKey()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate wireguard private key for %q: %w", name, err)
+		return nil, fmt.Errorf("failed to generate wireguard private key: %w", err)
 	}
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("mesh-config.%s", name),
+			Name:      secretName,
 			Namespace: envhelper.ThisPodNS(),
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -210,11 +289,7 @@ func (c *Controller) ensureMeshConfig(name string, config aranyaapi.NetworkSpec)
 }
 
 func generateWireguardPrivateKey() ([]byte, error) {
-	const (
-		KeyLen = 32
-	)
-
-	key := make([]byte, KeyLen)
+	key := make([]byte, constant.WireguardKeyLength)
 	if _, err := rand.Read(key); err != nil {
 		return nil, fmt.Errorf("failed to read random bytes: %v", err)
 	}

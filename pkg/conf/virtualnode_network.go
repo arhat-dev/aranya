@@ -5,24 +5,27 @@ import "time"
 type VirtualnodeNetworkConfig struct {
 	Enabled bool `json:"enabled" yaml:"enabled"`
 
-	Mesh    VirtualnodeNetworkMeshConfig    `json:"mesh" yaml:"mesh"`
-	Backend VirtualnodeNetworkBackendConfig `json:"backend" yaml:"backend"`
+	AbbotService   VirtualnodeNetworkAbbotServiceConfig `json:"abbotService" yaml:"abbotService"`
+	NetworkService VirtualnodeNetworkServiceConfig      `json:"networkService" yaml:"networkService"`
+	Mesh           VirtualnodeNetworkMeshConfig         `json:"mesh" yaml:"mesh"`
+	Backend        VirtualnodeNetworkBackendConfig      `json:"backend" yaml:"backend"`
+}
 
-	NetworkService struct {
-		Name      string   `json:"name" yaml:"name"`
-		Type      string   `json:"type" yaml:"type"`
-		Addresses []string `json:"addresses" yaml:"addresses"`
-		Port      int      `json:"port" yaml:"port"`
-	} `json:"networkService" yaml:"networkService"`
+type VirtualnodeNetworkServiceConfig struct {
+	Name      string   `json:"name" yaml:"name"`
+	Type      string   `json:"type" yaml:"type"`
+	Addresses []string `json:"addresses" yaml:"addresses"`
+	Port      int      `json:"port" yaml:"port"`
+}
 
-	AbbotService struct {
-		Name     string `json:"name" yaml:"name"`
-		PortName string `json:"portName" yaml:"portName"`
-	} `json:"abbotService" yaml:"abbotService"`
+type VirtualnodeNetworkAbbotServiceConfig struct {
+	Name     string `json:"name" yaml:"name"`
+	PortName string `json:"portName" yaml:"portName"`
 }
 
 type VirtualnodeNetworkBackendConfig struct {
-	Driver    string `json:"driver" yaml:"driver"`
+	Driver string `json:"driver" yaml:"driver"`
+
 	Wireguard struct {
 		Name         string        `json:"name" yaml:"name"`
 		MTU          int           `json:"mtu" yaml:"mtu"`
