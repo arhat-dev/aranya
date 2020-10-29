@@ -1,8 +1,14 @@
 package edgedevice
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
+
+	"arhat.dev/pkg/envhelper"
+	corev1 "k8s.io/api/core/v1"
+
+	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
@@ -30,6 +36,7 @@ type networkController struct {
 	netEndpointsInformer kubecache.SharedIndexInformer
 	netEndpointsRec      *reconcile.KubeInformerReconciler
 
+	// nolint:structcheck
 	netReqRec *reconcile.Core
 }
 
@@ -179,4 +186,41 @@ func (c *Controller) requestNetworkEnsure(name string) error {
 	}
 
 	return nil
+}
+
+// nolint:unparam
+func (c *Controller) ensureMeshConfig(name string, config aranyaapi.NetworkSpec) (*corev1.Secret, error) {
+	// TODO: generate and store config for mesh network
+
+	wgPk, err := generateWireguardPrivateKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate wireguard private key for %q: %w", name, err)
+	}
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("mesh-config.%s", name),
+			Namespace: envhelper.ThisPodNS(),
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			constant.MeshConfigKeyWireguardPrivateKey: wgPk,
+		},
+	}, nil
+}
+
+func generateWireguardPrivateKey() ([]byte, error) {
+	const (
+		KeyLen = 32
+	)
+
+	key := make([]byte, KeyLen)
+	if _, err := rand.Read(key); err != nil {
+		return nil, fmt.Errorf("failed to read random bytes: %v", err)
+	}
+
+	key[0] &= 248
+	key[31] &= 127
+	key[31] |= 64
+	return key, nil
 }

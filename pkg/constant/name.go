@@ -59,5 +59,9 @@ const (
 )
 
 const (
-	NetworkBackendDriverWireugard = "wireguard"
+	NetworkBackendDriverWireguard = "wireguard"
+)
+
+const (
+	MeshConfigKeyWireguardPrivateKey = "wireguard.private-key"
 )

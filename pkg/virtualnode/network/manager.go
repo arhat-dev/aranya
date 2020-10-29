@@ -12,9 +12,13 @@ import (
 )
 
 type Options struct {
-	Provider  string
-	PublicIP  string
-	Addresses []string
+	InterfaceName     string
+	MTU               int
+	Provider          string
+	ExtraAllowedCIDRs []string
+	Addresses         []string
+
+	PublicAddresses []string
 
 	WireguardOpts *WireguardOpts
 }
@@ -57,10 +61,7 @@ func NewManager(
 
 	switch {
 	case options.WireguardOpts != nil:
-		mgr.meshDriver = newWireguardMeshDriver(
-			mgr.Log, options.Provider, options.PublicIP,
-			options.Addresses, options.WireguardOpts,
-		)
+		mgr.meshDriver = newWireguardMeshDriver(mgr.Log, options)
 	default:
 		// no mesh driver
 	}
@@ -110,6 +111,21 @@ func (m *Manager) Initialized() <-chan struct{} {
 	defer m.mu.RUnlock()
 
 	return m.initialized
+}
+
+// Retrieve allowed CIDRs including pod CIDRs
+func (m *Manager) AllowedCIDRs() []string {
+	allCIDRs := append([]string{}, m.options.ExtraAllowedCIDRs...)
+	ipv4, ipv6 := m.GetPodCIDR(false), m.GetPodCIDR(true)
+	if ipv4 != "" {
+		allCIDRs = append(allCIDRs, ipv4)
+	}
+
+	if ipv6 != "" {
+		allCIDRs = append(allCIDRs, ipv6)
+	}
+
+	return allCIDRs
 }
 
 func (m *Manager) SetPodCIDRs(ipv4, ipv6 string) {

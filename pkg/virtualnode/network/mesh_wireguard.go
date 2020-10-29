@@ -4,63 +4,66 @@ import (
 	"encoding/base64"
 	"net"
 	"strconv"
-	"time"
+	"strings"
 
 	"arhat.dev/abbot-proto/abbotgopb"
 	"arhat.dev/pkg/log"
 	"golang.org/x/crypto/curve25519"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	"arhat.dev/aranya/pkg/constant"
 )
 
 type WireguardOpts struct {
 	PrivateKey   string
 	LogLevel     string
 	PreSharedKey string
-	Keepalive    time.Duration
 
-	ListenPort   int32
-	RoutingTable int32
-	FirewallMark int32
+	KeepaliveSeconds int32
+	ListenPort       int32
+	RoutingTable     int32
+	FirewallMark     int32
 }
 
 func newWireguardMeshDriver(
 	logger log.Interface,
-	provider, publicIP string,
-	addresses []string,
-	options *WireguardOpts,
+	options *Options,
 ) MeshDriver {
 	return &wireguardMeshDriver{
-		logger:    logger.WithFields(log.String("driver", "wireguard")),
-		provider:  provider,
-		publicIP:  publicIP,
-		addresses: addresses,
-
+		logger:  logger.WithFields(log.String("driver", "wireguard")),
 		options: options,
 	}
 }
 
 type wireguardMeshDriver struct {
-	logger    log.Interface
-	provider  string
-	publicIP  string
-	addresses []string
-
-	options *WireguardOpts
+	logger  log.Interface
+	options *Options
 }
 
+// nolint:gocyclo
 func (d *wireguardMeshDriver) GenerateEnsureRequest(
-	ifname string, mtu int32,
+	// os (GOOS)
+	os string,
+
+	// CIDRs for wireguard mesh
+	meshCIDRs []string,
+
+	// key: provider
+	// value: allowed ips (including pod CIDRs)
+	peerCIDRs map[string][]string,
+
+	// members in this mesh
 	cloudMembers, edgeMembers [][]*abbotgopb.HostNetworkInterface,
 ) *abbotgopb.HostNetworkConfigEnsureRequest {
 	var peers []*abbotgopb.DriverWireguard_Peer
 
 	// check cloud members
 	for _, memberIfaces := range cloudMembers {
-		addresses := sets.NewString(d.publicIP)
+		addresses := sets.NewString(d.options.PublicAddresses...)
 
 		var managedIfaces []*abbotgopb.HostNetworkInterface
 		for i, iface := range memberIfaces {
-			if iface.Provider == d.provider {
+			if iface.Provider == constant.PrefixMeshInterfaceProviderAranya+constant.WatchNS() {
 				// managed interfaces don't have ip address accessible from outside
 				managedIfaces = append(managedIfaces, memberIfaces[i])
 				continue
@@ -102,33 +105,51 @@ func (d *wireguardMeshDriver) GenerateEnsureRequest(
 				continue
 			}
 
-			pubKey := base64.StdEncoding.EncodeToString(wireguardKey(pk).PublicKey())
 			for _, addr := range addresses.List() {
 				peers = append(peers, &abbotgopb.DriverWireguard_Peer{
-					PublicKey:    pubKey,
-					PreSharedKey: d.options.PreSharedKey,
+					PublicKey:    base64.StdEncoding.EncodeToString(wireguardKey(pk).PublicKey()),
+					PreSharedKey: d.options.WireguardOpts.PreSharedKey,
 					Endpoint:     net.JoinHostPort(addr, strconv.FormatInt(int64(md.Wireguard.ListenPort), 10)),
 
-					PersistentKeepaliveInterval: int32(d.options.Keepalive.Seconds()),
+					PersistentKeepaliveInterval: d.options.WireguardOpts.KeepaliveSeconds,
 
-					AllowedIps: []string{
-						// TODO: add addresses
-					},
+					AllowedIps: append(append([]string{}, meshCIDRs...), peerCIDRs[iface.Provider]...),
 				})
 			}
 		}
 	}
 
-	// edge members may only have private addresses
+	ifname := "wg"
+	switch os {
+	case "openbsd":
+		ifname = "tun"
+	case "darwin":
+		ifname = "utun"
+	}
+
+	// edge members may only have private addresses but may be accessible from other edge devices
+memberLoop:
 	for _, memberIfaces := range edgeMembers {
-		addresses := sets.NewString()
+		memberAddresses := sets.NewString()
 
 		var managedIfaces []*abbotgopb.HostNetworkInterface
 		for i, iface := range memberIfaces {
-			if iface.Provider == d.provider {
+			if iface.Provider == d.options.Provider {
+				// it's me, check driver
+
+				if _, ok := iface.Config.(*abbotgopb.HostNetworkInterface_Wireguard); ok {
+					// note its interface name and ignore this member
+					if iface.Metadata.Name != "" {
+						ifname = iface.Metadata.Name
+					}
+				}
+
+				continue memberLoop
+			}
+
+			if strings.HasPrefix(iface.Provider, constant.PrefixMeshInterfaceProviderAranya) {
 				// managed interfaces don't have ip address accessible from outside
 				managedIfaces = append(managedIfaces, memberIfaces[i])
-				continue
 			}
 
 			for _, addr := range iface.Metadata.Addresses {
@@ -141,7 +162,7 @@ func (d *wireguardMeshDriver) GenerateEnsureRequest(
 					continue
 				}
 
-				addresses.Insert(ip.String())
+				memberAddresses.Insert(ip.String())
 			}
 		}
 
@@ -151,30 +172,31 @@ func (d *wireguardMeshDriver) GenerateEnsureRequest(
 				continue
 			}
 
+			logger := d.logger.WithFields(log.String("provider", iface.Provider))
 			if md.Wireguard.ListenPort <= 0 {
-				d.logger.D("no listen port in managed edge wireguard interface")
+				logger.D("no listen port in edge member wireguard interface")
 				continue
 			}
 
 			pk, err := base64.StdEncoding.DecodeString(md.Wireguard.PrivateKey)
 			if err != nil {
-				d.logger.I("invalid wireguard edge member private key", log.Error(err))
+				logger.I("invalid wireguard edge member private key", log.Error(err))
 				continue
 			}
 
 			if len(pk) != wireguardKeyLength {
-				d.logger.I("invalid wireguard edge member private key length")
+				logger.I("invalid wireguard edge member private key length")
 				continue
 			}
 
 			pubKey := base64.StdEncoding.EncodeToString(wireguardKey(pk).PublicKey())
-			for _, addr := range addresses.List() {
+			for _, addr := range memberAddresses.List() {
 				peers = append(peers, &abbotgopb.DriverWireguard_Peer{
 					PublicKey:    pubKey,
-					PreSharedKey: d.options.PreSharedKey,
+					PreSharedKey: d.options.WireguardOpts.PreSharedKey,
 					Endpoint:     net.JoinHostPort(addr, strconv.FormatInt(int64(md.Wireguard.ListenPort), 10)),
 
-					PersistentKeepaliveInterval: int32(d.options.Keepalive.Seconds()),
+					PersistentKeepaliveInterval: d.options.WireguardOpts.KeepaliveSeconds,
 
 					AllowedIps: []string{
 						// TODO: add cluster network address
@@ -184,24 +206,28 @@ func (d *wireguardMeshDriver) GenerateEnsureRequest(
 		}
 	}
 
+	if d.options.InterfaceName != "" {
+		ifname = d.options.InterfaceName
+	}
+
 	return abbotgopb.NewHostNetworkConfigEnsureRequest(&abbotgopb.HostNetworkInterface{
 		Metadata: &abbotgopb.NetworkInterface{
 			Name:            ifname,
-			Mtu:             mtu,
+			Mtu:             int32(d.options.MTU),
 			HardwareAddress: "",
-			Addresses:       d.addresses,
+			Addresses:       d.options.Addresses,
 		},
-		Provider: d.provider,
+		Provider: d.options.Provider,
 		Config: &abbotgopb.HostNetworkInterface_Wireguard{
 			Wireguard: &abbotgopb.DriverWireguard{
-				LogLevel:   d.options.LogLevel,
-				PrivateKey: d.options.PrivateKey,
+				LogLevel:   d.options.WireguardOpts.LogLevel,
+				PrivateKey: d.options.WireguardOpts.PrivateKey,
 				Peers:      peers,
-				ListenPort: d.options.ListenPort,
+				ListenPort: d.options.WireguardOpts.ListenPort,
 				Routing: &abbotgopb.DriverWireguard_Routing{
 					Enabled:      true,
-					Table:        d.options.RoutingTable,
-					FirewallMark: d.options.FirewallMark,
+					Table:        d.options.WireguardOpts.RoutingTable,
+					FirewallMark: d.options.WireguardOpts.FirewallMark,
 				},
 			},
 		},

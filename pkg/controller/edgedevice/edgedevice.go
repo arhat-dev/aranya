@@ -19,6 +19,7 @@ package edgedevice
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -254,6 +255,12 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 		return nil
 	}
 
+	meshSecret, err := c.ensureMeshConfig(ed.Name, ed.Spec.Network)
+	if err != nil {
+		logger.I("failed to ensure mesh config for edge device", log.Error(err))
+		return err
+	}
+
 	logger.D("ensuring kubelet cert for edge device node")
 	kubeletCert, err := c.ensureKubeletServerCert(c.hostNodeName, name, ed.Spec.Node.Cert, c.hostNodeAddresses)
 	if err != nil {
@@ -335,7 +342,7 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 		}
 
 		logger.D("preparing network options")
-		opts.NetworkOptions, err = c.prepareNetworkOptions(ed, vnConfig)
+		opts.NetworkOptions, err = c.prepareNetworkOptions(ed, vnConfig, meshSecret)
 		if err != nil {
 			logger.I("failed to prepare network options", log.Error(err))
 			return err
@@ -789,48 +796,106 @@ func (c *Controller) prepareStorageOptions(
 func (c *Controller) prepareNetworkOptions(
 	edgeDevice *aranyaapi.EdgeDevice,
 	vnConfig *conf.VirtualnodeConfig,
+	secret *corev1.Secret,
 ) (_ *network.Options, err error) {
 	if !vnConfig.Network.Enabled {
 		return nil, nil
 	}
 
+	if c.meshIPAMv4 == nil && c.meshIPAMv6 == nil {
+		return nil, fmt.Errorf("no mesh ip cidr configured")
+	}
+
 	var (
-		ipv4 = edgeDevice.Spec.Network.Mesh.IPv4
-		ipv6 = edgeDevice.Spec.Network.Mesh.IPv6
+		ipv4Req = edgeDevice.Spec.Network.Mesh.IPv4Addr
+		ipv6Req = edgeDevice.Spec.Network.Mesh.IPv6Addr
 	)
 
+	if ipv4Req == "" {
+		ipv4Req = edgeDevice.Status.Network.MeshIPv4Addr
+	}
+
+	if ipv6Req == "" {
+		ipv6Req = edgeDevice.Status.Network.MeshIPv6Addr
+	}
+
+	if ipv4Req != "" {
+		ipv4, _, err := net.ParseCIDR(ipv4Req)
+		if err == nil {
+			ipv4Req = ipv4.String()
+		}
+	}
+
+	if ipv6Req != "" {
+		ipv6, _, err := net.ParseCIDR(ipv6Req)
+		if err == nil {
+			ipv6Req = ipv6.String()
+		}
+	}
+
+	var (
+		ipv4, ipv6 string
+	)
 	// allocate dynamic ipv4 address
-	if ipv4 == "" && c.meshIPAMv4 != nil {
-		ipv4, err = c.meshIPAMv4.Allocate()
+	if c.meshIPAMv4 != nil {
+		ip, err := c.meshIPAMv4.Allocate(net.ParseIP(ipv4Req))
 		if err != nil {
 			return nil, fmt.Errorf("failed to allocate ipv4 address: %s", err)
 		}
+		ipv4 = ip.String()
 	}
 
 	// allocate dynamic ipv6 address
-	if ipv6 == "" && c.meshIPAMv6 != nil {
-		ipv6, err = c.meshIPAMv6.Allocate()
+	if c.meshIPAMv6 != nil {
+		ip, err := c.meshIPAMv6.Allocate(net.ParseIP(ipv6Req))
 		if err != nil {
-			return nil, fmt.Errorf("failed to allocate ipv4 address: %s", err)
+			return nil, fmt.Errorf("failed to allocate ipv6 address: %s", err)
 		}
+		ipv6 = ip.String()
 	}
 
-	if ipv4 == "" && ipv6 == "" {
+	var addresses []string
+	if ipv4 != "" {
+		addresses = append(addresses, ipv4)
+	}
+
+	if ipv6 != "" {
+		addresses = append(addresses, ipv6)
+	}
+
+	if len(addresses) == 0 {
 		return nil, fmt.Errorf("no ip address allocated")
 	}
 
 	opts := &network.Options{
-		Provider:  fmt.Sprintf("aranya:%s", edgeDevice.Name),
-		PublicIP:  c.vnConfig.Network.NetworkService.IP,
-		Addresses: []string{},
+		PublicAddresses: c.vnConfig.Network.NetworkService.Addresses,
+
+		InterfaceName:     edgeDevice.Spec.Network.Mesh.InterfaceName,
+		MTU:               edgeDevice.Spec.Network.Mesh.MTU,
+		Provider:          constant.PrefixMeshInterfaceProviderAranya + edgeDevice.Name,
+		ExtraAllowedCIDRs: edgeDevice.Spec.Network.Mesh.ExtraAllowedCIDRs,
+		Addresses:         addresses,
 
 		WireguardOpts: nil,
 	}
 
 	switch d := vnConfig.Network.Backend.Driver; d {
-	case constant.NetworkBackendDriverWireugard:
+	case constant.NetworkBackendDriverWireguard:
+		cfg := vnConfig.Network.Backend.Wireguard
+
+		privateKey, ok := accessMap(secret.StringData, secret.Data, constant.MeshConfigKeyWireguardPrivateKey)
+		if !ok {
+			return nil, fmt.Errorf("no private key for wireguard mesh")
+		}
+
 		opts.WireguardOpts = &network.WireguardOpts{
-			PrivateKey: "",
+			LogLevel:         "debug",
+			PreSharedKey:     cfg.PreSharedKey,
+			PrivateKey:       base64.StdEncoding.EncodeToString(privateKey),
+			KeepaliveSeconds: int32(cfg.Keepalive.Seconds()),
+			ListenPort:       int32(edgeDevice.Spec.Network.Mesh.ListenPort),
+			RoutingTable:     int32(edgeDevice.Spec.Network.Mesh.RoutingTable),
+			FirewallMark:     int32(edgeDevice.Spec.Network.Mesh.FirewallMark),
 		}
 	default:
 		return nil, fmt.Errorf("unknown backend driver: %s", d)

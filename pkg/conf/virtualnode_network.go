@@ -1,5 +1,7 @@
 package conf
 
+import "time"
+
 type VirtualnodeNetworkConfig struct {
 	Enabled bool `json:"enabled" yaml:"enabled"`
 
@@ -7,10 +9,10 @@ type VirtualnodeNetworkConfig struct {
 	Backend VirtualnodeNetworkBackendConfig `json:"backend" yaml:"backend"`
 
 	NetworkService struct {
-		Name string `json:"name" yaml:"name"`
-		Type string `json:"type" yaml:"type"`
-		IP   string `json:"ip" yaml:"ip"`
-		Port int    `json:"port" yaml:"port"`
+		Name      string   `json:"name" yaml:"name"`
+		Type      string   `json:"type" yaml:"type"`
+		Addresses []string `json:"addresses" yaml:"addresses"`
+		Port      int      `json:"port" yaml:"port"`
 	} `json:"networkService" yaml:"networkService"`
 
 	AbbotService struct {
@@ -22,10 +24,12 @@ type VirtualnodeNetworkConfig struct {
 type VirtualnodeNetworkBackendConfig struct {
 	Driver    string `json:"driver" yaml:"driver"`
 	Wireguard struct {
-		Name       string `json:"name" yaml:"name"`
-		MTU        int    `json:"mtu" yaml:"mtu"`
-		ListenPort int    `json:"listenPort" yaml:"listenPort"`
-		PrivateKey string `json:"privateKey" yaml:"privateKey"`
+		Name         string        `json:"name" yaml:"name"`
+		MTU          int           `json:"mtu" yaml:"mtu"`
+		ListenPort   int           `json:"listenPort" yaml:"listenPort"`
+		PrivateKey   string        `json:"privateKey" yaml:"privateKey"`
+		PreSharedKey string        `json:"preSharedKey" yaml:"preSharedKey"`
+		Keepalive    time.Duration `json:"keepalive" yaml:"keepalive"`
 	} `json:"wireguard" yaml:"wireguard"`
 }
 
