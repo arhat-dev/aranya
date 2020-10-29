@@ -105,12 +105,12 @@ gen() {
   group_name="$(printf "%s" "${cmd}" | cut -d\  -f3)"
   group_version="$(printf "%s" "${cmd}" | cut -d\  -f4)"
 
-  # _do_gen_deepcopy "${group_name}"
+  _do_gen_deepcopy "${group_name}"
   _do_gen_crd_manifests "${group_name}"
 
-  # _do_sync_gopath
+  _do_sync_gopath
 
-  # _do_gen_clients "${group_name}" "${group_version}"
+  _do_gen_clients "${group_name}" "${group_version}"
 }
 
 # shellcheck disable=SC2068
