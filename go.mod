@@ -139,6 +139,7 @@ require (
 	github.com/gogo/protobuf v1.3.1
 	github.com/goiiot/libmqtt v0.9.6
 	github.com/google/cadvisor v0.37.0
+	github.com/google/uuid v1.1.2 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.14.6 // indirect
@@ -152,6 +153,7 @@ require (
 	github.com/pkg/sftp v1.12.0
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.14.0
+	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
@@ -160,8 +162,12 @@ require (
 	go.etcd.io/etcd v0.0.0-20200401174654-e694b7bb0875 // indirect
 	go.uber.org/multierr v1.6.0
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
+	golang.org/x/net v0.0.0-20201027133719-8eef5233e2a1 // indirect
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
+	golang.org/x/sys v0.0.0-20201027140754-0fcbb8f4928c // indirect
 	golang.org/x/tools v0.0.0-20200811032001-fd80f4dbb3ea // indirect
 	google.golang.org/api v0.30.0
+	google.golang.org/genproto v0.0.0-20201026171402-d4b8fe4fd877 // indirect
 	google.golang.org/grpc v1.33.1
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
