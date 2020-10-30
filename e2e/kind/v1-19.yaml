@@ -4,8 +4,8 @@ networking:
   ipFamily: ipv4
   # apiServerAddress: "0.0.0.0"
   # apiServerPort: 6443
-  podSubnet: 10.118.0.0/24
-  serviceSubnet: 10.118.1.0/24
+  podSubnet: 10.119.0.0/24
+  serviceSubnet: 10.119.1.0/24
 # add to the apiServer certSANs the name of the docker (dind)
 # service in order to be able to reach the cluster through it
 kubeadmConfigPatchesJSON6902:
