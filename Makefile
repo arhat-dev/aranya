@@ -51,7 +51,7 @@ image.push.windows.all: \
 
 # code/file generation
 include scripts/gen/code.mk
-include scripts/gen/manifest.mk
+include scripts/gen/manifests.mk
 
 include scripts/deploy/aranya.mk
 
