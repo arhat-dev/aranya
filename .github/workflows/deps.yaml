@@ -27,5 +27,8 @@ jobs:
     - name: Push vendored packages
       run: |
         git add --all .
-        git commit -m 'deps(vendor): Update vendored packages'
-        git push
+        if git commit -m 'deps(vendor): Update vendored packages'; then
+          git push
+        else
+          echo "no vendored package changed, skipping push"
+        fi
