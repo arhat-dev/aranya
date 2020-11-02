@@ -13,8 +13,7 @@ Manages all your devices in your existing `Kubernetes` clusters.
   - Reuse your existing cloud infrastructure for edge devices (Scheduling, Authorization, etc)
   - Namespace based multi-tenancy, highly scalable (see [docs/Multi-tenancy.md](./docs/Multi-tenancy.md))
 
-- Edge devices get integrated into `Kubernetes` via `MQTT` or `gRPC`
-  - `MQTT` support includes standard MQTT 3.1.1, `Azure IoT Hub`, `GCP IoT Core` and `AWS IoT Core`
+- Edge devices get integrated into `Kubernetes` with lightweighted protocols like `MQTT`, `CoAP`
 
 - Deploy and manage large scale edge devices with `kubectl` and `ansible`
   - `kubectl attach/exec/cp/logs/port-forward` to both host and containers
@@ -26,20 +25,12 @@ Manages all your devices in your existing `Kubernetes` clusters.
     - Resource constrained embedded systems like home routers
     - Web browsers with `wasm` support (use `arhat-none.js.wasm` and MQTT via websocket)
 
-- No exposed port on edge devices
-  - Avoid attacks caused by misconfigured `ssh`, `scp`
-  - The edge device agent `arhat` will not expose any port, but you can epose host ports for containers
-
-- Cluster network as a addon
+- Flexible cluster network mesh in edge sites as a addon
   - Deploy and manage cluster network in edge devices with `abbot` container
-  - Proxy network traffic to cluster via your favorite proxy solution
 
 - `CSI` the remote way (see [Remote CSI](./docs/Remote-CSI.md))
   - Only mount operation happns in edge device, everything else is your cloud `Kubernetes` cluster's duty
   - Dynamic private key generation and deployment for edge devices
-
-- Minimum resource usage
-  - Built-in `prometheus` `node_exporter`(unix) / `wmi_exporter`(windows)
 
 __NOTE:__ For details of the host management, please refer to [Maintenance #Host Management](./docs/Maintenance.md#host-management)
 
