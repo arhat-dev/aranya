@@ -5,7 +5,9 @@
 [![GoReportCard](https://goreportcard.com/badge/arhat.dev/aranya)](https://goreportcard.com/report/arhat.dev/aranya)
 [![codecov](https://codecov.io/gh/arhat-dev/aranya/branch/master/graph/badge.svg)](https://codecov.io/gh/arhat-dev/aranya)
 
-Manages all your devices in your existing `Kubernetes` clusters.
+Manages all your devices in existing `Kubernetes` clusters.
+
+[![overview](./docs/images/overview.svg)](./docs/images/overview.svg)
 
 ## Features
 
