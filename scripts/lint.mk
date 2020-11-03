@@ -19,7 +19,11 @@ lint.file:
 
 lint.shell:
 	${RUN_LINTER} koalaman/shellcheck-alpine:stable \
-		sh -c "find . | grep -E -e '.sh\$$' | grep -v vendor | xargs -I'{}' shellcheck -S warning -e SC1090 -e SC1091 {} ;"
+		sh -c "find . \
+			| grep -E -e '.sh\$$' \
+			| grep -v vendor \
+			| grep -v pkg/mesh \
+			| xargs -I'{}' shellcheck -S warning -e SC1090 -e SC1091 {} ;"
 
 lint.go:
 	${RUN_LINTER} golangci/golangci-lint:v1.30.0 golangci-lint run --fix
