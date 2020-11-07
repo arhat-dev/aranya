@@ -1,6 +1,6 @@
 module arhat.dev/aranya
 
-go 1.14
+go 1.15
 
 // misc
 replace (
