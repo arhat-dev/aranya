@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -89,7 +89,7 @@ func NewJobQueue() *JobQueue {
 		chanClosed: true,
 		mu:         new(sync.RWMutex),
 
-		closed: 1,
+		paused: 1,
 	}
 }
 
@@ -102,7 +102,7 @@ type JobQueue struct {
 	hasJob chan struct{}
 	mu     *sync.RWMutex
 	// protected by atomic
-	closed     uint32
+	paused     uint32
 	chanClosed bool
 }
 
@@ -167,18 +167,19 @@ func (q *JobQueue) Find(key interface{}) (Job, bool) {
 // if shouldAcquireMore is false, w will be an empty job
 func (q *JobQueue) Acquire() (w Job, shouldAcquireMore bool) {
 	// wait until we have got some job to do
-	// or we have stopped stopped job queue
+	// or we have paused the job queue
 	<-q.hasJob
 
-	if q.isClosed() {
+	if q.isPaused() {
 		return Job{Action: ActionInvalid}, false
 	}
 
 	q.mu.Lock()
 	defer func() {
 		if len(q.queue) == 0 {
-			if !q.isClosed() {
+			if !q.isPaused() {
 				q.hasJob = make(chan struct{})
+				q.chanClosed = false
 			}
 		}
 
@@ -189,6 +190,7 @@ func (q *JobQueue) Acquire() (w Job, shouldAcquireMore bool) {
 		return Job{Action: ActionInvalid}, true
 	}
 
+	// pop first and rebuild index
 	w = q.queue[0]
 	q.delete(w.Action, w.Key)
 
@@ -270,7 +272,7 @@ func (q *JobQueue) Resume() {
 		q.chanClosed = false
 	}
 
-	atomic.StoreUint32(&q.closed, 0)
+	atomic.StoreUint32(&q.paused, 0)
 }
 
 // Pause do nothing but mark this job queue is closed,
@@ -285,7 +287,7 @@ func (q *JobQueue) Pause() {
 		q.chanClosed = true
 	}
 
-	atomic.StoreUint32(&q.closed, 1)
+	atomic.StoreUint32(&q.paused, 1)
 }
 
 func (q *JobQueue) Remove(w Job) bool {
@@ -295,6 +297,8 @@ func (q *JobQueue) Remove(w Job) bool {
 	return q.delete(w.Action, w.Key)
 }
 
-func (q *JobQueue) isClosed() bool {
-	return atomic.LoadUint32(&q.closed) == 1
+// isPaused is just for approximate check, for real
+// closed state, need to hold the lock
+func (q *JobQueue) isPaused() bool {
+	return atomic.LoadUint32(&q.paused) == 1
 }

@@ -1,5 +1,21 @@
 // +build !nocloud,!notelemetry
 
+/*
+Copyright 2020 The arhat.dev Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package confhelper
 
 import (
@@ -19,6 +35,7 @@ import (
 	otexporterotlp "go.opentelemetry.io/otel/exporters/otlp"
 	otsdkmetricspull "go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"google.golang.org/grpc/credentials"
 
@@ -62,7 +79,7 @@ func (c *MetricsConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 	}
 
 	var (
-		metricsProvider otapimetric.Provider
+		metricsProvider otapimetric.MeterProvider
 	)
 
 	tlsConfig, err := c.TLS.GetTLSConfig(true)
@@ -89,14 +106,13 @@ func (c *MetricsConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 		}
 
 		pusher := push.New(
-			simple.NewWithExactDistribution(),
+			basic.New(simple.NewWithExactDistribution(), exporter),
 			exporter,
-			push.WithStateful(true),
 			push.WithPeriod(5*time.Second),
 		)
 		pusher.Start()
 
-		metricsProvider = pusher.Provider()
+		metricsProvider = pusher.MeterProvider()
 	case "prometheus":
 		var metricsListener net.Listener
 		metricsListener, err = net.Listen("tcp", c.Endpoint)
@@ -114,11 +130,7 @@ func (c *MetricsConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 
 		var exporter *otprom.Exporter
 		exporter, err = otprom.NewExportPipeline(promCfg,
-			otsdkmetricspull.WithStateful(true),
 			otsdkmetricspull.WithCachePeriod(5*time.Second),
-			otsdkmetricspull.WithErrorHandler(func(err error) {
-				logger.V("prom push controller error", log.Error(err))
-			}),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to install global metrics collector")

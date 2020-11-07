@@ -24,19 +24,18 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
-// Exporter is an implementation of metric.Exporter that sends metrics to
-// Prometheus.
-//
-// This exporter supports Prometheus pulls, as such it does not
-// implement the export.Exporter interface.
+// Exporter supports Prometheus pulls.  It does not implement the
+// sdk/export/metric.Exporter interface--instead it creates a pull
+// controller and reads the latest checkpointed data on-scrape.
 type Exporter struct {
 	handler http.Handler
 
@@ -49,8 +48,6 @@ type Exporter struct {
 	// controllers (e.g., with different resources).
 	lock       sync.RWMutex
 	controller *pull.Controller
-
-	onError func(error)
 
 	defaultSummaryQuantiles    []float64
 	defaultHistogramBoundaries []float64
@@ -85,14 +82,10 @@ type Config struct {
 	// DefaultHistogramBoundaries defines the default histogram bucket
 	// boundaries.
 	DefaultHistogramBoundaries []float64
-
-	// OnError is a function that handle errors that may occur while exporting metrics.
-	// TODO: This should be refactored or even removed once we have a better error handling mechanism.
-	OnError func(error)
 }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// using the recommended selector and standard integrator.  See the pull.Options.
+// using the recommended selector and standard processor.  See the pull.Options.
 func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
@@ -106,19 +99,12 @@ func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error)
 		config.Gatherer = config.Registry
 	}
 
-	if config.OnError == nil {
-		config.OnError = func(err error) {
-			fmt.Println(err.Error())
-		}
-	}
-
 	e := &Exporter{
 		handler:                    promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
 		registerer:                 config.Registerer,
 		gatherer:                   config.Gatherer,
 		defaultSummaryQuantiles:    config.DefaultSummaryQuantiles,
 		defaultHistogramBoundaries: config.DefaultHistogramBoundaries,
-		onError:                    config.OnError,
 	}
 
 	c := &collector{
@@ -148,7 +134,7 @@ func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error
 	if err != nil {
 		return nil, err
 	}
-	global.SetMeterProvider(exp.Provider())
+	global.SetMeterProvider(exp.MeterProvider())
 	return exp, nil
 }
 
@@ -157,26 +143,20 @@ func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error
 func (e *Exporter) SetController(config Config, options ...pull.Option) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
-	// Prometheus uses a stateful pull controller since instruments are
-	// cumulative and should not be reset after each collection interval.
-	//
-	// Prometheus uses this approach to be resilient to scrape failures.
-	// If a Prometheus server tries to scrape metrics from a host and fails for some reason,
-	// it could try again on the next scrape and no data would be lost, only resolution.
-	//
-	// Gauges (or LastValues) and Summaries are an exception to this and have different behaviors.
-	//
-	// TODO: Prometheus supports "Gauge Histogram" which are
-	// expressed as delta histograms.
+
 	e.controller = pull.New(
-		simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
-		append(options, pull.WithStateful(true))...,
+		basic.New(
+			simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
+			e,
+			basic.WithMemory(true),
+		),
+		options...,
 	)
 }
 
-// Provider returns the metric.Provider of this exporter.
-func (e *Exporter) Provider() metric.Provider {
-	return e.controller.Provider()
+// MeterProvider returns the MeterProvider of this exporter.
+func (e *Exporter) MeterProvider() metric.MeterProvider {
+	return e.controller.MeterProvider()
 }
 
 // Controller returns the controller object that coordinates collection for the SDK.
@@ -184,6 +164,15 @@ func (e *Exporter) Controller() *pull.Controller {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 	return e.controller
+}
+
+func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	// NOTE: Summary values should use Delta aggregation, then be
+	// combined into a sliding window, see the TODO below.
+	// NOTE: Prometheus also supports a "GaugeDelta" exposition format,
+	// which is expressed as a delta histogram.  Need to understand if this
+	// should be a default behavior for ValueRecorder/ValueObserver.
+	return export.CumulativeExporter
 }
 
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -201,7 +190,7 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	c.exp.lock.RLock()
 	defer c.exp.lock.RUnlock()
 
-	_ = c.exp.Controller().ForEach(func(record export.Record) error {
+	_ = c.exp.Controller().ForEach(c.exp, func(record export.Record) error {
 		var labelKeys []string
 		mergeLabels(record, &labelKeys, nil)
 		ch <- c.toDesc(record, labelKeys)
@@ -218,10 +207,12 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	defer c.exp.lock.RUnlock()
 
 	ctrl := c.exp.Controller()
-	ctrl.Collect(context.Background())
+	if err := ctrl.Collect(context.Background()); err != nil {
+		global.Handle(err)
+	}
 
-	err := ctrl.ForEach(func(record export.Record) error {
-		agg := record.Aggregator()
+	err := ctrl.ForEach(c.exp, func(record export.Record) error {
+		agg := record.Aggregation()
 		numberKind := record.Descriptor().NumberKind()
 
 		var labelKeys, labels []string
@@ -229,11 +220,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 		desc := c.toDesc(record, labelKeys)
 
-		if hist, ok := agg.(aggregator.Histogram); ok {
+		if hist, ok := agg.(aggregation.Histogram); ok {
 			if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting histogram: %w", err)
 			}
-		} else if dist, ok := agg.(aggregator.Distribution); ok {
+		} else if dist, ok := agg.(aggregation.Distribution); ok {
 			// TODO: summaries values are never being resetted.
 			//  As measurements are recorded, new records starts to have less impact on these summaries.
 			//  We should implement an solution that is similar to the Prometheus Clients
@@ -245,11 +236,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			if err := c.exportSummary(ch, dist, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting summary: %w", err)
 			}
-		} else if sum, ok := agg.(aggregator.Sum); ok {
+		} else if sum, ok := agg.(aggregation.Sum); ok {
 			if err := c.exportCounter(ch, sum, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting counter: %w", err)
 			}
-		} else if lastValue, ok := agg.(aggregator.LastValue); ok {
+		} else if lastValue, ok := agg.(aggregation.LastValue); ok {
 			if err := c.exportLastValue(ch, lastValue, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting last value: %w", err)
 			}
@@ -257,11 +248,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		return nil
 	})
 	if err != nil {
-		c.exp.onError(err)
+		global.Handle(err)
 	}
 }
 
-func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregator.LastValue, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregation.LastValue, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	lv, _, err := lvagg.LastValue()
 	if err != nil {
 		return fmt.Errorf("error retrieving last value: %w", err)
@@ -276,7 +267,7 @@ func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregato
 	return nil
 }
 
-func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Sum, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	v, err := sum.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving counter: %w", err)
@@ -291,7 +282,7 @@ func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregator.Su
 	return nil
 }
 
-func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.Distribution, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregation.Distribution, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	count, err := dist.Count()
 	if err != nil {
 		return fmt.Errorf("error retrieving count: %w", err)
@@ -318,7 +309,7 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregator.D
 	return nil
 }
 
-func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregator.Histogram, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregation.Histogram, kind metric.NumberKind, desc *prometheus.Desc, labels []string) error {
 	buckets, err := hist.Histogram()
 	if err != nil {
 		return fmt.Errorf("error retrieving histogram: %w", err)

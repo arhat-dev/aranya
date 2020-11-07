@@ -1,5 +1,21 @@
 // +build !nocloud,!notelemetry
 
+/*
+Copyright 2020 The arhat.dev Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package confhelper
 
 import (
@@ -17,7 +33,9 @@ import (
 	otexporterotlp "go.opentelemetry.io/otel/exporters/otlp"
 	otexporterjaeger "go.opentelemetry.io/otel/exporters/trace/jaeger"
 	otexporterzipkin "go.opentelemetry.io/otel/exporters/trace/zipkin"
+	otsdkresource "go.opentelemetry.io/otel/sdk/resource"
 	otsdktrace "go.opentelemetry.io/otel/sdk/trace"
+	otsemconv "go.opentelemetry.io/otel/semconv"
 	"google.golang.org/grpc/credentials"
 
 	"arhat.dev/pkg/envhelper"
@@ -107,7 +125,7 @@ func (c *TracingConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 		return nil
 	}
 
-	var traceProvider otapitrace.Provider
+	var traceProvider otapitrace.TracerProvider
 
 	tlsConfig, err := c.TLS.GetTLSConfig(true)
 	if err != nil {
@@ -132,17 +150,18 @@ func (c *TracingConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 			return fmt.Errorf("failed to create otlp exporter: %w", err)
 		}
 
-		traceProvider, err = otsdktrace.NewProvider(
-			otsdktrace.WithConfig(otsdktrace.Config{DefaultSampler: otsdktrace.ProbabilitySampler(c.SampleRate)}),
+		bsp := otsdktrace.NewBatchSpanProcessor(exporter)
+
+		otsdktrace.WithResource(otsdkresource.New(otsemconv.ServiceNameKey.String(c.ReportedServiceName)))
+		traceProvider = otsdktrace.NewTracerProvider(
+			otsdktrace.WithConfig(otsdktrace.Config{DefaultSampler: otsdktrace.TraceIDRatioBased(c.SampleRate)}),
 			otsdktrace.WithSyncer(exporter),
+			otsdktrace.WithSpanProcessor(bsp),
 		)
-		if err != nil {
-			return fmt.Errorf("failed to create trace provider for otlp exporter: %w", err)
-		}
 	case "zipkin":
 		var exporter *otexporterzipkin.Exporter
 
-		exporter, err = otexporterzipkin.NewExporter(c.Endpoint, c.ReportedServiceName,
+		exporter, err = otexporterzipkin.NewRawExporter(c.Endpoint, c.ReportedServiceName,
 			otexporterzipkin.WithClient(c.newHTTPClient(tlsConfig)),
 			otexporterzipkin.WithLogger(nil),
 		)
@@ -150,17 +169,14 @@ func (c *TracingConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 			return fmt.Errorf("failed to create zipkin exporter: %w", err)
 		}
 
-		traceProvider, err = otsdktrace.NewProvider(
+		traceProvider = otsdktrace.NewTracerProvider(
 			otsdktrace.WithBatcher(exporter,
 				otsdktrace.WithBatchTimeout(5*time.Second),
 			),
 			otsdktrace.WithConfig(otsdktrace.Config{
-				DefaultSampler: otsdktrace.ProbabilitySampler(c.SampleRate),
+				DefaultSampler: otsdktrace.TraceIDRatioBased(c.SampleRate),
 			}),
 		)
-		if err != nil {
-			return fmt.Errorf("failed to create trace provider for zipkin exporter: %w", err)
-		}
 	case "jaeger":
 		var endpoint otexporterjaeger.EndpointOption
 		switch c.EndpointType {
@@ -182,7 +198,7 @@ func (c *TracingConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 				ServiceName: c.ReportedServiceName,
 			}),
 			otexporterjaeger.WithSDK(&otsdktrace.Config{
-				DefaultSampler: otsdktrace.ProbabilitySampler(c.SampleRate),
+				DefaultSampler: otsdktrace.TraceIDRatioBased(c.SampleRate),
 			}),
 		)
 		_ = flush
@@ -194,7 +210,7 @@ func (c *TracingConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 		return fmt.Errorf("failed to create %q tracing provider: %w", c.Format, err)
 	}
 
-	otapiglobal.SetTraceProvider(traceProvider)
+	otapiglobal.SetTracerProvider(traceProvider)
 
 	return nil
 }

@@ -22,15 +22,17 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
-	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
-	metricpb "github.com/open-telemetry/opentelemetry-proto/gen/go/metrics/v1"
-	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
+	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
+	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
+	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -38,6 +40,11 @@ var (
 	// ErrUnimplementedAgg is returned when a transformation of an unimplemented
 	// aggregator is attempted.
 	ErrUnimplementedAgg = errors.New("unimplemented aggregator")
+
+	// ErrIncompatibleAgg is returned when
+	// aggregation.Kind implies an interface conversion that has
+	// failed
+	ErrIncompatibleAgg = errors.New("incompatible aggregation type")
 
 	// ErrUnknownValueType is returned when a transformation of an unknown value
 	// is attempted.
@@ -53,16 +60,24 @@ var (
 
 // result is the product of transforming Records into OTLP Metrics.
 type result struct {
-	Resource *resource.Resource
-	Library  string
-	Metric   *metricpb.Metric
-	Err      error
+	Resource               *resource.Resource
+	InstrumentationLibrary instrumentation.Library
+	Metric                 *metricpb.Metric
+	Err                    error
+}
+
+// toNanos returns the number of nanoseconds since the UNIX epoch.
+func toNanos(t time.Time) uint64 {
+	if t.IsZero() {
+		return 0
+	}
+	return uint64(t.UnixNano())
 }
 
 // CheckpointSet transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
-func CheckpointSet(ctx context.Context, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
-	records, errc := source(ctx, cps)
+func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
+	records, errc := source(ctx, exportSelector, cps)
 
 	// Start a fixed number of goroutines to transform records.
 	transformed := make(chan result)
@@ -95,14 +110,14 @@ func CheckpointSet(ctx context.Context, cps export.CheckpointSet, numWorkers uin
 // source starts a goroutine that sends each one of the Records yielded by
 // the CheckpointSet on the returned chan. Any error encoutered will be sent
 // on the returned error chan after seeding is complete.
-func source(ctx context.Context, cps export.CheckpointSet) (<-chan export.Record, <-chan error) {
+func source(ctx context.Context, exportSelector export.ExportKindSelector, cps export.CheckpointSet) (<-chan export.Record, <-chan error) {
 	errc := make(chan error, 1)
 	out := make(chan export.Record)
 	// Seed records into process.
 	go func() {
 		defer close(out)
 		// No select is needed since errc is buffered.
-		errc <- cps.ForEach(func(r export.Record) error {
+		errc <- cps.ForEach(exportSelector, func(r export.Record) error {
 			select {
 			case <-ctx.Done():
 				return ErrContextCanceled
@@ -125,9 +140,12 @@ func transformer(ctx context.Context, in <-chan export.Record, out chan<- result
 		}
 		res := result{
 			Resource: r.Resource(),
-			Library:  r.Descriptor().LibraryName(),
-			Metric:   m,
-			Err:      err,
+			InstrumentationLibrary: instrumentation.Library{
+				Name:    r.Descriptor().InstrumentationName(),
+				Version: r.Descriptor().InstrumentationVersion(),
+			},
+			Metric: m,
+			Err:    err,
 		}
 		select {
 		case <-ctx.Done():
@@ -148,7 +166,7 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	type resourceBatch struct {
 		Resource *resourcepb.Resource
 		// Group by instrumentation library name and then the MetricDescriptor.
-		InstrumentationLibraryBatches map[string]map[string]*metricpb.Metric
+		InstrumentationLibraryBatches map[instrumentation.Library]map[string]*metricpb.Metric
 	}
 
 	// group by unique Resource string.
@@ -164,15 +182,15 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 		if !ok {
 			rb = resourceBatch{
 				Resource:                      Resource(res.Resource),
-				InstrumentationLibraryBatches: make(map[string]map[string]*metricpb.Metric),
+				InstrumentationLibraryBatches: make(map[instrumentation.Library]map[string]*metricpb.Metric),
 			}
 			grouped[rID] = rb
 		}
 
-		mb, ok := rb.InstrumentationLibraryBatches[res.Library]
+		mb, ok := rb.InstrumentationLibraryBatches[res.InstrumentationLibrary]
 		if !ok {
 			mb = make(map[string]*metricpb.Metric)
-			rb.InstrumentationLibraryBatches[res.Library] = mb
+			rb.InstrumentationLibraryBatches[res.InstrumentationLibrary] = mb
 		}
 
 		mID := res.Metric.GetMetricDescriptor().String()
@@ -202,12 +220,15 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	var rms []*metricpb.ResourceMetrics
 	for _, rb := range grouped {
 		rm := &metricpb.ResourceMetrics{Resource: rb.Resource}
-		for ilName, mb := range rb.InstrumentationLibraryBatches {
+		for il, mb := range rb.InstrumentationLibraryBatches {
 			ilm := &metricpb.InstrumentationLibraryMetrics{
 				Metrics: make([]*metricpb.Metric, 0, len(mb)),
 			}
-			if ilName != "" {
-				ilm.InstrumentationLibrary = &commonpb.InstrumentationLibrary{Name: ilName}
+			if il != (instrumentation.Library{}) {
+				ilm.InstrumentationLibrary = &commonpb.InstrumentationLibrary{
+					Name:    il.Name,
+					Version: il.Version,
+				}
 			}
 			for _, m := range mb {
 				ilm.Metrics = append(ilm.Metrics, m)
@@ -224,47 +245,86 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	return rms, nil
 }
 
-// Record transforms a Record into an OTLP Metric. An ErrUnimplementedAgg
+// Record transforms a Record into an OTLP Metric. An ErrIncompatibleAgg
 // error is returned if the Record Aggregator is not supported.
 func Record(r export.Record) (*metricpb.Metric, error) {
-	d := r.Descriptor()
-	l := r.Labels()
-	switch a := r.Aggregator().(type) {
-	case aggregator.MinMaxSumCount:
-		return minMaxSumCount(d, l, a)
-	case aggregator.Sum:
-		return sum(d, l, a)
+	agg := r.Aggregation()
+	switch agg.Kind() {
+	case aggregation.MinMaxSumCountKind:
+		mmsc, ok := agg.(aggregation.MinMaxSumCount)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
+		}
+		return minMaxSumCount(r, mmsc)
+
+	case aggregation.HistogramKind:
+		h, ok := agg.(aggregation.Histogram)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
+		}
+		return histogram(r, h)
+
+	case aggregation.SumKind:
+		s, ok := agg.(aggregation.Sum)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
+		}
+		sum, err := s.Sum()
+		if err != nil {
+			return nil, err
+		}
+		return scalar(r, sum, r.StartTime(), r.EndTime())
+
+	case aggregation.LastValueKind:
+		lv, ok := agg.(aggregation.LastValue)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
+		}
+		value, tm, err := lv.LastValue()
+		if err != nil {
+			return nil, err
+		}
+		return scalar(r, value, time.Time{}, tm)
+
 	default:
-		return nil, fmt.Errorf("%w: %v", ErrUnimplementedAgg, a)
+		return nil, fmt.Errorf("%w: %T", ErrUnimplementedAgg, agg)
 	}
 }
 
-// sum transforms a Sum Aggregator into an OTLP Metric.
-func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricpb.Metric, error) {
-	sum, err := a.Sum()
-	if err != nil {
-		return nil, err
-	}
+// scalar transforms a Sum or LastValue Aggregator into an OTLP Metric.
+// For LastValue (Gauge), use start==time.Time{}.
+func scalar(record export.Record, num metric.Number, start, end time.Time) (*metricpb.Metric, error) {
+	desc := record.Descriptor()
+	labels := record.Labels()
 
 	m := &metricpb.Metric{
 		MetricDescriptor: &metricpb.MetricDescriptor{
 			Name:        desc.Name(),
 			Description: desc.Description(),
 			Unit:        string(desc.Unit()),
-			Labels:      stringKeyValues(labels.Iter()),
 		},
 	}
 
 	switch n := desc.NumberKind(); n {
-	case metric.Int64NumberKind, metric.Uint64NumberKind:
-		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_INT64
+	case metric.Int64NumberKind:
+		m.MetricDescriptor.Type = metricpb.MetricDescriptor_INT64
 		m.Int64DataPoints = []*metricpb.Int64DataPoint{
-			{Value: sum.CoerceToInt64(n)},
+			{
+				Value:             num.CoerceToInt64(n),
+				Labels:            stringKeyValues(labels.Iter()),
+				StartTimeUnixNano: toNanos(start),
+				TimeUnixNano:      toNanos(end),
+			},
 		}
 	case metric.Float64NumberKind:
-		m.MetricDescriptor.Type = metricpb.MetricDescriptor_COUNTER_DOUBLE
+		m.MetricDescriptor.Type = metricpb.MetricDescriptor_DOUBLE
 		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
-			{Value: sum.CoerceToFloat64(n)},
+			{
+				Value:             num.CoerceToFloat64(n),
+				Labels:            stringKeyValues(labels.Iter()),
+				StartTimeUnixNano: toNanos(start),
+				TimeUnixNano:      toNanos(end),
+			},
 		}
 	default:
 		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
@@ -274,8 +334,8 @@ func sum(desc *metric.Descriptor, labels *label.Set, a aggregator.Sum) (*metricp
 }
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
-// as discret values.
-func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum metric.Number, count int64, err error) {
+// as discrete values.
+func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum metric.Number, count int64, err error) {
 	if min, err = a.Min(); err != nil {
 		return
 	}
@@ -292,7 +352,9 @@ func minMaxSumCountValues(a aggregator.MinMaxSumCount) (min, max, sum metric.Num
 }
 
 // minMaxSumCount transforms a MinMaxSumCount Aggregator into an OTLP Metric.
-func minMaxSumCount(desc *metric.Descriptor, labels *label.Set, a aggregator.MinMaxSumCount) (*metricpb.Metric, error) {
+func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metricpb.Metric, error) {
+	desc := record.Descriptor()
+	labels := record.Labels()
 	min, max, sum, count, err := minMaxSumCountValues(a)
 	if err != nil {
 		return nil, err
@@ -305,12 +367,12 @@ func minMaxSumCount(desc *metric.Descriptor, labels *label.Set, a aggregator.Min
 			Description: desc.Description(),
 			Unit:        string(desc.Unit()),
 			Type:        metricpb.MetricDescriptor_SUMMARY,
-			Labels:      stringKeyValues(labels.Iter()),
 		},
 		SummaryDataPoints: []*metricpb.SummaryDataPoint{
 			{
-				Count: uint64(count),
-				Sum:   sum.CoerceToFloat64(numKind),
+				Labels: stringKeyValues(labels.Iter()),
+				Count:  uint64(count),
+				Sum:    sum.CoerceToFloat64(numKind),
 				PercentileValues: []*metricpb.SummaryDataPoint_ValueAtPercentile{
 					{
 						Percentile: 0.0,
@@ -321,6 +383,69 @@ func minMaxSumCount(desc *metric.Descriptor, labels *label.Set, a aggregator.Min
 						Value:      max.CoerceToFloat64(numKind),
 					},
 				},
+				StartTimeUnixNano: toNanos(record.StartTime()),
+				TimeUnixNano:      toNanos(record.EndTime()),
+			},
+		},
+	}, nil
+}
+
+func histogramValues(a aggregation.Histogram) (boundaries []float64, counts []float64, err error) {
+	var buckets aggregation.Buckets
+	if buckets, err = a.Histogram(); err != nil {
+		return
+	}
+	boundaries, counts = buckets.Boundaries, buckets.Counts
+	if len(counts) != len(boundaries)+1 {
+		err = ErrTransforming
+		return
+	}
+	return
+}
+
+// histogram transforms a Histogram Aggregator into an OTLP Metric.
+func histogram(record export.Record, a aggregation.Histogram) (*metricpb.Metric, error) {
+	desc := record.Descriptor()
+	labels := record.Labels()
+	boundaries, counts, err := histogramValues(a)
+	if err != nil {
+		return nil, err
+	}
+
+	count, err := a.Count()
+	if err != nil {
+		return nil, err
+	}
+
+	sum, err := a.Sum()
+	if err != nil {
+		return nil, err
+	}
+
+	buckets := make([]*metricpb.HistogramDataPoint_Bucket, len(counts))
+	for i := 0; i < len(counts); i++ {
+		buckets[i] = &metricpb.HistogramDataPoint_Bucket{
+			Count: uint64(counts[i]),
+		}
+	}
+
+	numKind := desc.NumberKind()
+	return &metricpb.Metric{
+		MetricDescriptor: &metricpb.MetricDescriptor{
+			Name:        desc.Name(),
+			Description: desc.Description(),
+			Unit:        string(desc.Unit()),
+			Type:        metricpb.MetricDescriptor_HISTOGRAM,
+		},
+		HistogramDataPoints: []*metricpb.HistogramDataPoint{
+			{
+				Labels:            stringKeyValues(labels.Iter()),
+				StartTimeUnixNano: toNanos(record.StartTime()),
+				TimeUnixNano:      toNanos(record.EndTime()),
+				Count:             uint64(count),
+				Sum:               sum.CoerceToFloat64(numKind),
+				Buckets:           buckets,
+				ExplicitBounds:    boundaries,
 			},
 		},
 	}, nil

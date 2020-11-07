@@ -123,7 +123,7 @@ replace (
 require (
 	arhat.dev/abbot-proto v0.1.0
 	arhat.dev/aranya-proto v0.1.4
-	arhat.dev/pkg v0.0.0-20201011023427-3d85bac95f31
+	arhat.dev/pkg v0.2.11
 	cloud.google.com/go/pubsub v1.3.1
 	github.com/Azure/azure-amqp-common-go/v3 v3.0.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.0
@@ -165,12 +165,10 @@ require (
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
 	golang.org/x/net v0.0.0-20201027133719-8eef5233e2a1 // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
-	golang.org/x/sys v0.0.0-20201027140754-0fcbb8f4928c // indirect
 	golang.org/x/tools v0.0.0-20200811032001-fd80f4dbb3ea // indirect
-	google.golang.org/api v0.30.0
+	google.golang.org/api v0.32.0
 	google.golang.org/genproto v0.0.0-20201026171402-d4b8fe4fd877 // indirect
 	google.golang.org/grpc v1.33.1
-	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v2 v2.3.0

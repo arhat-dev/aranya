@@ -15,21 +15,21 @@
 package transform
 
 import (
-	commonpb "github.com/open-telemetry/opentelemetry-proto/gen/go/common/v1"
+	"reflect"
 
-	"go.opentelemetry.io/otel/api/kv/value"
+	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
+	"go.opentelemetry.io/otel/label"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Attributes transforms a slice of KeyValues into a slice of OTLP attribute key-values.
-func Attributes(attrs []kv.KeyValue) []*commonpb.AttributeKeyValue {
+func Attributes(attrs []label.KeyValue) []*commonpb.KeyValue {
 	if len(attrs) == 0 {
 		return nil
 	}
 
-	out := make([]*commonpb.AttributeKeyValue, 0, len(attrs))
+	out := make([]*commonpb.KeyValue, 0, len(attrs))
 	for _, kv := range attrs {
 		out = append(out, toAttribute(kv))
 	}
@@ -37,12 +37,12 @@ func Attributes(attrs []kv.KeyValue) []*commonpb.AttributeKeyValue {
 }
 
 // ResourceAttributes transforms a Resource into a slice of OTLP attribute key-values.
-func ResourceAttributes(resource *resource.Resource) []*commonpb.AttributeKeyValue {
+func ResourceAttributes(resource *resource.Resource) []*commonpb.KeyValue {
 	if resource.Len() == 0 {
 		return nil
 	}
 
-	out := make([]*commonpb.AttributeKeyValue, 0, resource.Len())
+	out := make([]*commonpb.KeyValue, 0, resource.Len())
 	for iter := resource.Iter(); iter.Next(); {
 		out = append(out, toAttribute(iter.Attribute()))
 	}
@@ -50,43 +50,96 @@ func ResourceAttributes(resource *resource.Resource) []*commonpb.AttributeKeyVal
 	return out
 }
 
-func toAttribute(v kv.KeyValue) *commonpb.AttributeKeyValue {
+func toAttribute(v label.KeyValue) *commonpb.KeyValue {
+	result := &commonpb.KeyValue{
+		Key:   string(v.Key),
+		Value: new(commonpb.AnyValue),
+	}
 	switch v.Value.Type() {
-	case value.BOOL:
-		return &commonpb.AttributeKeyValue{
-			Key:       string(v.Key),
-			Type:      commonpb.AttributeKeyValue_BOOL,
+	case label.BOOL:
+		result.Value.Value = &commonpb.AnyValue_BoolValue{
 			BoolValue: v.Value.AsBool(),
 		}
-	case value.INT64, value.INT32, value.UINT32, value.UINT64:
-		return &commonpb.AttributeKeyValue{
-			Key:      string(v.Key),
-			Type:     commonpb.AttributeKeyValue_INT,
+	case label.INT64, label.INT32, label.UINT32, label.UINT64:
+		result.Value.Value = &commonpb.AnyValue_IntValue{
 			IntValue: v.Value.AsInt64(),
 		}
-	case value.FLOAT32:
-		return &commonpb.AttributeKeyValue{
-			Key:         string(v.Key),
-			Type:        commonpb.AttributeKeyValue_DOUBLE,
+	case label.FLOAT32:
+		result.Value.Value = &commonpb.AnyValue_DoubleValue{
 			DoubleValue: float64(v.Value.AsFloat32()),
 		}
-	case value.FLOAT64:
-		return &commonpb.AttributeKeyValue{
-			Key:         string(v.Key),
-			Type:        commonpb.AttributeKeyValue_DOUBLE,
+	case label.FLOAT64:
+		result.Value.Value = &commonpb.AnyValue_DoubleValue{
 			DoubleValue: v.Value.AsFloat64(),
 		}
-	case value.STRING:
-		return &commonpb.AttributeKeyValue{
-			Key:         string(v.Key),
-			Type:        commonpb.AttributeKeyValue_STRING,
+	case label.STRING:
+		result.Value.Value = &commonpb.AnyValue_StringValue{
 			StringValue: v.Value.AsString(),
 		}
+	case label.ARRAY:
+		result.Value.Value = &commonpb.AnyValue_ArrayValue{
+			ArrayValue: &commonpb.ArrayValue{
+				Values: arrayValues(v),
+			},
+		}
 	default:
-		return &commonpb.AttributeKeyValue{
-			Key:         string(v.Key),
-			Type:        commonpb.AttributeKeyValue_STRING,
+		result.Value.Value = &commonpb.AnyValue_StringValue{
 			StringValue: "INVALID",
 		}
 	}
+	return result
+}
+
+func arrayValues(kv label.KeyValue) []*commonpb.AnyValue {
+	a := kv.Value.AsArray()
+	aType := reflect.TypeOf(a)
+	var valueFunc func(reflect.Value) *commonpb.AnyValue
+	switch aType.Elem().Kind() {
+	case reflect.Bool:
+		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
+			return &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_BoolValue{
+					BoolValue: v.Bool(),
+				},
+			}
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
+			return &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_IntValue{
+					IntValue: v.Int(),
+				},
+			}
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
+			return &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_IntValue{
+					IntValue: int64(v.Uint()),
+				},
+			}
+		}
+	case reflect.Float32, reflect.Float64:
+		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
+			return &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_DoubleValue{
+					DoubleValue: v.Float(),
+				},
+			}
+		}
+	case reflect.String:
+		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
+			return &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_StringValue{
+					StringValue: v.String(),
+				},
+			}
+		}
+	}
+
+	results := make([]*commonpb.AnyValue, aType.Len())
+	for i, aValue := 0, reflect.ValueOf(a); i < aValue.Len(); i++ {
+		results[i] = valueFunc(aValue.Index(i))
+	}
+	return results
 }
