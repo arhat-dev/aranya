@@ -23,7 +23,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -31,83 +30,89 @@ import (
 // will be returned without gathering metric data again.
 const DefaultCachePeriod time.Duration = 10 * time.Second
 
-// Controller manages access to a *sdk.Accumulator and
-// *simple.Integrator.  Use Provider() for obtaining Meters.  Use
-// Foreach() for accessing current records.
+// Controller manages access to a *sdk.Accumulator and *basic.Processor. Use
+// MeterProvider() for obtaining Meters. Use Foreach() for accessing current
+// records.
 type Controller struct {
-	accumulator *sdk.Accumulator
-	integrator  *integrator.Integrator
-	provider    *registry.Provider
-	period      time.Duration
-	lastCollect time.Time
-	clock       controllerTime.Clock
-	checkpoint  export.CheckpointSet
+	accumulator  *sdk.Accumulator
+	checkpointer export.Checkpointer
+	provider     *registry.MeterProvider
+	period       time.Duration
+	lastCollect  time.Time
+	clock        controllerTime.Clock
+	checkpoint   export.CheckpointSet
 }
 
-// New returns a *Controller configured with an aggregation selector and options.
-func New(selector export.AggregationSelector, options ...Option) *Controller {
+// New returns a *Controller configured with an export.Checkpointer.
+//
+// Pull controllers are typically used in an environment where there
+// are multiple readers.  It is common, therefore, when configuring a
+// basic Processor for use with this controller, to use a
+// CumulativeExport strategy and the basic.WithMemory(true) option,
+// which ensures that every CheckpointSet includes full state.
+func New(checkpointer export.Checkpointer, options ...Option) *Controller {
 	config := &Config{
-		Resource:     resource.Empty(),
-		ErrorHandler: sdk.DefaultErrorHandler,
-		CachePeriod:  DefaultCachePeriod,
+		Resource:    resource.Empty(),
+		CachePeriod: DefaultCachePeriod,
 	}
 	for _, opt := range options {
 		opt.Apply(config)
 	}
-	integrator := integrator.New(selector, config.Stateful)
 	accum := sdk.NewAccumulator(
-		integrator,
+		checkpointer,
 		sdk.WithResource(config.Resource),
-		sdk.WithErrorHandler(config.ErrorHandler),
 	)
 	return &Controller{
-		accumulator: accum,
-		integrator:  integrator,
-		provider:    registry.NewProvider(accum),
-		period:      config.CachePeriod,
-		checkpoint:  integrator.CheckpointSet(),
-		clock:       controllerTime.RealClock{},
+		accumulator:  accum,
+		checkpointer: checkpointer,
+		provider:     registry.NewMeterProvider(accum),
+		period:       config.CachePeriod,
+		checkpoint:   checkpointer.CheckpointSet(),
+		clock:        controllerTime.RealClock{},
 	}
 }
 
 // SetClock sets the clock used for caching.  For testing purposes.
 func (c *Controller) SetClock(clock controllerTime.Clock) {
-	c.integrator.Lock()
-	defer c.integrator.Unlock()
+	c.checkpointer.CheckpointSet().Lock()
+	defer c.checkpointer.CheckpointSet().Unlock()
 	c.clock = clock
 }
 
-// Provider returns a metric.Provider for the implementation managed
-// by this controller.
-func (c *Controller) Provider() metric.Provider {
+// MeterProvider returns a MeterProvider for the implementation managed by
+// this controller.
+func (c *Controller) MeterProvider() metric.MeterProvider {
 	return c.provider
 }
 
 // Foreach gives the caller read-locked access to the current
 // export.CheckpointSet.
-func (c *Controller) ForEach(f func(export.Record) error) error {
-	c.integrator.RLock()
-	defer c.integrator.RUnlock()
+func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record) error) error {
+	c.checkpointer.CheckpointSet().RLock()
+	defer c.checkpointer.CheckpointSet().RUnlock()
 
-	return c.checkpoint.ForEach(f)
+	return c.checkpoint.ForEach(ks, f)
 }
 
 // Collect requests a collection.  The collection will be skipped if
 // the last collection is aged less than the CachePeriod.
-func (c *Controller) Collect(ctx context.Context) {
-	c.integrator.Lock()
-	defer c.integrator.Unlock()
+func (c *Controller) Collect(ctx context.Context) error {
+	c.checkpointer.CheckpointSet().Lock()
+	defer c.checkpointer.CheckpointSet().Unlock()
 
 	if c.period > 0 {
 		now := c.clock.Now()
 		elapsed := now.Sub(c.lastCollect)
 
 		if elapsed < c.period {
-			return
+			return nil
 		}
 		c.lastCollect = now
 	}
 
+	c.checkpointer.StartCollection()
 	c.accumulator.Collect(ctx)
-	c.checkpoint = c.integrator.CheckpointSet()
+	err := c.checkpointer.FinishCollection()
+	c.checkpoint = c.checkpointer.CheckpointSet()
+	return err
 }

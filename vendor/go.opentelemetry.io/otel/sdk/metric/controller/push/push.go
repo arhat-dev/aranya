@@ -19,12 +19,12 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
-	"go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 )
 
 // DefaultPushPeriod is the default time interval between pushes.
@@ -34,9 +34,8 @@ const DefaultPushPeriod = 10 * time.Second
 type Controller struct {
 	lock         sync.Mutex
 	accumulator  *sdk.Accumulator
-	provider     *registry.Provider
-	errorHandler sdk.ErrorHandler
-	integrator   *simple.Integrator
+	provider     *registry.MeterProvider
+	checkpointer export.Checkpointer
 	exporter     export.Exporter
 	wg           sync.WaitGroup
 	ch           chan struct{}
@@ -46,13 +45,12 @@ type Controller struct {
 	ticker       controllerTime.Ticker
 }
 
-// New constructs a Controller, an implementation of metric.Provider,
-// using the provided exporter and options to configure an SDK with
+// New constructs a Controller, an implementation of MeterProvider, using the
+// provided checkpointer, exporter, and options to configure an SDK with
 // periodic collection.
-func New(selector export.AggregationSelector, exporter export.Exporter, opts ...Option) *Controller {
+func New(checkpointer export.Checkpointer, exporter export.Exporter, opts ...Option) *Controller {
 	c := &Config{
-		ErrorHandler: sdk.DefaultErrorHandler,
-		Period:       DefaultPushPeriod,
+		Period: DefaultPushPeriod,
 	}
 	for _, opt := range opts {
 		opt.Apply(c)
@@ -61,18 +59,15 @@ func New(selector export.AggregationSelector, exporter export.Exporter, opts ...
 		c.Timeout = c.Period
 	}
 
-	integrator := simple.New(selector, c.Stateful)
 	impl := sdk.NewAccumulator(
-		integrator,
-		sdk.WithErrorHandler(c.ErrorHandler),
+		checkpointer,
 		sdk.WithResource(c.Resource),
 	)
 	return &Controller{
-		provider:     registry.NewProvider(impl),
+		provider:     registry.NewMeterProvider(impl),
 		accumulator:  impl,
-		integrator:   integrator,
+		checkpointer: checkpointer,
 		exporter:     exporter,
-		errorHandler: c.ErrorHandler,
 		ch:           make(chan struct{}),
 		period:       c.Period,
 		timeout:      c.Timeout,
@@ -88,17 +83,8 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.clock = clock
 }
 
-// SetErrorHandler sets the handler for errors.  If none has been set, the
-// SDK default error handler is used.
-func (c *Controller) SetErrorHandler(errorHandler sdk.ErrorHandler) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.errorHandler = errorHandler
-	c.accumulator.SetErrorHandler(errorHandler)
-}
-
-// Provider returns a metric.Provider instance for this controller.
-func (c *Controller) Provider() metric.Provider {
+// MeterProvider returns a MeterProvider instance for this controller.
+func (c *Controller) MeterProvider() metric.MeterProvider {
 	return c.provider
 }
 
@@ -151,15 +137,17 @@ func (c *Controller) tick() {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	c.integrator.Lock()
-	defer c.integrator.Unlock()
+	ckpt := c.checkpointer.CheckpointSet()
+	ckpt.Lock()
+	defer ckpt.Unlock()
 
+	c.checkpointer.StartCollection()
 	c.accumulator.Collect(ctx)
+	if err := c.checkpointer.FinishCollection(); err != nil {
+		global.Handle(err)
+	}
 
-	err := c.exporter.Export(ctx, c.integrator.CheckpointSet())
-	c.integrator.FinishedCollection()
-
-	if err != nil {
-		c.errorHandler(err)
+	if err := c.exporter.Export(ctx, ckpt); err != nil {
+		global.Handle(err)
 	}
 }

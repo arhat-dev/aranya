@@ -25,15 +25,50 @@ const (
 	DefaultCollectorPort uint16 = 55680
 	DefaultCollectorHost string = "localhost"
 	DefaultNumWorkers    uint   = 1
+
+	// For more info on gRPC service configs:
+	// https://github.com/grpc/proposal/blob/master/A6-client-retries.md
+	//
+	// For more info on the RetryableStatusCodes we allow here:
+	// https://github.com/open-telemetry/oteps/blob/be2a3fcbaa417ebbf5845cd485d34fdf0ab4a2a4/text/0035-opentelemetry-protocol.md#export-response
+	//
+	// Note: MaxAttempts > 5 are treated as 5. See
+	// https://github.com/grpc/proposal/blob/master/A6-client-retries.md#validation-of-retrypolicy
+	// for more details.
+	DefaultGRPCServiceConfig = `{
+	"methodConfig":[{
+		"name":[
+			{ "service":"opentelemetry.proto.collector.metrics.v1.MetricsService" },
+			{ "service":"opentelemetry.proto.collector.trace.v1.TraceService" }
+		],
+		"retryPolicy":{
+			"MaxAttempts":5,
+			"InitialBackoff":"0.3s",
+			"MaxBackoff":"5s",
+			"BackoffMultiplier":2,
+			"RetryableStatusCodes":[
+				"UNAVAILABLE",
+				"CANCELLED",
+				"DEADLINE_EXCEEDED",
+				"RESOURCE_EXHAUSTED",
+				"ABORTED",
+				"OUT_OF_RANGE",
+				"UNAVAILABLE",
+				"DATA_LOSS"
+			]
+		}
+	}]
+}`
 )
 
-type ExporterOption func(*Config)
+type ExporterOption func(*config)
 
-type Config struct {
+type config struct {
 	canDialInsecure    bool
 	collectorAddr      string
 	compressor         string
 	reconnectionPeriod time.Duration
+	grpcServiceConfig  string
 	grpcDialOptions    []grpc.DialOption
 	headers            map[string]string
 	clientCredentials  credentials.TransportCredentials
@@ -45,7 +80,7 @@ func WorkerCount(n uint) ExporterOption {
 	if n == 0 {
 		n = DefaultNumWorkers
 	}
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.numWorkers = n
 	}
 }
@@ -54,7 +89,7 @@ func WorkerCount(n uint) ExporterOption {
 // just like grpc.WithInsecure() https://pkg.go.dev/google.golang.org/grpc#WithInsecure
 // does. Note, by default, client security is required unless WithInsecure is used.
 func WithInsecure() ExporterOption {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.canDialInsecure = true
 	}
 }
@@ -63,7 +98,7 @@ func WithInsecure() ExporterOption {
 // connect to the collector on. If unset, it will instead try to use
 // connect to DefaultCollectorHost:DefaultCollectorPort.
 func WithAddress(addr string) ExporterOption {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.collectorAddr = addr
 	}
 }
@@ -71,7 +106,7 @@ func WithAddress(addr string) ExporterOption {
 // WithReconnectionPeriod allows one to set the delay between next connection attempt
 // after failing to connect with the collector.
 func WithReconnectionPeriod(rp time.Duration) ExporterOption {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.reconnectionPeriod = rp
 	}
 }
@@ -82,15 +117,14 @@ func WithReconnectionPeriod(rp time.Duration) ExporterOption {
 // compressors auto-register on import, such as gzip, which can be registered by calling
 // `import _ "google.golang.org/grpc/encoding/gzip"`
 func WithCompressor(compressor string) ExporterOption {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.compressor = compressor
 	}
 }
 
-// WithHeaders will send the provided headers when the gRPC stream connection
-// is instantiated.
+// WithHeaders will send the provided headers with gRPC requests
 func WithHeaders(headers map[string]string) ExporterOption {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.headers = headers
 	}
 }
@@ -101,8 +135,15 @@ func WithHeaders(headers map[string]string) ExporterOption {
 // these credentials can be done in many ways e.g. plain file, in code tls.Config
 // or by certificate rotation, so it is up to the caller to decide what to use.
 func WithTLSCredentials(creds credentials.TransportCredentials) ExporterOption {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.clientCredentials = creds
+	}
+}
+
+// WithGRPCServiceConfig defines the default gRPC service config used.
+func WithGRPCServiceConfig(serviceConfig string) ExporterOption {
+	return func(cfg *config) {
+		cfg.grpcServiceConfig = serviceConfig
 	}
 }
 
@@ -110,7 +151,7 @@ func WithTLSCredentials(creds credentials.TransportCredentials) ExporterOption {
 // with some other configuration the GRPC specified via the collector the ones here will
 // take preference since they are set last.
 func WithGRPCDialOption(opts ...grpc.DialOption) ExporterOption {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.grpcDialOptions = opts
 	}
 }
