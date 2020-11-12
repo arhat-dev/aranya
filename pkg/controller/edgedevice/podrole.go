@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"arhat.dev/pkg/envhelper"
+	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
@@ -79,7 +80,7 @@ func (c *podRoleController) init(
 		return nil
 	})
 
-	roleRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.roleInformer, reconcile.Options{
+	roleRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.roleInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:role"),
 		BackoffStrategy: nil,
 		Workers:         1,

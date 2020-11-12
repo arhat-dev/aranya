@@ -265,15 +265,19 @@ func (m *Manager) doPortForward(s *stream) {
 			}
 		}()
 
-		r := iohelper.NewTimeoutReader(s.data, m.ConnectivityManager.MaxPayloadSize())
-		go r.StartBackgroundReading()
+		r := iohelper.NewTimeoutReader(s.data)
+		go r.FallbackReading()
 
-		for r.WaitUntilHasData(m.Context().Done()) {
+		buf := make([]byte, m.ConnectivityManager.MaxPayloadSize())
+		for r.WaitForData(m.Context().Done()) {
 			timer.Reset(constant.DefaultPortForwardStreamReadTimeout)
-			data, isTimeout := r.ReadUntilTimeout(timer.C)
-			if !isTimeout && !timer.Stop() {
-				<-timer.C
+			n, err2 := r.Read(constant.DefaultPortForwardStreamReadTimeout, buf)
+			if err2 != nil && err2 != iohelper.ErrDeadlineExceeded {
+				break
 			}
+
+			data := make([]byte, n)
+			_ = copy(data, buf[:n])
 
 			_, _, lastSeq, err2 := m.ConnectivityManager.PostData(
 				sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,

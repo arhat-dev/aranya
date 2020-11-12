@@ -3,13 +3,13 @@ package pod
 import (
 	"fmt"
 
-	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/aranya-proto/aranyagopb/runtimepb"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // ResolveVolumeData resolves volume data for pod from ConfigMap and Secret
-func (m *Manager) resolveVolumeData(pod *corev1.Pod) (volumeData map[string]*aranyagopb.NamedData, err error) {
-	volumeData = make(map[string]*aranyagopb.NamedData)
+func (m *Manager) resolveVolumeData(pod *corev1.Pod) (volumeData map[string]*runtimepb.NamedData, err error) {
+	volumeData = make(map[string]*runtimepb.NamedData)
 
 	for _, vol := range pod.Spec.Volumes {
 		switch {
@@ -24,7 +24,7 @@ func (m *Manager) resolveVolumeData(pod *corev1.Pod) (volumeData map[string]*ara
 				return nil, fmt.Errorf("failed to get configmap %q", vol.ConfigMap.Name)
 			}
 
-			namedData := &aranyagopb.NamedData{DataMap: make(map[string][]byte)}
+			namedData := &runtimepb.NamedData{DataMap: make(map[string][]byte)}
 
 			for dataName, data := range configMap.Data {
 				namedData.DataMap[dataName] = []byte(data)
@@ -46,7 +46,7 @@ func (m *Manager) resolveVolumeData(pod *corev1.Pod) (volumeData map[string]*ara
 				return nil, fmt.Errorf("failed to get secret %q", vol.Secret.SecretName)
 			}
 
-			namedData := &aranyagopb.NamedData{DataMap: make(map[string][]byte)}
+			namedData := &runtimepb.NamedData{DataMap: make(map[string][]byte)}
 			for dataName, data := range secret.StringData {
 				namedData.DataMap[dataName] = []byte(data)
 			}

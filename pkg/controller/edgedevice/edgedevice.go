@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
@@ -87,7 +88,7 @@ func (c edgeDeviceController) init(
 		return nil
 	})
 
-	edgeDeviceRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.edgeDeviceInformer, reconcile.Options{
+	edgeDeviceRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.edgeDeviceInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:ed"),
 		BackoffStrategy: nil,
 		Workers:         1,

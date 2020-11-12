@@ -24,6 +24,7 @@ import (
 
 	"arhat.dev/abbot-proto/abbotgopb"
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/aranya-proto/aranyagopb/runtimepb"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +39,7 @@ import (
 // UpdateMirrorPod update Kubernetes pod object status according to device pod status
 func (m *Manager) UpdateMirrorPod(
 	pod *corev1.Pod,
-	devicePodStatus *aranyagopb.PodStatusMsg,
+	devicePodStatus *runtimepb.PodStatusMsg,
 	forInitContainers bool,
 ) error {
 	logger := m.Log.WithFields(log.String("type", "cloud"), log.String("action", "update"))
@@ -204,7 +205,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 
 	// pull images if contains non virtual images
 	if len(imgOpts.Images) > 0 {
-		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_IMAGE_ENSURE, imgOpts)
+		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, imgOpts)
 		if err2 != nil {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 				"FailedToPostImageEnsureCmd", err2.Error())
@@ -273,7 +274,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 			}
 		} else {
 			// normal init containers
-			msgCh, _, err3 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_POD_ENSURE, initOpts)
+			msgCh, _, err3 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, initOpts)
 			if err3 != nil {
 				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 					"PostCreateInitCmdError", err3.Error())
@@ -340,7 +341,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 		}
 	} else {
 		// create work containers
-		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_POD_ENSURE, workOpts)
+		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, workOpts)
 		if err2 != nil {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 				"PostCreateWorkCmdError", err2.Error())
@@ -384,7 +385,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 	var (
 		graceTime    = time.Duration(0)
-		preStopHooks map[string]*aranyagopb.ContainerAction
+		preStopHooks map[string]*runtimepb.ContainerAction
 	)
 
 	// usually we should have pod object for pod deletion, but when we are trying to delete a stale pod
@@ -399,7 +400,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 		}
 
 		// collect pre-stop hook spec
-		preStopHooks = make(map[string]*aranyagopb.ContainerAction)
+		preStopHooks = make(map[string]*runtimepb.ContainerAction)
 		for i, ctr := range podToDelete.Spec.Containers {
 			// ignore pods using virtual images, they do not actually create containers in device
 			if ctr.Image == constant.VirtualImageNameHostExec {
@@ -416,8 +417,8 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 	}
 
 	// post cmd anyway, check pod cache when processing message
-	podDeleteCmd := aranyagopb.NewPodDeleteCmd(string(podUID), graceTime, preStopHooks)
-	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_POD_DELETE, podDeleteCmd)
+	podDeleteCmd := runtimepb.NewPodDeleteCmd(string(podUID), graceTime, preStopHooks)
+	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, podDeleteCmd)
 	if err != nil {
 		if hasPodObj {
 			m.options.EventRecorder.Event(podToDelete, corev1.EventTypeNormal, "PostDeleteCmdError", err.Error())
@@ -462,7 +463,7 @@ func (m *Manager) SyncDevicePods() error {
 
 	logger.I("syncing device pods")
 	msgCh, _, err := m.ConnectivityManager.PostCmd(
-		0, aranyagopb.CMD_POD_LIST, aranyagopb.NewPodListCmd(true),
+		0, aranyagopb.CMD_RUNTIME, runtimepb.NewPodListCmd(true),
 	)
 	if err != nil {
 		logger.I("failed to post pod list cmd", log.Error(err))

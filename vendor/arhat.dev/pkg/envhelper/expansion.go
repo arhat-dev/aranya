@@ -16,7 +16,7 @@ limitations under the License.
 
 package envhelper
 
-// Expand replaces ${var} or $var in the string based on the mapping function.
+// Expand replaces ${var}, $(var) or $var in the string based on the mapping function.
 func Expand(s string, mapping func(varName, origin string) string) string {
 	var buf []byte
 	// ${} is all ASCII, so bytes are fine for this operation.
@@ -69,6 +69,20 @@ func isAlphaNum(c uint8) bool {
 // expansion and two more bytes are needed than the length of the name.
 func getShellName(s string) (string, int) {
 	switch {
+	case s[0] == '(':
+		if len(s) > 2 && isShellSpecialVar(s[1]) && s[2] == ')' {
+			return s[1:2], 3
+		}
+		// Scan to closing brace
+		for i := 1; i < len(s); i++ {
+			if s[i] == ')' {
+				if i == 1 {
+					return "", 2 // Bad syntax; eat "$()"
+				}
+				return s[1:i], i + 1
+			}
+		}
+		return "", 1 // Bad syntax; eat "$("
 	case s[0] == '{':
 		if len(s) > 2 && isShellSpecialVar(s[1]) && s[2] == '}' {
 			return s[1:2], 3

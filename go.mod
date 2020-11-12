@@ -2,6 +2,71 @@ module arhat.dev/aranya
 
 go 1.15
 
+require (
+	arhat.dev/abbot-proto v0.1.0
+	arhat.dev/aranya-proto v0.2.3
+	arhat.dev/pkg v0.3.6-0.20201112201959-efe9404198be
+	cloud.google.com/go/pubsub v1.3.1
+	github.com/Azure/azure-amqp-common-go/v3 v3.0.0
+	github.com/Azure/azure-event-hubs-go/v3 v3.3.0
+	github.com/Azure/azure-sdk-for-go v45.1.0+incompatible // indirect
+	github.com/Azure/go-amqp v0.12.8
+	github.com/Azure/go-autorest/autorest/adal v0.9.1 // indirect
+	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
+	github.com/Azure/go-autorest/autorest/validation v0.3.0 // indirect
+	github.com/apparentlymart/go-cidr v1.1.0
+	github.com/blang/semver v3.5.1+incompatible // indirect
+	github.com/container-storage-interface/spec v1.3.0
+	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
+	github.com/fsnotify/fsnotify v1.4.9
+	github.com/gogo/protobuf v1.3.1
+	github.com/goiiot/libmqtt v0.9.6
+	github.com/google/cadvisor v0.37.0
+	github.com/google/uuid v1.1.2 // indirect
+	github.com/gorilla/mux v1.8.0
+	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.14.6 // indirect
+	github.com/hashicorp/golang-lru v0.5.3 // indirect
+	github.com/imdario/mergo v0.3.9 // indirect
+	github.com/itchyny/gojq v0.11.2
+	github.com/klauspost/compress v1.11.2
+	github.com/mitchellh/mapstructure v1.3.3 // indirect
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	github.com/onsi/ginkgo v1.14.0 // indirect
+	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/pkg/sftp v1.12.0
+	github.com/prometheus/client_model v0.2.0
+	github.com/prometheus/common v0.15.0
+	github.com/sirupsen/logrus v1.7.0 // indirect
+	github.com/spf13/cobra v1.1.1
+	github.com/spf13/pflag v1.0.5
+	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
+	github.com/stretchr/testify v1.6.1
+	go.etcd.io/bbolt v1.3.5 // indirect
+	go.etcd.io/etcd v0.0.0-20200401174654-e694b7bb0875 // indirect
+	go.uber.org/multierr v1.6.0
+	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
+	golang.org/x/net v0.0.0-20201027133719-8eef5233e2a1 // indirect
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
+	golang.org/x/tools v0.0.0-20200811032001-fd80f4dbb3ea // indirect
+	google.golang.org/api v0.32.0
+	google.golang.org/genproto v0.0.0-20201026171402-d4b8fe4fd877 // indirect
+	google.golang.org/grpc v1.33.2
+	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
+	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
+	gopkg.in/yaml.v2 v2.3.0
+	k8s.io/api v0.18.10
+	k8s.io/apimachinery v0.18.10
+	k8s.io/apiserver v0.18.10
+	k8s.io/client-go v0.18.10
+	k8s.io/cloud-provider v0.18.10
+	k8s.io/cri-api v0.18.10
+	k8s.io/csi-translation-lib v0.18.10
+	k8s.io/kubelet v0.18.10
+	k8s.io/kubernetes v1.18.10
+	k8s.io/utils v0.0.0-20201015054608-420da100c033
+)
+
 // misc
 replace (
 	cloud.google.com/go => cloud.google.com/go v0.63.0
@@ -43,8 +108,8 @@ replace (
 replace (
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.8.0
 	github.com/prometheus/client_model => github.com/prometheus/client_model v0.2.0
-	github.com/prometheus/common => github.com/prometheus/common v0.14.0
-	github.com/prometheus/procfs => github.com/prometheus/procfs v0.1.3
+	github.com/prometheus/common => github.com/prometheus/common v0.15.0
+	github.com/prometheus/procfs => github.com/prometheus/procfs v0.2.1-0.20201102103729-910e68572b35
 )
 
 // go experimental
@@ -118,68 +183,4 @@ replace (
 	github.com/Azure/go-autorest/autorest/mocks => github.com/Azure/go-autorest/autorest/mocks v0.3.0
 	github.com/Azure/go-autorest/autorest/to => github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/Azure/go-autorest/autorest/validation => github.com/Azure/go-autorest/autorest/validation v0.2.0
-)
-
-require (
-	arhat.dev/abbot-proto v0.1.0
-	arhat.dev/aranya-proto v0.1.4
-	arhat.dev/pkg v0.2.11
-	cloud.google.com/go/pubsub v1.3.1
-	github.com/Azure/azure-amqp-common-go/v3 v3.0.0
-	github.com/Azure/azure-event-hubs-go/v3 v3.3.0
-	github.com/Azure/azure-sdk-for-go v45.1.0+incompatible // indirect
-	github.com/Azure/go-amqp v0.12.8
-	github.com/Azure/go-autorest/autorest/adal v0.9.1 // indirect
-	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
-	github.com/Azure/go-autorest/autorest/validation v0.3.0 // indirect
-	github.com/apparentlymart/go-cidr v1.1.0
-	github.com/blang/semver v3.5.1+incompatible // indirect
-	github.com/container-storage-interface/spec v1.3.0
-	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
-	github.com/fsnotify/fsnotify v1.4.9
-	github.com/gogo/protobuf v1.3.1
-	github.com/goiiot/libmqtt v0.9.6
-	github.com/google/cadvisor v0.37.0
-	github.com/google/uuid v1.1.2 // indirect
-	github.com/gorilla/mux v1.8.0
-	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.14.6 // indirect
-	github.com/hashicorp/golang-lru v0.5.3 // indirect
-	github.com/imdario/mergo v0.3.9 // indirect
-	github.com/itchyny/gojq v0.11.2
-	github.com/mitchellh/mapstructure v1.3.3 // indirect
-	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
-	github.com/onsi/ginkgo v1.14.0 // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/pkg/sftp v1.12.0
-	github.com/prometheus/client_model v0.2.0
-	github.com/prometheus/common v0.14.0
-	github.com/sirupsen/logrus v1.7.0 // indirect
-	github.com/spf13/cobra v1.1.1
-	github.com/spf13/pflag v1.0.5
-	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
-	github.com/stretchr/testify v1.6.1
-	go.etcd.io/bbolt v1.3.5 // indirect
-	go.etcd.io/etcd v0.0.0-20200401174654-e694b7bb0875 // indirect
-	go.uber.org/multierr v1.6.0
-	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
-	golang.org/x/net v0.0.0-20201027133719-8eef5233e2a1 // indirect
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
-	golang.org/x/tools v0.0.0-20200811032001-fd80f4dbb3ea // indirect
-	google.golang.org/api v0.32.0
-	google.golang.org/genproto v0.0.0-20201026171402-d4b8fe4fd877 // indirect
-	google.golang.org/grpc v1.33.1
-	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
-	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
-	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api v0.18.10
-	k8s.io/apimachinery v0.18.10
-	k8s.io/apiserver v0.18.10
-	k8s.io/client-go v0.18.10
-	k8s.io/cloud-provider v0.18.10
-	k8s.io/cri-api v0.18.10
-	k8s.io/csi-translation-lib v0.18.10
-	k8s.io/kubelet v0.18.10
-	k8s.io/kubernetes v1.18.10
-	k8s.io/utils v0.0.0-20201015054608-420da100c033
 )

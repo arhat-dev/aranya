@@ -18,9 +18,9 @@ package cache
 
 import (
 	"bytes"
-	"compress/gzip"
 	"sync"
 
+	"github.com/klauspost/compress/zstd"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 )
@@ -62,11 +62,11 @@ func (c *MetricsCache) Get() []*dto.MetricFamily {
 }
 
 func parseMetricsBytes(metricsBytes []byte) ([]*dto.MetricFamily, error) {
-	r, err := gzip.NewReader(bytes.NewReader(metricsBytes))
+	r, err := zstd.NewReader(bytes.NewReader(metricsBytes))
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = r.Close() }()
+	defer func() { r.Close() }()
 
 	decoder := expfmt.NewDecoder(r, expfmt.FmtProtoDelim)
 

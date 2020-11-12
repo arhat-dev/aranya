@@ -68,7 +68,7 @@ type nodeController struct {
 	// Node management
 	nodeClient    clientcorev1.NodeInterface
 	nodeInformer  kubecache.SharedIndexInformer
-	nodeStatusRec *reconcile.KubeInformerReconciler
+	nodeStatusRec *kubehelper.KubeInformerReconciler
 	nodeReqRec    *reconcile.Core
 
 	nodeLeaseInformer kubecache.SharedIndexInformer
@@ -171,7 +171,7 @@ func (c *nodeController) init(
 			return lease
 		}
 
-		nodeLeaseRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.nodeLeaseInformer, reconcile.Options{
+		nodeLeaseRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.nodeLeaseInformer, reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:nl"),
 			BackoffStrategy: nil,
 			Workers:         1,
@@ -214,7 +214,7 @@ func (c *nodeController) init(
 		c.nodeLeaseClient,
 	)
 
-	nodeRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
+	nodeRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:node"),
 		BackoffStrategy: nil,
 		Workers:         1,
@@ -244,7 +244,7 @@ func (c *nodeController) init(
 	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.nodeReqRec.ReconcileUntil)
 
 	// start a standalone node status reconciler in addition to node reconciler to make it clear for node
-	c.nodeStatusRec = reconcile.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
+	c.nodeStatusRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
 		Logger: ctrl.Log.WithName("rec:nodestatus"),
 		// no backoff
 		BackoffStrategy: backoff.NewStrategy(0, 0, 1, 0),

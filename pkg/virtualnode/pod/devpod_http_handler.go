@@ -331,32 +331,17 @@ func (m *Manager) doServeTerminalStream(
 	}
 
 	if stdin != nil {
-		r := iohelper.NewTimeoutReader(stdin, m.ConnectivityManager.MaxPayloadSize())
-		go r.StartBackgroundReading()
+		r := iohelper.NewTimeoutReader(stdin)
+		go r.FallbackReading()
 
 		readTimeout := constant.DefaultNonInteractiveStreamReadTimeout
 		if resizeCh != nil {
 			readTimeout = constant.DefaultInteractiveStreamReadTimeout
 		}
 
-		timer := time.NewTimer(0)
-		if !timer.Stop() {
-			<-timer.C
-		}
-
-		closeSig := make(chan struct{})
-		defer func() {
-			close(closeSig)
-			if !timer.Stop() {
-				select {
-				case <-timer.C:
-				default:
-				}
-			}
-		}()
-
 		var (
-			seq uint64
+			seq      uint64
+			closeSig = make(chan struct{})
 		)
 
 		go func() {
@@ -372,16 +357,20 @@ func (m *Manager) doServeTerminalStream(
 				logger.D("finished terminal input")
 			}()
 
-			for r.WaitUntilHasData(closeSig) {
-				timer.Reset(readTimeout)
-				data, isTimeout := r.ReadUntilTimeout(timer.C)
-				if !isTimeout && !timer.Stop() {
-					<-timer.C
+			buf := make([]byte, m.ConnectivityManager.MaxPayloadSize())
+			for r.WaitForData(closeSig) {
+				n, err2 := r.Read(readTimeout, buf)
+				if err2 != nil {
+					break
 				}
+
+				data := make([]byte, n)
+				_ = copy(data, buf[:n])
 
 				_, _, lastSeq, err2 := m.ConnectivityManager.PostData(
 					sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
 				)
+
 				atomic.StoreUint64(&seq, lastSeq+1)
 				if err2 != nil {
 					logger.I("failed to post user input", log.Error(err2))

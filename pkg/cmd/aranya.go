@@ -27,9 +27,9 @@ import (
 	"os"
 	"strconv"
 
-	"arhat.dev/pkg/confhelper"
 	"arhat.dev/pkg/encodehelper"
 	"arhat.dev/pkg/envhelper"
+	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/patchhelper"
 	"github.com/spf13/cobra"
@@ -85,7 +85,7 @@ func NewAranyaCmd() *cobra.Command {
 
 	flags.StringVarP(&configFile, "config", "c", constant.DefaultAranyaConfigFile, "path to the aranya config file")
 
-	flags.AddFlagSet(confhelper.FlagsForControllerConfig("aranya", "", cliLogConfig, &config.Aranya.ControllerConfig))
+	flags.AddFlagSet(kubehelper.FlagsForControllerConfig("aranya", "", cliLogConfig, &config.Aranya.ControllerConfig))
 
 	flags.AddFlagSet(conf.FlagsForAranyaAppConfig("", &config.Aranya))
 

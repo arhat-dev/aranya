@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
@@ -85,7 +86,7 @@ func (c *podController) init(
 		return nil
 	})
 
-	podRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.podInformer, reconcile.Options{
+	podRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.podInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:pod"),
 		BackoffStrategy: nil,
 		Workers:         1,

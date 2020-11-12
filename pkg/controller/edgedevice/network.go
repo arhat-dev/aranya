@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"arhat.dev/pkg/envhelper"
+	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
 	corev1 "k8s.io/api/core/v1"
@@ -32,12 +33,12 @@ type networkController struct {
 	meshIPAMv6 *ipam.IPAddressManager
 
 	abbotEndpointsInformer kubecache.SharedIndexInformer
-	abbotEndpointsRec      *reconcile.KubeInformerReconciler
+	abbotEndpointsRec      *kubehelper.KubeInformerReconciler
 
 	netSvcInformer       kubecache.SharedIndexInformer
-	netSvcRec            *reconcile.KubeInformerReconciler
+	netSvcRec            *kubehelper.KubeInformerReconciler
 	netEndpointsInformer kubecache.SharedIndexInformer
-	netEndpointsRec      *reconcile.KubeInformerReconciler
+	netEndpointsRec      *kubehelper.KubeInformerReconciler
 
 	// nolint:structcheck
 	netReqRec *reconcile.Core
@@ -84,7 +85,7 @@ func (c *networkController) init(
 			).String()
 		},
 	).Endpoints().Informer()
-	c.abbotEndpointsRec = reconcile.NewKubeInformerReconciler(ctrl.Context(), c.abbotEndpointsInformer,
+	c.abbotEndpointsRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.abbotEndpointsInformer,
 		reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:net:abbot"),
 			BackoffStrategy: nil,
@@ -109,7 +110,7 @@ func (c *networkController) init(
 			).String()
 		},
 	).Services().Informer()
-	c.netSvcRec = reconcile.NewKubeInformerReconciler(ctrl.Context(), c.netSvcInformer,
+	c.netSvcRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.netSvcInformer,
 		reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:net:svc"),
 			BackoffStrategy: nil,
@@ -134,7 +135,7 @@ func (c *networkController) init(
 			).String()
 		},
 	).Endpoints().Informer()
-	c.netEndpointsRec = reconcile.NewKubeInformerReconciler(ctrl.Context(), c.netEndpointsInformer,
+	c.netEndpointsRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.netEndpointsInformer,
 		reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:net:ep"),
 			BackoffStrategy: nil,

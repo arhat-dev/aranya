@@ -19,10 +19,10 @@ limitations under the License.
 package conf
 
 import (
-	"arhat.dev/pkg/confhelper"
 	"github.com/spf13/pflag"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/pkg/kubehelper"
 )
 
 type Config struct {
@@ -32,7 +32,7 @@ type Config struct {
 
 // nolint:lll
 type AppConfig struct {
-	confhelper.ControllerConfig `json:",inline" yaml:",inline"`
+	kubehelper.ControllerConfig `json:",inline" yaml:",inline"`
 
 	MaxVirtualnodeCreatingInParallel int  `json:"maxVirtualnodeCreatingInParallel" yaml:"maxVirtualnodeCreatingInParallel"`
 	RunAsCloudProvider               bool `json:"runAsCloudProvider" yaml:"runAsCloudProvider"`

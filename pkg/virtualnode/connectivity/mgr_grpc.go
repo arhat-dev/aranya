@@ -21,6 +21,7 @@ import (
 	"net"
 
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/aranya-proto/aranyagopb/rpcpb"
 	"arhat.dev/pkg/log"
 	"go.uber.org/multierr"
 	"google.golang.org/grpc"
@@ -35,7 +36,7 @@ var _ Manager = &GRPCManager{}
 type GRPCManager struct {
 	*baseManager
 
-	clientSessions map[string]aranyagopb.EdgeDevice_SyncServer
+	clientSessions map[string]rpcpb.EdgeDevice_SyncServer
 
 	server   *grpc.Server
 	listener net.Listener
@@ -45,12 +46,12 @@ func NewGRPCManager(parentCtx context.Context, name string, mgrConfig *Options) 
 	mgr := &GRPCManager{
 		baseManager: newBaseManager(parentCtx, name, mgrConfig),
 
-		clientSessions: make(map[string]aranyagopb.EdgeDevice_SyncServer),
+		clientSessions: make(map[string]rpcpb.EdgeDevice_SyncServer),
 
 		listener: mgrConfig.GRPCOpts.Listener,
 		server:   mgrConfig.GRPCOpts.Server,
 	}
-	aranyagopb.RegisterEdgeDeviceServer(mgrConfig.GRPCOpts.Server, mgr)
+	rpcpb.RegisterEdgeDeviceServer(mgrConfig.GRPCOpts.Server, mgr)
 
 	mgr.sendCmd = func(cmd *aranyagopb.Cmd) error {
 		mgr.mu.RLock()
@@ -88,7 +89,7 @@ func (m *GRPCManager) Reject(reason aranyagopb.RejectionReason, message string) 
 	})
 }
 
-func (m *GRPCManager) Sync(server aranyagopb.EdgeDevice_SyncServer) error {
+func (m *GRPCManager) Sync(server rpcpb.EdgeDevice_SyncServer) error {
 	connCtx, closeConn := context.WithCancel(server.Context())
 	defer closeConn()
 

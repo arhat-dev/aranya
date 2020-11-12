@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
@@ -68,7 +69,7 @@ func (c *nodeClusterRoleController) init(
 	})
 
 	// reconciler for cluster role resources
-	crRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), c.crInformer, reconcile.Options{
+	crRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.crInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:cr"),
 		BackoffStrategy: nil,
 		Workers:         1,

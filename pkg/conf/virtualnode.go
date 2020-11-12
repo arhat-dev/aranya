@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"arhat.dev/pkg/confhelper"
+	"arhat.dev/pkg/kubehelper"
 	"github.com/spf13/pflag"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
@@ -12,7 +12,7 @@ import (
 
 // VirtualnodeConfig the virtual node config
 type VirtualnodeConfig struct {
-	KubeClient   confhelper.KubeClientConfig   `json:"kubeClient" yaml:"kubeClient"`
+	KubeClient   kubehelper.KubeClientConfig   `json:"kubeClient" yaml:"kubeClient"`
 	Node         VirtualnodeNodeConfig         `json:"node" yaml:"node"`
 	Pod          VirtualnodePodConfig          `json:"pod" yaml:"pod"`
 	Storage      VirtualnodeStorageConfig      `json:"storage" yaml:"storage"`
@@ -23,7 +23,7 @@ type VirtualnodeConfig struct {
 func FlagsForVirtualnode(prefix string, config *VirtualnodeConfig) *pflag.FlagSet {
 	flags := pflag.NewFlagSet("virtualnode", pflag.ExitOnError)
 
-	flags.AddFlagSet(confhelper.FlagsForKubeClient(prefix+"kube.", &config.KubeClient))
+	flags.AddFlagSet(kubehelper.FlagsForKubeClient(prefix+"kube.", &config.KubeClient))
 
 	flags.AddFlagSet(FlagsForVirtualnodeConnectivityConfig(prefix+"conn.", &config.Connectivity))
 	flags.AddFlagSet(FlagsForVirtualnodePodConfig(prefix+"pod.", &config.Pod))

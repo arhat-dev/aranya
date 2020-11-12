@@ -141,8 +141,7 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 		_, _, _ = vn.opt.ConnectivityManager.PostCmd(
 			0, aranyagopb.CMD_SESSION_CLOSE, aranyagopb.NewSessionCloseCmd(msg.Sid),
 		)
-	case aranyagopb.MSG_CRED_STATUS:
-	case aranyagopb.MSG_POD_STATUS:
+	case aranyagopb.MSG_RUNTIME:
 		if ps := msg.GetPodStatus(); ps != nil {
 			logger.V("received global pod status")
 
@@ -151,7 +150,6 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 				logger.I("failed to update pod status", log.Error(err))
 			}
 		}
-	case aranyagopb.MSG_POD_STATUS_LIST:
 		if psl := msg.GetPodStatusList(); psl != nil {
 			logger.V("received global pod status list")
 
@@ -178,8 +176,8 @@ func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg) {
 			MachineID:       sysInfo.GetMachineId(),
 			SystemUUID:      sysInfo.GetSystemUuid(),
 			BootID:          sysInfo.GetBootId(),
-			ContainerRuntimeVersion: fmt.Sprintf("%s://%s",
-				sysInfo.GetRuntimeInfo().GetName(), sysInfo.GetRuntimeInfo().GetVersion()),
+			// TODO: handle runtime version from pod manager
+			ContainerRuntimeVersion: "",
 			// TODO: how should we report kubelet and kube-proxy version?
 			//       be the same with host node?
 			KubeletVersion:   "",

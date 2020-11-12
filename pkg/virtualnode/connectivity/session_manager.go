@@ -58,7 +58,7 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 		kind = msg.Kind
 	)
 
-	dataChunks, complete := s.seqQ.Offer(seq, msg.Body)
+	dataChunks, complete := s.seqQ.Offer(seq, msg.Payload)
 
 	if msg.Completed {
 		complete = s.seqQ.SetMaxSeq(seq)

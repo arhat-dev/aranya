@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/aranya-proto/aranyagopb/runtimepb"
 	"arhat.dev/pkg/iohelper"
 	"arhat.dev/pkg/log"
 	corev1 "k8s.io/api/core/v1"
@@ -105,13 +106,13 @@ func (m *Manager) updateVirtualPodToRunningPhase() error {
 }
 
 // only return error for log file related errors
-func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.PodEnsureCmd) (*aranyagopb.PodStatusMsg, error) {
+func (m *Manager) handleContainerAsHostExec(opts *runtimepb.PodEnsureCmd) (*runtimepb.PodStatusMsg, error) {
 	// defensive, should not happen
 	if opts.PodUid == "" || opts.Namespace == "" || opts.Name == "" {
 		return nil, fmt.Errorf("invalid options: pod uid should not be empty")
 	}
 
-	containerStatus := make(map[string]*aranyagopb.ContainerStatus)
+	containerStatus := make(map[string]*runtimepb.ContainerStatus)
 
 	// the real log path is different from the one documented here:
 	//    https://github.com/kubernetes/community/blob/master/contributors/design-proposals/node/kubelet-cri-logging.md
@@ -212,7 +213,7 @@ func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.PodEnsureCmd) (*ara
 
 		finishedAt := time.Now().UTC().Format(constant.TimeLayout)
 
-		ctrStatus := &aranyagopb.ContainerStatus{
+		ctrStatus := &runtimepb.ContainerStatus{
 			//ContainerId:  "",
 			//ImageId:      "",
 			CreatedAt: createdAt,
@@ -241,5 +242,5 @@ func (m *Manager) handleContainerAsHostExec(opts *aranyagopb.PodEnsureCmd) (*ara
 		}
 	}
 
-	return aranyagopb.NewPodStatusMsg(opts.PodUid, nil, containerStatus), nil
+	return runtimepb.NewPodStatusMsg(opts.PodUid, nil, containerStatus), nil
 }

@@ -22,6 +22,7 @@ import (
 	"sort"
 
 	"arhat.dev/pkg/envhelper"
+	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/patchhelper"
 	"arhat.dev/pkg/queue"
@@ -86,7 +87,7 @@ func (c *connectivityServiceController) init(
 	})
 
 	// reconciler
-	serviceRec := reconcile.NewKubeInformerReconciler(ctrl.Context(), informer, reconcile.Options{
+	serviceRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), informer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:svc"),
 		BackoffStrategy: nil,
 		Workers:         0,

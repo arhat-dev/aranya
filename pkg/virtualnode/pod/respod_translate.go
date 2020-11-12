@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"arhat.dev/abbot-proto/abbotgopb"
-	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/aranya-proto/aranyagopb/runtimepb"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -73,12 +73,12 @@ func newContainerCreatingStatus(pod *corev1.Pod) (corev1.PodPhase, []corev1.Cont
 
 func resolveContainerStatus(
 	containers []corev1.Container,
-	devicePodStatus *aranyagopb.PodStatusMsg,
+	devicePodStatus *runtimepb.PodStatusMsg,
 ) (corev1.PodPhase, []corev1.ContainerStatus) {
 	ctrStatusMap := devicePodStatus.GetContainers()
 	if ctrStatusMap == nil {
 		// generalize to avoid panic
-		ctrStatusMap = make(map[string]*aranyagopb.ContainerStatus)
+		ctrStatusMap = make(map[string]*runtimepb.ContainerStatus)
 	}
 
 	podPhase := corev1.PodRunning
@@ -94,22 +94,22 @@ func resolveContainerStatus(
 
 			containerExited := false
 			switch s.GetState() {
-			case aranyagopb.POD_STATE_UNKNOWN:
-			case aranyagopb.POD_STATE_PENDING:
+			case runtimepb.POD_STATE_UNKNOWN:
+			case runtimepb.POD_STATE_PENDING:
 				podPhase = corev1.PodPending
 				status.State.Waiting = &corev1.ContainerStateWaiting{
 					Reason:  s.Reason,
 					Message: s.Message,
 				}
-			case aranyagopb.POD_STATE_RUNNING:
+			case runtimepb.POD_STATE_RUNNING:
 				status.Ready = true
 				status.State.Running = &corev1.ContainerStateRunning{
 					StartedAt: metav1.NewTime(s.GetTimeStartedAt()),
 				}
-			case aranyagopb.POD_STATE_SUCCEEDED:
+			case runtimepb.POD_STATE_SUCCEEDED:
 				containerExited = true
 				podPhase = corev1.PodSucceeded
-			case aranyagopb.POD_STATE_FAILED:
+			case runtimepb.POD_STATE_FAILED:
 				containerExited = true
 				podPhase = corev1.PodFailed
 			}
@@ -140,24 +140,24 @@ func resolveContainerStatus(
 func (m *Manager) translatePodCreateOptions(
 	pod *corev1.Pod,
 	envs map[string]map[string]string,
-	authConfigs map[string]*aranyagopb.ImageAuthConfig,
-	volumeData map[string]*aranyagopb.NamedData,
+	authConfigs map[string]*runtimepb.ImageAuthConfig,
+	volumeData map[string]*runtimepb.NamedData,
 	volNames map[corev1.UniqueVolumeName]volumeNamePathPair,
 	dnsConfig *aranyaapi.PodDNSConfig,
 ) (
-	_ *aranyagopb.ImageEnsureCmd,
-	initOpts, workOpts *aranyagopb.PodEnsureCmd,
+	_ *runtimepb.ImageEnsureCmd,
+	initOpts, workOpts *runtimepb.PodEnsureCmd,
 	initHostExec, workHostExec bool,
 	_ error,
 ) {
 	var (
 		sharePid             bool
 		hosts                = make(map[string]string)
-		containers           = make([]*aranyagopb.ContainerSpec, len(pod.Spec.Containers))
+		containers           = make([]*runtimepb.ContainerSpec, len(pod.Spec.Containers))
 		sysctls              = make(map[string]string)
 		hostPaths            = make(map[string]string)
-		imagePull            = make(map[string]*aranyagopb.ImagePullSpec)
-		volumeDataForWorkCtr = make(map[string]*aranyagopb.NamedData)
+		imagePull            = make(map[string]*runtimepb.ImagePullSpec)
+		volumeDataForWorkCtr = make(map[string]*runtimepb.NamedData)
 		hostPathsForWorkCtr  = make(map[string]string)
 	)
 
@@ -223,7 +223,7 @@ func (m *Manager) translatePodCreateOptions(
 			hostExecImageFound++
 		} else {
 			// real image to pull
-			imagePull[ctr.Image] = &aranyagopb.ImagePullSpec{
+			imagePull[ctr.Image] = &runtimepb.ImagePullSpec{
 				AuthConfig: authConfigs[ctr.Image],
 				PullPolicy: translateImagePullPolicy(ctr.ImagePullPolicy),
 			}
@@ -248,8 +248,8 @@ func (m *Manager) translatePodCreateOptions(
 	if len(pod.Spec.InitContainers) != 0 {
 		var (
 			hostExecImageFound   = 0
-			initContainers       = make([]*aranyagopb.ContainerSpec, len(pod.Spec.InitContainers))
-			volumeDataForInitCtr = make(map[string]*aranyagopb.NamedData)
+			initContainers       = make([]*runtimepb.ContainerSpec, len(pod.Spec.InitContainers))
+			volumeDataForInitCtr = make(map[string]*runtimepb.NamedData)
 			hostPathsForInitCtr  = make(map[string]string)
 		)
 
@@ -261,7 +261,7 @@ func (m *Manager) translatePodCreateOptions(
 				hostExecImageFound++
 			} else {
 				// real image to pull
-				imagePull[ctr.Image] = &aranyagopb.ImagePullSpec{
+				imagePull[ctr.Image] = &runtimepb.ImagePullSpec{
 					AuthConfig: authConfigs[ctr.Image],
 					PullPolicy: translateImagePullPolicy(ctr.ImagePullPolicy),
 				}
@@ -283,14 +283,14 @@ func (m *Manager) translatePodCreateOptions(
 			return nil, nil, nil, false, false, fmt.Errorf("invalid init container images")
 		}
 
-		initOpts = &aranyagopb.PodEnsureCmd{
+		initOpts = &runtimepb.PodEnsureCmd{
 			PodUid:    string(pod.UID),
 			Namespace: pod.Namespace,
 			Name:      pod.Name,
 
 			Labels: getPodLabels(pod.Labels),
 
-			RestartPolicy: aranyagopb.RESTART_NEVER,
+			RestartPolicy: runtimepb.RESTART_NEVER,
 
 			// kernel namespaces
 			HostIpc:     pod.Spec.HostIPC,
@@ -301,7 +301,7 @@ func (m *Manager) translatePodCreateOptions(
 
 			// network options
 
-			Network: &aranyagopb.PodNetworkSpec{
+			Network: &runtimepb.PodNetworkSpec{
 				Nameservers: dnsConfig.Servers,
 				DnsSearches: dnsConfig.Searches,
 				DnsOptions:  dnsConfig.Options,
@@ -313,16 +313,16 @@ func (m *Manager) translatePodCreateOptions(
 			Containers: initContainers,
 			Wait:       true,
 
-			Volumes: &aranyagopb.PodVolumeSpec{
+			Volumes: &runtimepb.PodVolumeSpec{
 				HostPaths:  hostPathsForInitCtr,
 				VolumeData: volumeDataForInitCtr,
 			},
-			Security: &aranyagopb.PodSecuritySpec{
+			Security: &runtimepb.PodSecuritySpec{
 				Sysctls: sysctls,
 			},
 		}
 
-		workOpts = &aranyagopb.PodEnsureCmd{
+		workOpts = &runtimepb.PodEnsureCmd{
 			PodUid:    string(pod.UID),
 			Namespace: pod.Namespace,
 			Name:      pod.Name,
@@ -332,19 +332,19 @@ func (m *Manager) translatePodCreateOptions(
 			Containers: containers,
 			Wait:       false,
 
-			Volumes: &aranyagopb.PodVolumeSpec{
+			Volumes: &runtimepb.PodVolumeSpec{
 				HostPaths:  hostPathsForWorkCtr,
 				VolumeData: volumeDataForWorkCtr,
 			},
 
-			Security: &aranyagopb.PodSecuritySpec{
+			Security: &runtimepb.PodSecuritySpec{
 				Sysctls: sysctls,
 			},
 		}
 	} else {
 		// need to create pause when creating work containers
 		// require all options applied to pause container
-		workOpts = &aranyagopb.PodEnsureCmd{
+		workOpts = &runtimepb.PodEnsureCmd{
 			PodUid:    string(pod.UID),
 			Namespace: pod.Namespace,
 			Name:      pod.Name,
@@ -362,7 +362,7 @@ func (m *Manager) translatePodCreateOptions(
 
 			// network options
 
-			Network: &aranyagopb.PodNetworkSpec{
+			Network: &runtimepb.PodNetworkSpec{
 				Nameservers: dnsConfig.Servers,
 				DnsSearches: dnsConfig.Searches,
 				DnsOptions:  dnsConfig.Options,
@@ -374,17 +374,17 @@ func (m *Manager) translatePodCreateOptions(
 			Containers: containers,
 			Wait:       false,
 
-			Volumes: &aranyagopb.PodVolumeSpec{
+			Volumes: &runtimepb.PodVolumeSpec{
 				HostPaths:  hostPathsForWorkCtr,
 				VolumeData: volumeDataForWorkCtr,
 			},
-			Security: &aranyagopb.PodSecuritySpec{
+			Security: &runtimepb.PodSecuritySpec{
 				Sysctls: sysctls,
 			},
 		}
 	}
 
-	return &aranyagopb.ImageEnsureCmd{Images: imagePull}, initOpts, workOpts, initHostExec, workHostExec, nil
+	return &runtimepb.ImageEnsureCmd{Images: imagePull}, initOpts, workOpts, initHostExec, workHostExec, nil
 }
 
 func getNamedContainerPorts(ctr *corev1.Container) map[string]int32 {
@@ -401,7 +401,7 @@ func translateContainerSpec(
 	pod *corev1.Pod,
 	envs map[string]map[string]string,
 	ctr *corev1.Container,
-) *aranyagopb.ContainerSpec {
+) *runtimepb.ContainerSpec {
 	var (
 		ctrPorts = make(map[string]int32)
 	)
@@ -412,7 +412,7 @@ func translateContainerSpec(
 		}
 	}
 
-	mounts := make(map[string]*aranyagopb.ContainerMountSpec)
+	mounts := make(map[string]*runtimepb.ContainerMountSpec)
 	for _, volMount := range ctr.VolumeMounts {
 		var (
 			fileMode uint32
@@ -442,7 +442,7 @@ func translateContainerSpec(
 			break
 		}
 
-		mounts[volMount.Name] = &aranyagopb.ContainerMountSpec{
+		mounts[volMount.Name] = &runtimepb.ContainerMountSpec{
 			MountPath: volMount.MountPath,
 			SubPath:   volMount.SubPath,
 			ReadOnly:  readOnly,
@@ -453,7 +453,7 @@ func translateContainerSpec(
 		}
 	}
 
-	spec := &aranyagopb.ContainerSpec{
+	spec := &runtimepb.ContainerSpec{
 		Name:  ctr.Name,
 		Image: ctr.Image,
 
@@ -480,12 +480,12 @@ func translateContainerSpec(
 	return spec
 }
 
-func translateProbe(p *corev1.Probe, ports map[string]int32) *aranyagopb.ContainerProbeSpec {
+func translateProbe(p *corev1.Probe, ports map[string]int32) *runtimepb.ContainerProbeSpec {
 	if p == nil {
 		return nil
 	}
 
-	return &aranyagopb.ContainerProbeSpec{
+	return &runtimepb.ContainerProbeSpec{
 		Method:           translateHandler(&p.Handler, ports),
 		InitialDelay:     int64(time.Second) * int64(p.InitialDelaySeconds),
 		ProbeTimeout:     int64(time.Second) * int64(p.TimeoutSeconds),
@@ -495,16 +495,16 @@ func translateProbe(p *corev1.Probe, ports map[string]int32) *aranyagopb.Contain
 	}
 }
 
-func translateHandler(h *corev1.Handler, namedPorts map[string]int32) *aranyagopb.ContainerAction {
+func translateHandler(h *corev1.Handler, namedPorts map[string]int32) *runtimepb.ContainerAction {
 	if h == nil {
 		return nil
 	}
 
 	switch {
 	case h.Exec != nil:
-		return &aranyagopb.ContainerAction{
-			Action: &aranyagopb.ContainerAction_Exec_{
-				Exec: &aranyagopb.ContainerAction_Exec{
+		return &runtimepb.ContainerAction{
+			Action: &runtimepb.ContainerAction_Exec_{
+				Exec: &runtimepb.ContainerAction_Exec{
 					Command: h.Exec.Command,
 				},
 			},
@@ -515,14 +515,14 @@ func translateHandler(h *corev1.Handler, namedPorts map[string]int32) *aranyagop
 			return nil
 		}
 
-		var kvPair []*aranyagopb.KeyValuePair
+		var kvPair []*runtimepb.KeyValuePair
 		for _, header := range h.HTTPGet.HTTPHeaders {
-			kvPair = append(kvPair, &aranyagopb.KeyValuePair{Key: header.Name, Value: header.Value})
+			kvPair = append(kvPair, &runtimepb.KeyValuePair{Key: header.Name, Value: header.Value})
 		}
 
-		return &aranyagopb.ContainerAction{
-			Action: &aranyagopb.ContainerAction_Http{
-				Http: &aranyagopb.ContainerAction_HTTP{
+		return &runtimepb.ContainerAction{
+			Action: &runtimepb.ContainerAction_Http{
+				Http: &runtimepb.ContainerAction_HTTP{
 					Method:  http.MethodGet,
 					Url:     fmt.Sprintf("%s://%s:%d%s", h.HTTPGet.Scheme, h.HTTPGet.Host, port, h.HTTPGet.Path),
 					Headers: kvPair,
@@ -535,9 +535,9 @@ func translateHandler(h *corev1.Handler, namedPorts map[string]int32) *aranyagop
 			return nil
 		}
 
-		return &aranyagopb.ContainerAction{
-			Action: &aranyagopb.ContainerAction_Socket_{
-				Socket: &aranyagopb.ContainerAction_Socket{
+		return &runtimepb.ContainerAction{
+			Action: &runtimepb.ContainerAction_Socket_{
+				Socket: &runtimepb.ContainerAction_Socket{
 					Address: fmt.Sprintf("tcp://%s:%d", h.TCPSocket.Host, port),
 				},
 			},
@@ -567,7 +567,7 @@ func getPortValue(ports map[string]int32, port intstr.IntOrString) int32 {
 func translateContainerSecOpts(
 	podSecOpts *corev1.PodSecurityContext,
 	ctrSecOpts *corev1.SecurityContext,
-) *aranyagopb.ContainerSecuritySpec {
+) *runtimepb.ContainerSecuritySpec {
 	result := resolveCommonSecOpts(podSecOpts, ctrSecOpts)
 	if result == nil || ctrSecOpts == nil {
 		return result
@@ -589,9 +589,9 @@ func translateContainerSecOpts(
 	if ctrSecOpts.ProcMount != nil {
 		switch *ctrSecOpts.ProcMount {
 		case corev1.UnmaskedProcMount:
-			result.ProcMountKind = aranyagopb.PROC_MOUNT_UNMASKED
+			result.ProcMountKind = runtimepb.PROC_MOUNT_UNMASKED
 		default:
-			result.ProcMountKind = aranyagopb.PROC_MOUNT_DEFAULT
+			result.ProcMountKind = runtimepb.PROC_MOUNT_DEFAULT
 		}
 	}
 
@@ -614,12 +614,12 @@ func translateContainerSecOpts(
 func resolveCommonSecOpts(
 	podSecOpts *corev1.PodSecurityContext,
 	ctrSecOpts *corev1.SecurityContext,
-) *aranyagopb.ContainerSecuritySpec {
+) *runtimepb.ContainerSecuritySpec {
 	if podSecOpts == nil && ctrSecOpts != nil {
 		return nil
 	}
 
-	return &aranyagopb.ContainerSecuritySpec{
+	return &runtimepb.ContainerSecuritySpec{
 		NonRoot: func() bool {
 			switch {
 			case ctrSecOpts != nil && ctrSecOpts.RunAsNonRoot != nil:
@@ -647,17 +647,17 @@ func resolveCommonSecOpts(
 			}
 			return -1
 		}(),
-		SelinuxOptions: func() *aranyagopb.SELinuxOptions {
+		SelinuxOptions: func() *runtimepb.SELinuxOptions {
 			switch {
 			case ctrSecOpts != nil && ctrSecOpts.SELinuxOptions != nil:
-				return &aranyagopb.SELinuxOptions{
+				return &runtimepb.SELinuxOptions{
 					Type:  ctrSecOpts.SELinuxOptions.Type,
 					Level: ctrSecOpts.SELinuxOptions.Level,
 					Role:  ctrSecOpts.SELinuxOptions.Role,
 					User:  ctrSecOpts.SELinuxOptions.User,
 				}
 			case podSecOpts != nil && podSecOpts.SELinuxOptions != nil:
-				return &aranyagopb.SELinuxOptions{
+				return &runtimepb.SELinuxOptions{
 					Type:  podSecOpts.SELinuxOptions.Type,
 					Level: podSecOpts.SELinuxOptions.Level,
 					Role:  podSecOpts.SELinuxOptions.Role,
@@ -669,29 +669,29 @@ func resolveCommonSecOpts(
 	}
 }
 
-func translateImagePullPolicy(policy corev1.PullPolicy) aranyagopb.ImagePullPolicy {
+func translateImagePullPolicy(policy corev1.PullPolicy) runtimepb.ImagePullPolicy {
 	switch policy {
 	case corev1.PullNever:
-		return aranyagopb.IMAGE_PULL_NEVER
+		return runtimepb.IMAGE_PULL_NEVER
 	case corev1.PullIfNotPresent:
-		return aranyagopb.IMAGE_PULL_IF_NOT_PRESENT
+		return runtimepb.IMAGE_PULL_IF_NOT_PRESENT
 	case corev1.PullAlways:
-		return aranyagopb.IMAGE_PULL_ALWAYS
+		return runtimepb.IMAGE_PULL_ALWAYS
 	default:
-		return aranyagopb.IMAGE_PULL_NEVER
+		return runtimepb.IMAGE_PULL_NEVER
 	}
 }
 
-func translateRestartPolicy(policy corev1.RestartPolicy) aranyagopb.RestartPolicy {
+func translateRestartPolicy(policy corev1.RestartPolicy) runtimepb.RestartPolicy {
 	switch policy {
 	case corev1.RestartPolicyAlways:
-		return aranyagopb.RESTART_ALWAYS
+		return runtimepb.RESTART_ALWAYS
 	case corev1.RestartPolicyNever:
-		return aranyagopb.RESTART_NEVER
+		return runtimepb.RESTART_NEVER
 	case corev1.RestartPolicyOnFailure:
-		return aranyagopb.RESTART_ON_FAILURE
+		return runtimepb.RESTART_ON_FAILURE
 	}
-	return aranyagopb.RESTART_ALWAYS
+	return runtimepb.RESTART_ALWAYS
 }
 
 func getPodLabels(allLabels map[string]string) map[string]string {

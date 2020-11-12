@@ -32,7 +32,7 @@ func init() {
 		Sid:       math.MaxUint64,
 		Seq:       math.MaxUint64,
 		Completed: true,
-		Body:      emptyBody,
+		Payload:   emptyBody,
 	}
 
 	EmptyMsgSize = emptyMsg.Size()
@@ -45,7 +45,7 @@ func NewMsg(kind MsgType, sid, seq uint64, completed bool, payload []byte) *Msg 
 		Sid:       sid,
 		Seq:       seq,
 		Completed: completed,
-		Body:      payload,
+		Payload:   payload,
 	}
 }
 

@@ -36,7 +36,7 @@ func init() {
 		Sid:       math.MaxUint64,
 		Seq:       math.MaxUint64,
 		Completed: true,
-		Body:      emptyBody,
+		Payload:   emptyBody,
 	}
 
 	EmptyCmdSize = emptyCmd.Size()
@@ -50,7 +50,7 @@ func NewCmd(kind CmdType, sid, seq uint64, completed bool, payload []byte) *Cmd 
 		Sid:       sid,
 		Seq:       seq,
 		Completed: completed,
-		Body:      payload,
+		Payload:   payload,
 	}
 }
 
@@ -70,40 +70,6 @@ func NewNodeCmd(k NodeInfoGetCmd_Kind) *NodeInfoGetCmd {
 func NewCredentialEnsureCmd(sshPrivateKey []byte) *CredentialEnsureCmd {
 	return &CredentialEnsureCmd{
 		SshPrivateKey: sshPrivateKey,
-	}
-}
-
-func NewImageListCmd(refs ...string) *ImageListCmd {
-	return &ImageListCmd{
-		Refs: refs,
-	}
-}
-
-func NewImageDeleteCmd(refs ...string) *ImageDeleteCmd {
-	return &ImageDeleteCmd{
-		Refs: refs,
-	}
-}
-
-func NewPodDeleteCmd(podUID string, graceTime time.Duration, preStopHooks map[string]*ContainerAction) *PodDeleteCmd {
-	return &PodDeleteCmd{
-		PodUid:      podUID,
-		GraceTime:   int64(graceTime),
-		HookPreStop: preStopHooks,
-	}
-}
-
-func NewPodContainerDeleteCmd(podUID string, containers []string) *PodDeleteCmd {
-	return &PodDeleteCmd{
-		PodUid:     podUID,
-		Containers: containers,
-	}
-}
-
-func NewPodListCmd(all bool, names ...string) *PodListCmd {
-	return &PodListCmd{
-		All:   all,
-		Names: names,
 	}
 }
 

@@ -6,10 +6,16 @@
 package aranyagopb
 
 import (
+	bytes "bytes"
 	fmt "fmt"
 	proto "github.com/gogo/protobuf/proto"
+	github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
+	io "io"
 	math "math"
+	math_bits "math/bits"
+	reflect "reflect"
 	strconv "strconv"
+	strings "strings"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -50,28 +56,931 @@ func (PeripheralType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_8f764f7e9651e8ed, []int{0}
 }
 
+type PeripheralState int32
+
+const (
+	PERIPHERAL_STATE_UNKNOWN   PeripheralState = 0
+	PERIPHERAL_STATE_CREATED   PeripheralState = 1
+	PERIPHERAL_STATE_CONNECTED PeripheralState = 2
+	PERIPHERAL_STATE_ERRORED   PeripheralState = 3
+	PERIPHERAL_STATE_REMOVED   PeripheralState = 4
+)
+
+var PeripheralState_name = map[int32]string{
+	0: "PERIPHERAL_STATE_UNKNOWN",
+	1: "PERIPHERAL_STATE_CREATED",
+	2: "PERIPHERAL_STATE_CONNECTED",
+	3: "PERIPHERAL_STATE_ERRORED",
+	4: "PERIPHERAL_STATE_REMOVED",
+}
+
+var PeripheralState_value = map[string]int32{
+	"PERIPHERAL_STATE_UNKNOWN":   0,
+	"PERIPHERAL_STATE_CREATED":   1,
+	"PERIPHERAL_STATE_CONNECTED": 2,
+	"PERIPHERAL_STATE_ERRORED":   3,
+	"PERIPHERAL_STATE_REMOVED":   4,
+}
+
+func (PeripheralState) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{1}
+}
+
+type PeripheralMetric_ReportMethod int32
+
+const (
+	// Report peripheral metrics when collecting node metrics
+	REPORT_WITH_NODE_METRICS PeripheralMetric_ReportMethod = 0
+	// Report peripheral metrics along with arhat client
+	REPORT_WITH_ARHAT_CONNECTIVITY PeripheralMetric_ReportMethod = 1
+	// Create a standalone client for metrics uploading
+	REPORT_WITH_STANDALONE_CLIENT PeripheralMetric_ReportMethod = 2
+)
+
+var PeripheralMetric_ReportMethod_name = map[int32]string{
+	0: "REPORT_WITH_NODE_METRICS",
+	1: "REPORT_WITH_ARHAT_CONNECTIVITY",
+	2: "REPORT_WITH_STANDALONE_CLIENT",
+}
+
+var PeripheralMetric_ReportMethod_value = map[string]int32{
+	"REPORT_WITH_NODE_METRICS":       0,
+	"REPORT_WITH_ARHAT_CONNECTIVITY": 1,
+	"REPORT_WITH_STANDALONE_CLIENT":  2,
+}
+
+func (PeripheralMetric_ReportMethod) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{3, 0}
+}
+
+type PeripheralMetric_ValueType int32
+
+const (
+	METRICS_VALUE_TYPE_UNTYPED PeripheralMetric_ValueType = 0
+	METRICS_VALUE_TYPE_COUNTER PeripheralMetric_ValueType = 1
+	METRICS_VALUE_TYPE_GAUGE   PeripheralMetric_ValueType = 2
+)
+
+var PeripheralMetric_ValueType_name = map[int32]string{
+	0: "METRICS_VALUE_TYPE_UNTYPED",
+	1: "METRICS_VALUE_TYPE_COUNTER",
+	2: "METRICS_VALUE_TYPE_GAUGE",
+}
+
+var PeripheralMetric_ValueType_value = map[string]int32{
+	"METRICS_VALUE_TYPE_UNTYPED": 0,
+	"METRICS_VALUE_TYPE_COUNTER": 1,
+	"METRICS_VALUE_TYPE_GAUGE":   2,
+}
+
+func (PeripheralMetric_ValueType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{3, 1}
+}
+
+type TLSConfig struct {
+	ServerName         string   `protobuf:"bytes,1,opt,name=server_name,json=serverName,proto3" json:"server_name,omitempty"`
+	InsecureSkipVerify bool     `protobuf:"varint,2,opt,name=insecure_skip_verify,json=insecureSkipVerify,proto3" json:"insecure_skip_verify,omitempty"`
+	MinVersion         uint32   `protobuf:"varint,3,opt,name=min_version,json=minVersion,proto3" json:"min_version,omitempty"`
+	MaxVersion         uint32   `protobuf:"varint,4,opt,name=max_version,json=maxVersion,proto3" json:"max_version,omitempty"`
+	CaCert             []byte   `protobuf:"bytes,5,opt,name=ca_cert,json=caCert,proto3" json:"ca_cert,omitempty"`
+	Cert               []byte   `protobuf:"bytes,6,opt,name=cert,proto3" json:"cert,omitempty"`
+	Key                []byte   `protobuf:"bytes,7,opt,name=key,proto3" json:"key,omitempty"`
+	CipherSuites       []uint32 `protobuf:"varint,8,rep,packed,name=cipher_suites,json=cipherSuites,proto3" json:"cipher_suites,omitempty"`
+	NextProtos         []string `protobuf:"bytes,9,rep,name=next_protos,json=nextProtos,proto3" json:"next_protos,omitempty"`
+}
+
+func (m *TLSConfig) Reset()      { *m = TLSConfig{} }
+func (*TLSConfig) ProtoMessage() {}
+func (*TLSConfig) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{0}
+}
+func (m *TLSConfig) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *TLSConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_TLSConfig.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *TLSConfig) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TLSConfig.Merge(m, src)
+}
+func (m *TLSConfig) XXX_Size() int {
+	return m.Size()
+}
+func (m *TLSConfig) XXX_DiscardUnknown() {
+	xxx_messageInfo_TLSConfig.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TLSConfig proto.InternalMessageInfo
+
+func (m *TLSConfig) GetServerName() string {
+	if m != nil {
+		return m.ServerName
+	}
+	return ""
+}
+
+func (m *TLSConfig) GetInsecureSkipVerify() bool {
+	if m != nil {
+		return m.InsecureSkipVerify
+	}
+	return false
+}
+
+func (m *TLSConfig) GetMinVersion() uint32 {
+	if m != nil {
+		return m.MinVersion
+	}
+	return 0
+}
+
+func (m *TLSConfig) GetMaxVersion() uint32 {
+	if m != nil {
+		return m.MaxVersion
+	}
+	return 0
+}
+
+func (m *TLSConfig) GetCaCert() []byte {
+	if m != nil {
+		return m.CaCert
+	}
+	return nil
+}
+
+func (m *TLSConfig) GetCert() []byte {
+	if m != nil {
+		return m.Cert
+	}
+	return nil
+}
+
+func (m *TLSConfig) GetKey() []byte {
+	if m != nil {
+		return m.Key
+	}
+	return nil
+}
+
+func (m *TLSConfig) GetCipherSuites() []uint32 {
+	if m != nil {
+		return m.CipherSuites
+	}
+	return nil
+}
+
+func (m *TLSConfig) GetNextProtos() []string {
+	if m != nil {
+		return m.NextProtos
+	}
+	return nil
+}
+
+type Connectivity struct {
+	// method name of the connectivity
+	Method string `protobuf:"bytes,1,opt,name=method,proto3" json:"method,omitempty"`
+	// target to connect
+	Target string `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	// parameters used when creating this connectivity
+	Params map[string]string `protobuf:"bytes,3,rep,name=params,proto3" json:"params,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Tls    *TLSConfig        `protobuf:"bytes,4,opt,name=tls,proto3" json:"tls,omitempty"`
+}
+
+func (m *Connectivity) Reset()      { *m = Connectivity{} }
+func (*Connectivity) ProtoMessage() {}
+func (*Connectivity) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{1}
+}
+func (m *Connectivity) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Connectivity) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Connectivity.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Connectivity) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Connectivity.Merge(m, src)
+}
+func (m *Connectivity) XXX_Size() int {
+	return m.Size()
+}
+func (m *Connectivity) XXX_DiscardUnknown() {
+	xxx_messageInfo_Connectivity.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Connectivity proto.InternalMessageInfo
+
+func (m *Connectivity) GetMethod() string {
+	if m != nil {
+		return m.Method
+	}
+	return ""
+}
+
+func (m *Connectivity) GetTarget() string {
+	if m != nil {
+		return m.Target
+	}
+	return ""
+}
+
+func (m *Connectivity) GetParams() map[string]string {
+	if m != nil {
+		return m.Params
+	}
+	return nil
+}
+
+func (m *Connectivity) GetTls() *TLSConfig {
+	if m != nil {
+		return m.Tls
+	}
+	return nil
+}
+
+type PeripheralOperation struct {
+	// (required) identifier of this operation
+	OperationId string `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	// (optional) params usd for peripheral connectivity when executing this
+	// operation
+	Params map[string]string `protobuf:"bytes,2,rep,name=params,proto3" json:"params,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+}
+
+func (m *PeripheralOperation) Reset()      { *m = PeripheralOperation{} }
+func (*PeripheralOperation) ProtoMessage() {}
+func (*PeripheralOperation) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{2}
+}
+func (m *PeripheralOperation) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PeripheralOperation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PeripheralOperation.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PeripheralOperation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeripheralOperation.Merge(m, src)
+}
+func (m *PeripheralOperation) XXX_Size() int {
+	return m.Size()
+}
+func (m *PeripheralOperation) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeripheralOperation.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PeripheralOperation proto.InternalMessageInfo
+
+func (m *PeripheralOperation) GetOperationId() string {
+	if m != nil {
+		return m.OperationId
+	}
+	return ""
+}
+
+func (m *PeripheralOperation) GetParams() map[string]string {
+	if m != nil {
+		return m.Params
+	}
+	return nil
+}
+
+type PeripheralMetric struct {
+	// Name of this metric
+	Name         string                        `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	ReportMethod PeripheralMetric_ReportMethod `protobuf:"varint,2,opt,name=report_method,json=reportMethod,proto3,enum=aranya.PeripheralMetric_ReportMethod" json:"report_method,omitempty"`
+	ValueType    PeripheralMetric_ValueType    `protobuf:"varint,3,opt,name=value_type,json=valueType,proto3,enum=aranya.PeripheralMetric_ValueType" json:"value_type,omitempty"`
+	// (required) params for peripheral connector to retrieve metrics
+	PeripheralParams map[string]string `protobuf:"bytes,4,rep,name=peripheral_params,json=peripheralParams,proto3" json:"peripheral_params,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// Hex encoded hash of the metrics reporter
+	ReporterName string `protobuf:"bytes,5,opt,name=reporter_name,json=reporterName,proto3" json:"reporter_name,omitempty"`
+	// (optional) params for metrics_reporter to upload metrics
+	ReporterParams map[string]string `protobuf:"bytes,6,rep,name=reporter_params,json=reporterParams,proto3" json:"reporter_params,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+}
+
+func (m *PeripheralMetric) Reset()      { *m = PeripheralMetric{} }
+func (*PeripheralMetric) ProtoMessage() {}
+func (*PeripheralMetric) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{3}
+}
+func (m *PeripheralMetric) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PeripheralMetric) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PeripheralMetric.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PeripheralMetric) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeripheralMetric.Merge(m, src)
+}
+func (m *PeripheralMetric) XXX_Size() int {
+	return m.Size()
+}
+func (m *PeripheralMetric) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeripheralMetric.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PeripheralMetric proto.InternalMessageInfo
+
+func (m *PeripheralMetric) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *PeripheralMetric) GetReportMethod() PeripheralMetric_ReportMethod {
+	if m != nil {
+		return m.ReportMethod
+	}
+	return REPORT_WITH_NODE_METRICS
+}
+
+func (m *PeripheralMetric) GetValueType() PeripheralMetric_ValueType {
+	if m != nil {
+		return m.ValueType
+	}
+	return METRICS_VALUE_TYPE_UNTYPED
+}
+
+func (m *PeripheralMetric) GetPeripheralParams() map[string]string {
+	if m != nil {
+		return m.PeripheralParams
+	}
+	return nil
+}
+
+func (m *PeripheralMetric) GetReporterName() string {
+	if m != nil {
+		return m.ReporterName
+	}
+	return ""
+}
+
+func (m *PeripheralMetric) GetReporterParams() map[string]string {
+	if m != nil {
+		return m.ReporterParams
+	}
+	return nil
+}
+
+type PeripheralEnsureCmd struct {
+	Kind PeripheralType `protobuf:"varint,1,opt,name=kind,proto3,enum=aranya.PeripheralType" json:"kind,omitempty"`
+	// (required) User defined peripheral name
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// (required) Connector defines how to connect to the peripheral, operations operate
+	// upon this connector
+	Connector *Connectivity `protobuf:"bytes,3,opt,name=connector,proto3" json:"connector,omitempty"`
+	// (optional) User defined peripheral operations
+	Operations []*PeripheralOperation `protobuf:"bytes,4,rep,name=operations,proto3" json:"operations,omitempty"`
+	// (optional) User defined peripheral metrics
+	Metrics []*PeripheralMetric `protobuf:"bytes,5,rep,name=metrics,proto3" json:"metrics,omitempty"`
+}
+
+func (m *PeripheralEnsureCmd) Reset()      { *m = PeripheralEnsureCmd{} }
+func (*PeripheralEnsureCmd) ProtoMessage() {}
+func (*PeripheralEnsureCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{4}
+}
+func (m *PeripheralEnsureCmd) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PeripheralEnsureCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PeripheralEnsureCmd.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PeripheralEnsureCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeripheralEnsureCmd.Merge(m, src)
+}
+func (m *PeripheralEnsureCmd) XXX_Size() int {
+	return m.Size()
+}
+func (m *PeripheralEnsureCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeripheralEnsureCmd.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PeripheralEnsureCmd proto.InternalMessageInfo
+
+func (m *PeripheralEnsureCmd) GetKind() PeripheralType {
+	if m != nil {
+		return m.Kind
+	}
+	return _INVALID_PERIPHERAL_TYPE
+}
+
+func (m *PeripheralEnsureCmd) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *PeripheralEnsureCmd) GetConnector() *Connectivity {
+	if m != nil {
+		return m.Connector
+	}
+	return nil
+}
+
+func (m *PeripheralEnsureCmd) GetOperations() []*PeripheralOperation {
+	if m != nil {
+		return m.Operations
+	}
+	return nil
+}
+
+func (m *PeripheralEnsureCmd) GetMetrics() []*PeripheralMetric {
+	if m != nil {
+		return m.Metrics
+	}
+	return nil
+}
+
+type PeripheralListCmd struct {
+	PeripheralNames []string `protobuf:"bytes,1,rep,name=peripheral_names,json=peripheralNames,proto3" json:"peripheral_names,omitempty"`
+}
+
+func (m *PeripheralListCmd) Reset()      { *m = PeripheralListCmd{} }
+func (*PeripheralListCmd) ProtoMessage() {}
+func (*PeripheralListCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{5}
+}
+func (m *PeripheralListCmd) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PeripheralListCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PeripheralListCmd.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PeripheralListCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeripheralListCmd.Merge(m, src)
+}
+func (m *PeripheralListCmd) XXX_Size() int {
+	return m.Size()
+}
+func (m *PeripheralListCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeripheralListCmd.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PeripheralListCmd proto.InternalMessageInfo
+
+func (m *PeripheralListCmd) GetPeripheralNames() []string {
+	if m != nil {
+		return m.PeripheralNames
+	}
+	return nil
+}
+
+type PeripheralDeleteCmd struct {
+	// delete normal peripherals or metrics reporters
+	PeripheralNames []string `protobuf:"bytes,1,rep,name=peripheral_names,json=peripheralNames,proto3" json:"peripheral_names,omitempty"`
+}
+
+func (m *PeripheralDeleteCmd) Reset()      { *m = PeripheralDeleteCmd{} }
+func (*PeripheralDeleteCmd) ProtoMessage() {}
+func (*PeripheralDeleteCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{6}
+}
+func (m *PeripheralDeleteCmd) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PeripheralDeleteCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PeripheralDeleteCmd.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PeripheralDeleteCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeripheralDeleteCmd.Merge(m, src)
+}
+func (m *PeripheralDeleteCmd) XXX_Size() int {
+	return m.Size()
+}
+func (m *PeripheralDeleteCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeripheralDeleteCmd.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PeripheralDeleteCmd proto.InternalMessageInfo
+
+func (m *PeripheralDeleteCmd) GetPeripheralNames() []string {
+	if m != nil {
+		return m.PeripheralNames
+	}
+	return nil
+}
+
+type PeripheralOperateCmd struct {
+	// (required) peripheral id of a normal peripheral
+	PeripheralName string `protobuf:"bytes,1,opt,name=peripheral_name,json=peripheralName,proto3" json:"peripheral_name,omitempty"`
+	// (required) identifier of this operation
+	OperationId string `protobuf:"bytes,2,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	// (optional) extra data for this operation
+	Data []byte `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (m *PeripheralOperateCmd) Reset()      { *m = PeripheralOperateCmd{} }
+func (*PeripheralOperateCmd) ProtoMessage() {}
+func (*PeripheralOperateCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{7}
+}
+func (m *PeripheralOperateCmd) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PeripheralOperateCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PeripheralOperateCmd.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PeripheralOperateCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeripheralOperateCmd.Merge(m, src)
+}
+func (m *PeripheralOperateCmd) XXX_Size() int {
+	return m.Size()
+}
+func (m *PeripheralOperateCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeripheralOperateCmd.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PeripheralOperateCmd proto.InternalMessageInfo
+
+func (m *PeripheralOperateCmd) GetPeripheralName() string {
+	if m != nil {
+		return m.PeripheralName
+	}
+	return ""
+}
+
+func (m *PeripheralOperateCmd) GetOperationId() string {
+	if m != nil {
+		return m.OperationId
+	}
+	return ""
+}
+
+func (m *PeripheralOperateCmd) GetData() []byte {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+type PeripheralMetricsCollectCmd struct {
+	PeripheralNames []string `protobuf:"bytes,2,rep,name=peripheral_names,json=peripheralNames,proto3" json:"peripheral_names,omitempty"`
+}
+
+func (m *PeripheralMetricsCollectCmd) Reset()      { *m = PeripheralMetricsCollectCmd{} }
+func (*PeripheralMetricsCollectCmd) ProtoMessage() {}
+func (*PeripheralMetricsCollectCmd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{8}
+}
+func (m *PeripheralMetricsCollectCmd) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PeripheralMetricsCollectCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PeripheralMetricsCollectCmd.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PeripheralMetricsCollectCmd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeripheralMetricsCollectCmd.Merge(m, src)
+}
+func (m *PeripheralMetricsCollectCmd) XXX_Size() int {
+	return m.Size()
+}
+func (m *PeripheralMetricsCollectCmd) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeripheralMetricsCollectCmd.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PeripheralMetricsCollectCmd proto.InternalMessageInfo
+
+func (m *PeripheralMetricsCollectCmd) GetPeripheralNames() []string {
+	if m != nil {
+		return m.PeripheralNames
+	}
+	return nil
+}
+
+type PeripheralStatusMsg struct {
+	Kind  PeripheralType  `protobuf:"varint,1,opt,name=kind,proto3,enum=aranya.PeripheralType" json:"kind,omitempty"`
+	Name  string          `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	State PeripheralState `protobuf:"varint,3,opt,name=state,proto3,enum=aranya.PeripheralState" json:"state,omitempty"`
+	// Human readable description for this state
+	Message string `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+}
+
+func (m *PeripheralStatusMsg) Reset()      { *m = PeripheralStatusMsg{} }
+func (*PeripheralStatusMsg) ProtoMessage() {}
+func (*PeripheralStatusMsg) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{9}
+}
+func (m *PeripheralStatusMsg) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PeripheralStatusMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PeripheralStatusMsg.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PeripheralStatusMsg) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeripheralStatusMsg.Merge(m, src)
+}
+func (m *PeripheralStatusMsg) XXX_Size() int {
+	return m.Size()
+}
+func (m *PeripheralStatusMsg) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeripheralStatusMsg.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PeripheralStatusMsg proto.InternalMessageInfo
+
+func (m *PeripheralStatusMsg) GetKind() PeripheralType {
+	if m != nil {
+		return m.Kind
+	}
+	return _INVALID_PERIPHERAL_TYPE
+}
+
+func (m *PeripheralStatusMsg) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *PeripheralStatusMsg) GetState() PeripheralState {
+	if m != nil {
+		return m.State
+	}
+	return PERIPHERAL_STATE_UNKNOWN
+}
+
+func (m *PeripheralStatusMsg) GetMessage() string {
+	if m != nil {
+		return m.Message
+	}
+	return ""
+}
+
+type PeripheralStatusListMsg struct {
+	Peripherals []*PeripheralStatusMsg `protobuf:"bytes,1,rep,name=peripherals,proto3" json:"peripherals,omitempty"`
+}
+
+func (m *PeripheralStatusListMsg) Reset()      { *m = PeripheralStatusListMsg{} }
+func (*PeripheralStatusListMsg) ProtoMessage() {}
+func (*PeripheralStatusListMsg) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{10}
+}
+func (m *PeripheralStatusListMsg) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PeripheralStatusListMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PeripheralStatusListMsg.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PeripheralStatusListMsg) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeripheralStatusListMsg.Merge(m, src)
+}
+func (m *PeripheralStatusListMsg) XXX_Size() int {
+	return m.Size()
+}
+func (m *PeripheralStatusListMsg) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeripheralStatusListMsg.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PeripheralStatusListMsg proto.InternalMessageInfo
+
+func (m *PeripheralStatusListMsg) GetPeripherals() []*PeripheralStatusMsg {
+	if m != nil {
+		return m.Peripherals
+	}
+	return nil
+}
+
+type PeripheralOperationResultMsg struct {
+	Data [][]byte `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+}
+
+func (m *PeripheralOperationResultMsg) Reset()      { *m = PeripheralOperationResultMsg{} }
+func (*PeripheralOperationResultMsg) ProtoMessage() {}
+func (*PeripheralOperationResultMsg) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8f764f7e9651e8ed, []int{11}
+}
+func (m *PeripheralOperationResultMsg) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PeripheralOperationResultMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PeripheralOperationResultMsg.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PeripheralOperationResultMsg) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeripheralOperationResultMsg.Merge(m, src)
+}
+func (m *PeripheralOperationResultMsg) XXX_Size() int {
+	return m.Size()
+}
+func (m *PeripheralOperationResultMsg) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeripheralOperationResultMsg.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PeripheralOperationResultMsg proto.InternalMessageInfo
+
+func (m *PeripheralOperationResultMsg) GetData() [][]byte {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterEnum("aranya.PeripheralType", PeripheralType_name, PeripheralType_value)
+	proto.RegisterEnum("aranya.PeripheralState", PeripheralState_name, PeripheralState_value)
+	proto.RegisterEnum("aranya.PeripheralMetric_ReportMethod", PeripheralMetric_ReportMethod_name, PeripheralMetric_ReportMethod_value)
+	proto.RegisterEnum("aranya.PeripheralMetric_ValueType", PeripheralMetric_ValueType_name, PeripheralMetric_ValueType_value)
+	proto.RegisterType((*TLSConfig)(nil), "aranya.TLSConfig")
+	proto.RegisterType((*Connectivity)(nil), "aranya.Connectivity")
+	proto.RegisterMapType((map[string]string)(nil), "aranya.Connectivity.ParamsEntry")
+	proto.RegisterType((*PeripheralOperation)(nil), "aranya.PeripheralOperation")
+	proto.RegisterMapType((map[string]string)(nil), "aranya.PeripheralOperation.ParamsEntry")
+	proto.RegisterType((*PeripheralMetric)(nil), "aranya.PeripheralMetric")
+	proto.RegisterMapType((map[string]string)(nil), "aranya.PeripheralMetric.PeripheralParamsEntry")
+	proto.RegisterMapType((map[string]string)(nil), "aranya.PeripheralMetric.ReporterParamsEntry")
+	proto.RegisterType((*PeripheralEnsureCmd)(nil), "aranya.PeripheralEnsureCmd")
+	proto.RegisterType((*PeripheralListCmd)(nil), "aranya.PeripheralListCmd")
+	proto.RegisterType((*PeripheralDeleteCmd)(nil), "aranya.PeripheralDeleteCmd")
+	proto.RegisterType((*PeripheralOperateCmd)(nil), "aranya.PeripheralOperateCmd")
+	proto.RegisterType((*PeripheralMetricsCollectCmd)(nil), "aranya.PeripheralMetricsCollectCmd")
+	proto.RegisterType((*PeripheralStatusMsg)(nil), "aranya.PeripheralStatusMsg")
+	proto.RegisterType((*PeripheralStatusListMsg)(nil), "aranya.PeripheralStatusListMsg")
+	proto.RegisterType((*PeripheralOperationResultMsg)(nil), "aranya.PeripheralOperationResultMsg")
 }
 
 func init() { proto.RegisterFile("peripheral.proto", fileDescriptor_8f764f7e9651e8ed) }
 
 var fileDescriptor_8f764f7e9651e8ed = []byte{
-	// 215 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x28, 0x48, 0x2d, 0xca,
-	0x2c, 0xc8, 0x48, 0x2d, 0x4a, 0xcc, 0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4b, 0x2c,
-	0x4a, 0xcc, 0xab, 0x4c, 0xd4, 0x2a, 0xe0, 0xe2, 0x0b, 0x80, 0xcb, 0x85, 0x54, 0x16, 0xa4, 0x0a,
-	0xc9, 0x70, 0x49, 0xc4, 0x7b, 0xfa, 0x85, 0x39, 0xfa, 0x78, 0xba, 0xc4, 0x07, 0xb8, 0x06, 0x79,
-	0x06, 0x78, 0xb8, 0x06, 0x39, 0xfa, 0xc4, 0x87, 0x44, 0x06, 0xb8, 0x0a, 0x30, 0x08, 0x49, 0x71,
-	0x89, 0xa1, 0x09, 0xc6, 0xfb, 0xf9, 0x07, 0xf9, 0x3a, 0xfa, 0x08, 0x30, 0x0a, 0xa9, 0x70, 0x29,
-	0xa0, 0xcb, 0xf9, 0xba, 0x86, 0x04, 0x79, 0x3a, 0x07, 0xc7, 0x07, 0xb9, 0x06, 0xf8, 0x07, 0x85,
-	0xb8, 0x06, 0x09, 0x30, 0x39, 0x85, 0x5f, 0x78, 0x28, 0xc7, 0x70, 0xe3, 0xa1, 0x1c, 0xc3, 0x87,
-	0x87, 0x72, 0x8c, 0x0d, 0x8f, 0xe4, 0x18, 0x57, 0x3c, 0x92, 0x63, 0x3c, 0xf1, 0x48, 0x8e, 0xf1,
-	0xc2, 0x23, 0x39, 0xc6, 0x07, 0x8f, 0xe4, 0x18, 0x5f, 0x3c, 0x92, 0x63, 0xf8, 0xf0, 0x48, 0x8e,
-	0x71, 0xc2, 0x63, 0x39, 0x86, 0x0b, 0x8f, 0xe5, 0x18, 0x6e, 0x3c, 0x96, 0x63, 0x88, 0x52, 0x4c,
-	0x2c, 0xca, 0x48, 0x2c, 0xd1, 0x4b, 0x49, 0x2d, 0xd3, 0x87, 0xb8, 0x5c, 0x17, 0xec, 0x0f, 0x28,
-	0x27, 0x3d, 0xbf, 0x20, 0x29, 0x89, 0x0d, 0x2c, 0x62, 0x0c, 0x08, 0x00, 0x00, 0xff, 0xff, 0x04,
-	0x02, 0xac, 0x1e, 0xed, 0x00, 0x00, 0x00,
+	// 1155 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x56, 0xcd, 0x92, 0xdb, 0x44,
+	0x10, 0xb6, 0xfc, 0x97, 0xb8, 0xed, 0xf5, 0x2a, 0x93, 0x25, 0x51, 0x6d, 0x82, 0x70, 0x14, 0xa8,
+	0x98, 0x14, 0x31, 0x94, 0xb9, 0x04, 0x28, 0x7e, 0x84, 0xac, 0xca, 0x1a, 0x6c, 0xd9, 0x35, 0xd6,
+	0x3a, 0x04, 0x0e, 0x2a, 0xc5, 0x3b, 0xd9, 0xa8, 0xd6, 0x96, 0x55, 0xd2, 0xd8, 0x15, 0xdf, 0x78,
+	0x04, 0x9e, 0x80, 0x1b, 0x55, 0x70, 0xe7, 0x21, 0x38, 0xe6, 0x98, 0x23, 0xeb, 0xbd, 0x70, 0xcc,
+	0x89, 0x03, 0x27, 0x6a, 0x46, 0x92, 0xad, 0xb5, 0xb5, 0x50, 0x5b, 0x39, 0xad, 0xa6, 0xfb, 0x9b,
+	0x9e, 0xee, 0xaf, 0xbf, 0x6e, 0x2f, 0x88, 0x1e, 0xf1, 0x1d, 0xef, 0x39, 0xf1, 0xed, 0x71, 0xc3,
+	0xf3, 0xa7, 0x74, 0x8a, 0x8a, 0xb6, 0x6f, 0xbb, 0x0b, 0x5b, 0xf9, 0x25, 0x0b, 0x25, 0xb3, 0x33,
+	0xd0, 0xa6, 0xee, 0x33, 0xe7, 0x18, 0xbd, 0x03, 0xe5, 0x80, 0xf8, 0x73, 0xe2, 0x5b, 0xae, 0x3d,
+	0x21, 0x92, 0x50, 0x13, 0xea, 0x25, 0x0c, 0xa1, 0xc9, 0xb0, 0x27, 0x04, 0x7d, 0x04, 0x7b, 0x8e,
+	0x1b, 0x90, 0xd1, 0xcc, 0x27, 0x56, 0x70, 0xe2, 0x78, 0xd6, 0x9c, 0xf8, 0xce, 0xb3, 0x85, 0x94,
+	0xad, 0x09, 0xf5, 0xab, 0x18, 0xc5, 0xbe, 0xc1, 0x89, 0xe3, 0x0d, 0xb9, 0x87, 0x85, 0x9c, 0x38,
+	0x2e, 0xc3, 0x05, 0xce, 0xd4, 0x95, 0x72, 0x35, 0xa1, 0xbe, 0x83, 0x61, 0xe2, 0xb8, 0xc3, 0xd0,
+	0xc2, 0x01, 0xf6, 0x8b, 0x15, 0x20, 0x1f, 0x01, 0xec, 0x17, 0x31, 0xe0, 0x26, 0x5c, 0x19, 0xd9,
+	0xd6, 0x88, 0xf8, 0x54, 0x2a, 0xd4, 0x84, 0x7a, 0x05, 0x17, 0x47, 0xb6, 0x46, 0x7c, 0x8a, 0x10,
+	0xe4, 0xb9, 0xb5, 0xc8, 0xad, 0xfc, 0x1b, 0x89, 0x90, 0x3b, 0x21, 0x0b, 0xe9, 0x0a, 0x37, 0xb1,
+	0x4f, 0x74, 0x17, 0x76, 0x46, 0xbc, 0x76, 0x2b, 0x98, 0x39, 0x94, 0x04, 0xd2, 0xd5, 0x5a, 0xae,
+	0xbe, 0x83, 0x2b, 0xa1, 0x71, 0xc0, 0x6d, 0x2c, 0x09, 0x97, 0xbc, 0xa0, 0x16, 0x27, 0x27, 0x90,
+	0x4a, 0xb5, 0x1c, 0x2b, 0x9c, 0x99, 0xfa, 0xdc, 0xa2, 0xbc, 0x12, 0xa0, 0xa2, 0x4d, 0x5d, 0x97,
+	0x8c, 0xa8, 0x33, 0x77, 0xe8, 0x02, 0xdd, 0x80, 0xe2, 0x84, 0xd0, 0xe7, 0xd3, 0xa3, 0x88, 0xa5,
+	0xe8, 0xc4, 0xec, 0xd4, 0xf6, 0x8f, 0x09, 0xe5, 0x9c, 0x94, 0x70, 0x74, 0x42, 0x0f, 0xa1, 0xe8,
+	0xd9, 0xbe, 0x3d, 0x09, 0xa4, 0x5c, 0x2d, 0x57, 0x2f, 0x37, 0x6b, 0x8d, 0xb0, 0x03, 0x8d, 0x64,
+	0xd4, 0x46, 0x9f, 0x43, 0x74, 0x97, 0xfa, 0x0b, 0x1c, 0xe1, 0xd1, 0x5d, 0xc8, 0xd1, 0x71, 0xc0,
+	0x89, 0x29, 0x37, 0xaf, 0xc5, 0xd7, 0x56, 0x4d, 0xc3, 0xcc, 0xbb, 0xff, 0x09, 0x94, 0x13, 0x77,
+	0x63, 0x1a, 0xc2, 0xd4, 0x38, 0x0d, 0x7b, 0x50, 0x98, 0xdb, 0xe3, 0x19, 0x89, 0xd2, 0x0a, 0x0f,
+	0x9f, 0x66, 0x1f, 0x0a, 0xca, 0xef, 0x02, 0x5c, 0xef, 0xaf, 0xf4, 0xd1, 0xf3, 0x88, 0x6f, 0x53,
+	0xc6, 0xfb, 0x1d, 0xa8, 0x4c, 0xe3, 0x83, 0xe5, 0xc4, 0x75, 0x96, 0x57, 0xb6, 0xf6, 0x11, 0xfa,
+	0x72, 0x55, 0x54, 0x96, 0x17, 0x75, 0x2f, 0xce, 0x2e, 0x25, 0x5e, 0x5a, 0x6d, 0x6f, 0x92, 0xf6,
+	0xdf, 0x05, 0x10, 0xd7, 0xcf, 0x74, 0x09, 0xf5, 0x9d, 0x11, 0x93, 0x44, 0x42, 0xb9, 0xfc, 0x1b,
+	0x7d, 0x03, 0x3b, 0x3e, 0xf1, 0xa6, 0x3e, 0xb5, 0xa2, 0x86, 0xb1, 0x50, 0xd5, 0xe6, 0x7b, 0xdb,
+	0xb9, 0x86, 0x41, 0x1a, 0x98, 0xa3, 0xbb, 0x1c, 0x8c, 0x2b, 0x7e, 0xe2, 0x84, 0x54, 0x00, 0x9e,
+	0x81, 0x45, 0x17, 0x1e, 0xe1, 0x62, 0xae, 0x36, 0x95, 0x0b, 0x03, 0x0d, 0x19, 0xd4, 0x5c, 0x78,
+	0x04, 0x97, 0xe6, 0xf1, 0x27, 0xfa, 0x01, 0xae, 0xad, 0xa7, 0xd1, 0x8a, 0xe8, 0xcb, 0x73, 0xfa,
+	0x1a, 0x17, 0x46, 0x5a, 0x1b, 0x92, 0x2c, 0x26, 0xc6, 0xba, 0x1f, 0x6b, 0x25, 0xaa, 0x35, 0x1e,
+	0xe1, 0x02, 0x27, 0xa2, 0x12, 0x1b, 0xf9, 0x10, 0x1f, 0xc2, 0xee, 0x0a, 0x14, 0xbd, 0x5f, 0xe4,
+	0xef, 0x7f, 0xf0, 0x3f, 0x94, 0x10, 0x3f, 0xf9, 0x7a, 0xd5, 0x3f, 0x67, 0xdc, 0xd7, 0xe0, 0xad,
+	0xd4, 0x34, 0x2f, 0xd3, 0xd5, 0x7d, 0x15, 0xae, 0xa7, 0xbc, 0x75, 0x29, 0x61, 0x04, 0x50, 0x49,
+	0x76, 0x10, 0xdd, 0x06, 0x09, 0xeb, 0xfd, 0x1e, 0x36, 0xad, 0xc7, 0x6d, 0xf3, 0xc0, 0x32, 0x7a,
+	0x2d, 0xdd, 0xea, 0xea, 0x26, 0x6e, 0x6b, 0x03, 0x31, 0x83, 0x14, 0x90, 0x93, 0x5e, 0x15, 0x1f,
+	0xa8, 0xa6, 0xa5, 0xf5, 0x0c, 0x43, 0xd7, 0xcc, 0xf6, 0xb0, 0x6d, 0x3e, 0x11, 0x05, 0x74, 0x07,
+	0xde, 0x4e, 0x62, 0x06, 0xa6, 0x6a, 0xb4, 0xd4, 0x4e, 0xcf, 0xd0, 0x2d, 0xad, 0xd3, 0xd6, 0x0d,
+	0x53, 0xcc, 0x2a, 0x0e, 0x94, 0x56, 0xdd, 0x46, 0x32, 0xec, 0x47, 0x0f, 0x58, 0x43, 0xb5, 0x73,
+	0xa8, 0x5b, 0xe6, 0x93, 0xbe, 0x6e, 0x1d, 0x1a, 0xec, 0x4f, 0x4b, 0xcc, 0x5c, 0xe0, 0xd7, 0x7a,
+	0x87, 0x86, 0xa9, 0x63, 0x51, 0x60, 0x19, 0xa7, 0xf8, 0x1f, 0xa9, 0x87, 0x8f, 0x74, 0x31, 0xab,
+	0xfc, 0x73, 0x6e, 0x5e, 0x75, 0x37, 0x98, 0xf9, 0x44, 0x9b, 0x1c, 0xa1, 0xfb, 0x90, 0x3f, 0x71,
+	0xdc, 0x70, 0x4e, 0xab, 0xcd, 0x1b, 0xdb, 0xbd, 0xe4, 0x4a, 0xe4, 0x98, 0xd5, 0x9c, 0x64, 0x13,
+	0x73, 0xd2, 0x84, 0xd2, 0x28, 0xdc, 0x45, 0x53, 0x9f, 0x4b, 0xbb, 0xdc, 0xdc, 0x4b, 0x5b, 0x52,
+	0x78, 0x0d, 0x43, 0x9f, 0x01, 0xac, 0xf6, 0x41, 0xac, 0xe2, 0x5b, 0xff, 0xb1, 0x04, 0x70, 0x02,
+	0x8e, 0x9a, 0x70, 0x65, 0xc2, 0xe5, 0x15, 0x48, 0x05, 0x7e, 0x53, 0xba, 0x48, 0x7f, 0x38, 0x06,
+	0x2a, 0x5f, 0xc0, 0xb5, 0xb5, 0xb3, 0xe3, 0x04, 0x94, 0x55, 0xfe, 0x7e, 0xf2, 0x07, 0x8e, 0xeb,
+	0x3e, 0x90, 0x04, 0xbe, 0xc2, 0x77, 0xd7, 0x76, 0x26, 0xfd, 0x40, 0xf9, 0x2a, 0xc9, 0x5d, 0x8b,
+	0x8c, 0x09, 0x25, 0x97, 0x8c, 0x30, 0x87, 0xbd, 0xcd, 0xc2, 0x78, 0x88, 0x7b, 0xb0, 0xbb, 0x11,
+	0x22, 0x92, 0x6b, 0xf5, 0x7c, 0x84, 0xad, 0xbd, 0x9a, 0xdd, 0xde, 0xab, 0x08, 0xf2, 0x47, 0x36,
+	0xb5, 0x79, 0x17, 0x2a, 0x98, 0x7f, 0x2b, 0x07, 0x70, 0x6b, 0x93, 0x96, 0x40, 0x9b, 0x8e, 0xc7,
+	0x64, 0x74, 0x21, 0x07, 0xd9, 0xf4, 0x0a, 0x7e, 0x3e, 0x27, 0xa0, 0x01, 0xb5, 0xe9, 0x2c, 0xe8,
+	0x06, 0xc7, 0x6f, 0x2c, 0xa0, 0x07, 0x50, 0x08, 0xa8, 0x4d, 0xe3, 0xbd, 0x78, 0x73, 0x3b, 0x00,
+	0x7b, 0x8b, 0xe0, 0x10, 0x85, 0x24, 0xd6, 0xfe, 0x20, 0xb0, 0x8f, 0x09, 0xff, 0x6d, 0x2b, 0xe1,
+	0xf8, 0xa8, 0x7c, 0x07, 0x37, 0x37, 0xf3, 0x63, 0xad, 0x66, 0x39, 0x7e, 0x0e, 0xe5, 0x75, 0x39,
+	0x61, 0x8f, 0x52, 0x15, 0xb7, 0xaa, 0x0a, 0x27, 0xf1, 0x4a, 0x13, 0x6e, 0xa7, 0xa9, 0x92, 0x04,
+	0xb3, 0x31, 0x0f, 0x1f, 0x13, 0xcf, 0xe2, 0x46, 0xc4, 0xdf, 0xf7, 0xa0, 0x7a, 0x9e, 0x02, 0x36,
+	0x9f, 0x56, 0xdb, 0x18, 0xaa, 0x9d, 0x76, 0xcb, 0xea, 0xeb, 0xb8, 0xdd, 0x3f, 0xd0, 0xb1, 0xda,
+	0xe1, 0x53, 0x2a, 0x66, 0xd0, 0x3e, 0xdc, 0xd8, 0x30, 0x5a, 0x46, 0x0f, 0x77, 0xd5, 0x8e, 0x28,
+	0xa0, 0x77, 0xa1, 0xb6, 0xe9, 0x8b, 0x27, 0x3d, 0xdc, 0x30, 0x3a, 0x16, 0xb3, 0xf7, 0x7f, 0x13,
+	0x60, 0x77, 0x83, 0x34, 0xf6, 0x66, 0xe2, 0xe6, 0xc0, 0x54, 0x4d, 0xb6, 0x51, 0xbe, 0x35, 0x7a,
+	0x8f, 0x0d, 0x31, 0x93, 0xea, 0xd5, 0xb0, 0xae, 0x9a, 0x7a, 0x4b, 0x14, 0xd8, 0xbe, 0xd9, 0xf6,
+	0x86, 0x2b, 0x4e, 0x6f, 0x89, 0xd9, 0xd4, 0xdb, 0x3a, 0xc6, 0x3d, 0xac, 0xb7, 0xc4, 0x5c, 0xaa,
+	0x17, 0xeb, 0xdd, 0xde, 0x50, 0x6f, 0x89, 0xf9, 0xaf, 0x1f, 0xbf, 0x3c, 0x95, 0x33, 0xaf, 0x4e,
+	0xe5, 0xcc, 0xeb, 0x53, 0x59, 0xf8, 0x71, 0x29, 0x0b, 0xbf, 0x2e, 0x65, 0xe1, 0x8f, 0xa5, 0x2c,
+	0xbc, 0x5c, 0xca, 0xc2, 0x9f, 0x4b, 0x59, 0xf8, 0x6b, 0x29, 0x67, 0x5e, 0x2f, 0x65, 0xe1, 0xa7,
+	0x33, 0x39, 0xf3, 0xf2, 0x4c, 0xce, 0xbc, 0x3a, 0x93, 0x33, 0xdf, 0xdf, 0xb1, 0xfd, 0xe7, 0x36,
+	0x6d, 0x1c, 0x91, 0xf9, 0x87, 0x61, 0xeb, 0x1e, 0xf0, 0xff, 0xbc, 0xa2, 0xc3, 0xf1, 0xd4, 0x7b,
+	0xfa, 0xb4, 0xc8, 0x2d, 0x1f, 0xff, 0x1b, 0x00, 0x00, 0xff, 0xff, 0x2f, 0xac, 0xa7, 0xc6, 0xbc,
+	0x0a, 0x00, 0x00,
 }
 
 func (x PeripheralType) String() string {
@@ -81,3 +990,4090 @@ func (x PeripheralType) String() string {
 	}
 	return strconv.Itoa(int(x))
 }
+func (x PeripheralState) String() string {
+	s, ok := PeripheralState_name[int32(x)]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(x))
+}
+func (x PeripheralMetric_ReportMethod) String() string {
+	s, ok := PeripheralMetric_ReportMethod_name[int32(x)]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(x))
+}
+func (x PeripheralMetric_ValueType) String() string {
+	s, ok := PeripheralMetric_ValueType_name[int32(x)]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(x))
+}
+func (this *TLSConfig) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*TLSConfig)
+	if !ok {
+		that2, ok := that.(TLSConfig)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.ServerName != that1.ServerName {
+		return false
+	}
+	if this.InsecureSkipVerify != that1.InsecureSkipVerify {
+		return false
+	}
+	if this.MinVersion != that1.MinVersion {
+		return false
+	}
+	if this.MaxVersion != that1.MaxVersion {
+		return false
+	}
+	if !bytes.Equal(this.CaCert, that1.CaCert) {
+		return false
+	}
+	if !bytes.Equal(this.Cert, that1.Cert) {
+		return false
+	}
+	if !bytes.Equal(this.Key, that1.Key) {
+		return false
+	}
+	if len(this.CipherSuites) != len(that1.CipherSuites) {
+		return false
+	}
+	for i := range this.CipherSuites {
+		if this.CipherSuites[i] != that1.CipherSuites[i] {
+			return false
+		}
+	}
+	if len(this.NextProtos) != len(that1.NextProtos) {
+		return false
+	}
+	for i := range this.NextProtos {
+		if this.NextProtos[i] != that1.NextProtos[i] {
+			return false
+		}
+	}
+	return true
+}
+func (this *Connectivity) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Connectivity)
+	if !ok {
+		that2, ok := that.(Connectivity)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Method != that1.Method {
+		return false
+	}
+	if this.Target != that1.Target {
+		return false
+	}
+	if len(this.Params) != len(that1.Params) {
+		return false
+	}
+	for i := range this.Params {
+		if this.Params[i] != that1.Params[i] {
+			return false
+		}
+	}
+	if !this.Tls.Equal(that1.Tls) {
+		return false
+	}
+	return true
+}
+func (this *PeripheralOperation) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PeripheralOperation)
+	if !ok {
+		that2, ok := that.(PeripheralOperation)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.OperationId != that1.OperationId {
+		return false
+	}
+	if len(this.Params) != len(that1.Params) {
+		return false
+	}
+	for i := range this.Params {
+		if this.Params[i] != that1.Params[i] {
+			return false
+		}
+	}
+	return true
+}
+func (this *PeripheralMetric) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PeripheralMetric)
+	if !ok {
+		that2, ok := that.(PeripheralMetric)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Name != that1.Name {
+		return false
+	}
+	if this.ReportMethod != that1.ReportMethod {
+		return false
+	}
+	if this.ValueType != that1.ValueType {
+		return false
+	}
+	if len(this.PeripheralParams) != len(that1.PeripheralParams) {
+		return false
+	}
+	for i := range this.PeripheralParams {
+		if this.PeripheralParams[i] != that1.PeripheralParams[i] {
+			return false
+		}
+	}
+	if this.ReporterName != that1.ReporterName {
+		return false
+	}
+	if len(this.ReporterParams) != len(that1.ReporterParams) {
+		return false
+	}
+	for i := range this.ReporterParams {
+		if this.ReporterParams[i] != that1.ReporterParams[i] {
+			return false
+		}
+	}
+	return true
+}
+func (this *PeripheralEnsureCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PeripheralEnsureCmd)
+	if !ok {
+		that2, ok := that.(PeripheralEnsureCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Kind != that1.Kind {
+		return false
+	}
+	if this.Name != that1.Name {
+		return false
+	}
+	if !this.Connector.Equal(that1.Connector) {
+		return false
+	}
+	if len(this.Operations) != len(that1.Operations) {
+		return false
+	}
+	for i := range this.Operations {
+		if !this.Operations[i].Equal(that1.Operations[i]) {
+			return false
+		}
+	}
+	if len(this.Metrics) != len(that1.Metrics) {
+		return false
+	}
+	for i := range this.Metrics {
+		if !this.Metrics[i].Equal(that1.Metrics[i]) {
+			return false
+		}
+	}
+	return true
+}
+func (this *PeripheralListCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PeripheralListCmd)
+	if !ok {
+		that2, ok := that.(PeripheralListCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if len(this.PeripheralNames) != len(that1.PeripheralNames) {
+		return false
+	}
+	for i := range this.PeripheralNames {
+		if this.PeripheralNames[i] != that1.PeripheralNames[i] {
+			return false
+		}
+	}
+	return true
+}
+func (this *PeripheralDeleteCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PeripheralDeleteCmd)
+	if !ok {
+		that2, ok := that.(PeripheralDeleteCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if len(this.PeripheralNames) != len(that1.PeripheralNames) {
+		return false
+	}
+	for i := range this.PeripheralNames {
+		if this.PeripheralNames[i] != that1.PeripheralNames[i] {
+			return false
+		}
+	}
+	return true
+}
+func (this *PeripheralOperateCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PeripheralOperateCmd)
+	if !ok {
+		that2, ok := that.(PeripheralOperateCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.PeripheralName != that1.PeripheralName {
+		return false
+	}
+	if this.OperationId != that1.OperationId {
+		return false
+	}
+	if !bytes.Equal(this.Data, that1.Data) {
+		return false
+	}
+	return true
+}
+func (this *PeripheralMetricsCollectCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PeripheralMetricsCollectCmd)
+	if !ok {
+		that2, ok := that.(PeripheralMetricsCollectCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if len(this.PeripheralNames) != len(that1.PeripheralNames) {
+		return false
+	}
+	for i := range this.PeripheralNames {
+		if this.PeripheralNames[i] != that1.PeripheralNames[i] {
+			return false
+		}
+	}
+	return true
+}
+func (this *PeripheralStatusMsg) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PeripheralStatusMsg)
+	if !ok {
+		that2, ok := that.(PeripheralStatusMsg)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Kind != that1.Kind {
+		return false
+	}
+	if this.Name != that1.Name {
+		return false
+	}
+	if this.State != that1.State {
+		return false
+	}
+	if this.Message != that1.Message {
+		return false
+	}
+	return true
+}
+func (this *PeripheralStatusListMsg) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PeripheralStatusListMsg)
+	if !ok {
+		that2, ok := that.(PeripheralStatusListMsg)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if len(this.Peripherals) != len(that1.Peripherals) {
+		return false
+	}
+	for i := range this.Peripherals {
+		if !this.Peripherals[i].Equal(that1.Peripherals[i]) {
+			return false
+		}
+	}
+	return true
+}
+func (this *PeripheralOperationResultMsg) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PeripheralOperationResultMsg)
+	if !ok {
+		that2, ok := that.(PeripheralOperationResultMsg)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if len(this.Data) != len(that1.Data) {
+		return false
+	}
+	for i := range this.Data {
+		if !bytes.Equal(this.Data[i], that1.Data[i]) {
+			return false
+		}
+	}
+	return true
+}
+func (this *TLSConfig) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 13)
+	s = append(s, "&aranyagopb.TLSConfig{")
+	s = append(s, "ServerName: "+fmt.Sprintf("%#v", this.ServerName)+",\n")
+	s = append(s, "InsecureSkipVerify: "+fmt.Sprintf("%#v", this.InsecureSkipVerify)+",\n")
+	s = append(s, "MinVersion: "+fmt.Sprintf("%#v", this.MinVersion)+",\n")
+	s = append(s, "MaxVersion: "+fmt.Sprintf("%#v", this.MaxVersion)+",\n")
+	s = append(s, "CaCert: "+fmt.Sprintf("%#v", this.CaCert)+",\n")
+	s = append(s, "Cert: "+fmt.Sprintf("%#v", this.Cert)+",\n")
+	s = append(s, "Key: "+fmt.Sprintf("%#v", this.Key)+",\n")
+	s = append(s, "CipherSuites: "+fmt.Sprintf("%#v", this.CipherSuites)+",\n")
+	s = append(s, "NextProtos: "+fmt.Sprintf("%#v", this.NextProtos)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *Connectivity) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 8)
+	s = append(s, "&aranyagopb.Connectivity{")
+	s = append(s, "Method: "+fmt.Sprintf("%#v", this.Method)+",\n")
+	s = append(s, "Target: "+fmt.Sprintf("%#v", this.Target)+",\n")
+	keysForParams := make([]string, 0, len(this.Params))
+	for k, _ := range this.Params {
+		keysForParams = append(keysForParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForParams)
+	mapStringForParams := "map[string]string{"
+	for _, k := range keysForParams {
+		mapStringForParams += fmt.Sprintf("%#v: %#v,", k, this.Params[k])
+	}
+	mapStringForParams += "}"
+	if this.Params != nil {
+		s = append(s, "Params: "+mapStringForParams+",\n")
+	}
+	if this.Tls != nil {
+		s = append(s, "Tls: "+fmt.Sprintf("%#v", this.Tls)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *PeripheralOperation) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&aranyagopb.PeripheralOperation{")
+	s = append(s, "OperationId: "+fmt.Sprintf("%#v", this.OperationId)+",\n")
+	keysForParams := make([]string, 0, len(this.Params))
+	for k, _ := range this.Params {
+		keysForParams = append(keysForParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForParams)
+	mapStringForParams := "map[string]string{"
+	for _, k := range keysForParams {
+		mapStringForParams += fmt.Sprintf("%#v: %#v,", k, this.Params[k])
+	}
+	mapStringForParams += "}"
+	if this.Params != nil {
+		s = append(s, "Params: "+mapStringForParams+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *PeripheralMetric) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 10)
+	s = append(s, "&aranyagopb.PeripheralMetric{")
+	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
+	s = append(s, "ReportMethod: "+fmt.Sprintf("%#v", this.ReportMethod)+",\n")
+	s = append(s, "ValueType: "+fmt.Sprintf("%#v", this.ValueType)+",\n")
+	keysForPeripheralParams := make([]string, 0, len(this.PeripheralParams))
+	for k, _ := range this.PeripheralParams {
+		keysForPeripheralParams = append(keysForPeripheralParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForPeripheralParams)
+	mapStringForPeripheralParams := "map[string]string{"
+	for _, k := range keysForPeripheralParams {
+		mapStringForPeripheralParams += fmt.Sprintf("%#v: %#v,", k, this.PeripheralParams[k])
+	}
+	mapStringForPeripheralParams += "}"
+	if this.PeripheralParams != nil {
+		s = append(s, "PeripheralParams: "+mapStringForPeripheralParams+",\n")
+	}
+	s = append(s, "ReporterName: "+fmt.Sprintf("%#v", this.ReporterName)+",\n")
+	keysForReporterParams := make([]string, 0, len(this.ReporterParams))
+	for k, _ := range this.ReporterParams {
+		keysForReporterParams = append(keysForReporterParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForReporterParams)
+	mapStringForReporterParams := "map[string]string{"
+	for _, k := range keysForReporterParams {
+		mapStringForReporterParams += fmt.Sprintf("%#v: %#v,", k, this.ReporterParams[k])
+	}
+	mapStringForReporterParams += "}"
+	if this.ReporterParams != nil {
+		s = append(s, "ReporterParams: "+mapStringForReporterParams+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *PeripheralEnsureCmd) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 9)
+	s = append(s, "&aranyagopb.PeripheralEnsureCmd{")
+	s = append(s, "Kind: "+fmt.Sprintf("%#v", this.Kind)+",\n")
+	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
+	if this.Connector != nil {
+		s = append(s, "Connector: "+fmt.Sprintf("%#v", this.Connector)+",\n")
+	}
+	if this.Operations != nil {
+		s = append(s, "Operations: "+fmt.Sprintf("%#v", this.Operations)+",\n")
+	}
+	if this.Metrics != nil {
+		s = append(s, "Metrics: "+fmt.Sprintf("%#v", this.Metrics)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *PeripheralListCmd) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&aranyagopb.PeripheralListCmd{")
+	s = append(s, "PeripheralNames: "+fmt.Sprintf("%#v", this.PeripheralNames)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *PeripheralDeleteCmd) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&aranyagopb.PeripheralDeleteCmd{")
+	s = append(s, "PeripheralNames: "+fmt.Sprintf("%#v", this.PeripheralNames)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *PeripheralOperateCmd) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 7)
+	s = append(s, "&aranyagopb.PeripheralOperateCmd{")
+	s = append(s, "PeripheralName: "+fmt.Sprintf("%#v", this.PeripheralName)+",\n")
+	s = append(s, "OperationId: "+fmt.Sprintf("%#v", this.OperationId)+",\n")
+	s = append(s, "Data: "+fmt.Sprintf("%#v", this.Data)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *PeripheralMetricsCollectCmd) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&aranyagopb.PeripheralMetricsCollectCmd{")
+	s = append(s, "PeripheralNames: "+fmt.Sprintf("%#v", this.PeripheralNames)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *PeripheralStatusMsg) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 8)
+	s = append(s, "&aranyagopb.PeripheralStatusMsg{")
+	s = append(s, "Kind: "+fmt.Sprintf("%#v", this.Kind)+",\n")
+	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
+	s = append(s, "State: "+fmt.Sprintf("%#v", this.State)+",\n")
+	s = append(s, "Message: "+fmt.Sprintf("%#v", this.Message)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *PeripheralStatusListMsg) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&aranyagopb.PeripheralStatusListMsg{")
+	if this.Peripherals != nil {
+		s = append(s, "Peripherals: "+fmt.Sprintf("%#v", this.Peripherals)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *PeripheralOperationResultMsg) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&aranyagopb.PeripheralOperationResultMsg{")
+	s = append(s, "Data: "+fmt.Sprintf("%#v", this.Data)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func valueToGoStringPeripheral(v interface{}, typ string) string {
+	rv := reflect.ValueOf(v)
+	if rv.IsNil() {
+		return "nil"
+	}
+	pv := reflect.Indirect(rv).Interface()
+	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
+}
+func (m *TLSConfig) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *TLSConfig) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TLSConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.NextProtos) > 0 {
+		for iNdEx := len(m.NextProtos) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.NextProtos[iNdEx])
+			copy(dAtA[i:], m.NextProtos[iNdEx])
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(m.NextProtos[iNdEx])))
+			i--
+			dAtA[i] = 0x4a
+		}
+	}
+	if len(m.CipherSuites) > 0 {
+		dAtA2 := make([]byte, len(m.CipherSuites)*10)
+		var j1 int
+		for _, num := range m.CipherSuites {
+			for num >= 1<<7 {
+				dAtA2[j1] = uint8(uint64(num)&0x7f | 0x80)
+				num >>= 7
+				j1++
+			}
+			dAtA2[j1] = uint8(num)
+			j1++
+		}
+		i -= j1
+		copy(dAtA[i:], dAtA2[:j1])
+		i = encodeVarintPeripheral(dAtA, i, uint64(j1))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.Key) > 0 {
+		i -= len(m.Key)
+		copy(dAtA[i:], m.Key)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.Key)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if len(m.Cert) > 0 {
+		i -= len(m.Cert)
+		copy(dAtA[i:], m.Cert)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.Cert)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.CaCert) > 0 {
+		i -= len(m.CaCert)
+		copy(dAtA[i:], m.CaCert)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.CaCert)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.MaxVersion != 0 {
+		i = encodeVarintPeripheral(dAtA, i, uint64(m.MaxVersion))
+		i--
+		dAtA[i] = 0x20
+	}
+	if m.MinVersion != 0 {
+		i = encodeVarintPeripheral(dAtA, i, uint64(m.MinVersion))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.InsecureSkipVerify {
+		i--
+		if m.InsecureSkipVerify {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.ServerName) > 0 {
+		i -= len(m.ServerName)
+		copy(dAtA[i:], m.ServerName)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.ServerName)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *Connectivity) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Connectivity) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Connectivity) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Tls != nil {
+		{
+			size, err := m.Tls.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPeripheral(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.Params) > 0 {
+		for k := range m.Params {
+			v := m.Params[k]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintPeripheral(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
+	if len(m.Target) > 0 {
+		i -= len(m.Target)
+		copy(dAtA[i:], m.Target)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.Target)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Method) > 0 {
+		i -= len(m.Method)
+		copy(dAtA[i:], m.Method)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.Method)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PeripheralOperation) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PeripheralOperation) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PeripheralOperation) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Params) > 0 {
+		for k := range m.Params {
+			v := m.Params[k]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintPeripheral(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.OperationId) > 0 {
+		i -= len(m.OperationId)
+		copy(dAtA[i:], m.OperationId)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.OperationId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PeripheralMetric) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PeripheralMetric) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PeripheralMetric) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.ReporterParams) > 0 {
+		for k := range m.ReporterParams {
+			v := m.ReporterParams[k]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintPeripheral(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x32
+		}
+	}
+	if len(m.ReporterName) > 0 {
+		i -= len(m.ReporterName)
+		copy(dAtA[i:], m.ReporterName)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.ReporterName)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.PeripheralParams) > 0 {
+		for k := range m.PeripheralParams {
+			v := m.PeripheralParams[k]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintPeripheral(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x22
+		}
+	}
+	if m.ValueType != 0 {
+		i = encodeVarintPeripheral(dAtA, i, uint64(m.ValueType))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.ReportMethod != 0 {
+		i = encodeVarintPeripheral(dAtA, i, uint64(m.ReportMethod))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.Name) > 0 {
+		i -= len(m.Name)
+		copy(dAtA[i:], m.Name)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.Name)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PeripheralEnsureCmd) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PeripheralEnsureCmd) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PeripheralEnsureCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Metrics) > 0 {
+		for iNdEx := len(m.Metrics) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Metrics[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintPeripheral(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
+	if len(m.Operations) > 0 {
+		for iNdEx := len(m.Operations) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Operations[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintPeripheral(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x22
+		}
+	}
+	if m.Connector != nil {
+		{
+			size, err := m.Connector.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPeripheral(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Name) > 0 {
+		i -= len(m.Name)
+		copy(dAtA[i:], m.Name)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.Name)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Kind != 0 {
+		i = encodeVarintPeripheral(dAtA, i, uint64(m.Kind))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PeripheralListCmd) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PeripheralListCmd) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PeripheralListCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.PeripheralNames) > 0 {
+		for iNdEx := len(m.PeripheralNames) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.PeripheralNames[iNdEx])
+			copy(dAtA[i:], m.PeripheralNames[iNdEx])
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(m.PeripheralNames[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PeripheralDeleteCmd) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PeripheralDeleteCmd) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PeripheralDeleteCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.PeripheralNames) > 0 {
+		for iNdEx := len(m.PeripheralNames) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.PeripheralNames[iNdEx])
+			copy(dAtA[i:], m.PeripheralNames[iNdEx])
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(m.PeripheralNames[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PeripheralOperateCmd) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PeripheralOperateCmd) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PeripheralOperateCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Data) > 0 {
+		i -= len(m.Data)
+		copy(dAtA[i:], m.Data)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.Data)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.OperationId) > 0 {
+		i -= len(m.OperationId)
+		copy(dAtA[i:], m.OperationId)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.OperationId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.PeripheralName) > 0 {
+		i -= len(m.PeripheralName)
+		copy(dAtA[i:], m.PeripheralName)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.PeripheralName)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PeripheralMetricsCollectCmd) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PeripheralMetricsCollectCmd) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PeripheralMetricsCollectCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.PeripheralNames) > 0 {
+		for iNdEx := len(m.PeripheralNames) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.PeripheralNames[iNdEx])
+			copy(dAtA[i:], m.PeripheralNames[iNdEx])
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(m.PeripheralNames[iNdEx])))
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PeripheralStatusMsg) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PeripheralStatusMsg) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PeripheralStatusMsg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Message) > 0 {
+		i -= len(m.Message)
+		copy(dAtA[i:], m.Message)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.Message)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.State != 0 {
+		i = encodeVarintPeripheral(dAtA, i, uint64(m.State))
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.Name) > 0 {
+		i -= len(m.Name)
+		copy(dAtA[i:], m.Name)
+		i = encodeVarintPeripheral(dAtA, i, uint64(len(m.Name)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Kind != 0 {
+		i = encodeVarintPeripheral(dAtA, i, uint64(m.Kind))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PeripheralStatusListMsg) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PeripheralStatusListMsg) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PeripheralStatusListMsg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Peripherals) > 0 {
+		for iNdEx := len(m.Peripherals) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Peripherals[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintPeripheral(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PeripheralOperationResultMsg) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PeripheralOperationResultMsg) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PeripheralOperationResultMsg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Data) > 0 {
+		for iNdEx := len(m.Data) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Data[iNdEx])
+			copy(dAtA[i:], m.Data[iNdEx])
+			i = encodeVarintPeripheral(dAtA, i, uint64(len(m.Data[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func encodeVarintPeripheral(dAtA []byte, offset int, v uint64) int {
+	offset -= sovPeripheral(v)
+	base := offset
+	for v >= 1<<7 {
+		dAtA[offset] = uint8(v&0x7f | 0x80)
+		v >>= 7
+		offset++
+	}
+	dAtA[offset] = uint8(v)
+	return base
+}
+func (m *TLSConfig) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.ServerName)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	if m.InsecureSkipVerify {
+		n += 2
+	}
+	if m.MinVersion != 0 {
+		n += 1 + sovPeripheral(uint64(m.MinVersion))
+	}
+	if m.MaxVersion != 0 {
+		n += 1 + sovPeripheral(uint64(m.MaxVersion))
+	}
+	l = len(m.CaCert)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	l = len(m.Cert)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	l = len(m.Key)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	if len(m.CipherSuites) > 0 {
+		l = 0
+		for _, e := range m.CipherSuites {
+			l += sovPeripheral(uint64(e))
+		}
+		n += 1 + sovPeripheral(uint64(l)) + l
+	}
+	if len(m.NextProtos) > 0 {
+		for _, s := range m.NextProtos {
+			l = len(s)
+			n += 1 + l + sovPeripheral(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *Connectivity) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Method)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	l = len(m.Target)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	if len(m.Params) > 0 {
+		for k, v := range m.Params {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovPeripheral(uint64(len(k))) + 1 + len(v) + sovPeripheral(uint64(len(v)))
+			n += mapEntrySize + 1 + sovPeripheral(uint64(mapEntrySize))
+		}
+	}
+	if m.Tls != nil {
+		l = m.Tls.Size()
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	return n
+}
+
+func (m *PeripheralOperation) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.OperationId)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	if len(m.Params) > 0 {
+		for k, v := range m.Params {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovPeripheral(uint64(len(k))) + 1 + len(v) + sovPeripheral(uint64(len(v)))
+			n += mapEntrySize + 1 + sovPeripheral(uint64(mapEntrySize))
+		}
+	}
+	return n
+}
+
+func (m *PeripheralMetric) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Name)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	if m.ReportMethod != 0 {
+		n += 1 + sovPeripheral(uint64(m.ReportMethod))
+	}
+	if m.ValueType != 0 {
+		n += 1 + sovPeripheral(uint64(m.ValueType))
+	}
+	if len(m.PeripheralParams) > 0 {
+		for k, v := range m.PeripheralParams {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovPeripheral(uint64(len(k))) + 1 + len(v) + sovPeripheral(uint64(len(v)))
+			n += mapEntrySize + 1 + sovPeripheral(uint64(mapEntrySize))
+		}
+	}
+	l = len(m.ReporterName)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	if len(m.ReporterParams) > 0 {
+		for k, v := range m.ReporterParams {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovPeripheral(uint64(len(k))) + 1 + len(v) + sovPeripheral(uint64(len(v)))
+			n += mapEntrySize + 1 + sovPeripheral(uint64(mapEntrySize))
+		}
+	}
+	return n
+}
+
+func (m *PeripheralEnsureCmd) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Kind != 0 {
+		n += 1 + sovPeripheral(uint64(m.Kind))
+	}
+	l = len(m.Name)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	if m.Connector != nil {
+		l = m.Connector.Size()
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	if len(m.Operations) > 0 {
+		for _, e := range m.Operations {
+			l = e.Size()
+			n += 1 + l + sovPeripheral(uint64(l))
+		}
+	}
+	if len(m.Metrics) > 0 {
+		for _, e := range m.Metrics {
+			l = e.Size()
+			n += 1 + l + sovPeripheral(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *PeripheralListCmd) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.PeripheralNames) > 0 {
+		for _, s := range m.PeripheralNames {
+			l = len(s)
+			n += 1 + l + sovPeripheral(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *PeripheralDeleteCmd) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.PeripheralNames) > 0 {
+		for _, s := range m.PeripheralNames {
+			l = len(s)
+			n += 1 + l + sovPeripheral(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *PeripheralOperateCmd) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.PeripheralName)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	l = len(m.OperationId)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	l = len(m.Data)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	return n
+}
+
+func (m *PeripheralMetricsCollectCmd) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.PeripheralNames) > 0 {
+		for _, s := range m.PeripheralNames {
+			l = len(s)
+			n += 1 + l + sovPeripheral(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *PeripheralStatusMsg) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Kind != 0 {
+		n += 1 + sovPeripheral(uint64(m.Kind))
+	}
+	l = len(m.Name)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	if m.State != 0 {
+		n += 1 + sovPeripheral(uint64(m.State))
+	}
+	l = len(m.Message)
+	if l > 0 {
+		n += 1 + l + sovPeripheral(uint64(l))
+	}
+	return n
+}
+
+func (m *PeripheralStatusListMsg) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Peripherals) > 0 {
+		for _, e := range m.Peripherals {
+			l = e.Size()
+			n += 1 + l + sovPeripheral(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *PeripheralOperationResultMsg) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Data) > 0 {
+		for _, b := range m.Data {
+			l = len(b)
+			n += 1 + l + sovPeripheral(uint64(l))
+		}
+	}
+	return n
+}
+
+func sovPeripheral(x uint64) (n int) {
+	return (math_bits.Len64(x|1) + 6) / 7
+}
+func sozPeripheral(x uint64) (n int) {
+	return sovPeripheral(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+}
+func (this *TLSConfig) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&TLSConfig{`,
+		`ServerName:` + fmt.Sprintf("%v", this.ServerName) + `,`,
+		`InsecureSkipVerify:` + fmt.Sprintf("%v", this.InsecureSkipVerify) + `,`,
+		`MinVersion:` + fmt.Sprintf("%v", this.MinVersion) + `,`,
+		`MaxVersion:` + fmt.Sprintf("%v", this.MaxVersion) + `,`,
+		`CaCert:` + fmt.Sprintf("%v", this.CaCert) + `,`,
+		`Cert:` + fmt.Sprintf("%v", this.Cert) + `,`,
+		`Key:` + fmt.Sprintf("%v", this.Key) + `,`,
+		`CipherSuites:` + fmt.Sprintf("%v", this.CipherSuites) + `,`,
+		`NextProtos:` + fmt.Sprintf("%v", this.NextProtos) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Connectivity) String() string {
+	if this == nil {
+		return "nil"
+	}
+	keysForParams := make([]string, 0, len(this.Params))
+	for k, _ := range this.Params {
+		keysForParams = append(keysForParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForParams)
+	mapStringForParams := "map[string]string{"
+	for _, k := range keysForParams {
+		mapStringForParams += fmt.Sprintf("%v: %v,", k, this.Params[k])
+	}
+	mapStringForParams += "}"
+	s := strings.Join([]string{`&Connectivity{`,
+		`Method:` + fmt.Sprintf("%v", this.Method) + `,`,
+		`Target:` + fmt.Sprintf("%v", this.Target) + `,`,
+		`Params:` + mapStringForParams + `,`,
+		`Tls:` + strings.Replace(this.Tls.String(), "TLSConfig", "TLSConfig", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *PeripheralOperation) String() string {
+	if this == nil {
+		return "nil"
+	}
+	keysForParams := make([]string, 0, len(this.Params))
+	for k, _ := range this.Params {
+		keysForParams = append(keysForParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForParams)
+	mapStringForParams := "map[string]string{"
+	for _, k := range keysForParams {
+		mapStringForParams += fmt.Sprintf("%v: %v,", k, this.Params[k])
+	}
+	mapStringForParams += "}"
+	s := strings.Join([]string{`&PeripheralOperation{`,
+		`OperationId:` + fmt.Sprintf("%v", this.OperationId) + `,`,
+		`Params:` + mapStringForParams + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *PeripheralMetric) String() string {
+	if this == nil {
+		return "nil"
+	}
+	keysForPeripheralParams := make([]string, 0, len(this.PeripheralParams))
+	for k, _ := range this.PeripheralParams {
+		keysForPeripheralParams = append(keysForPeripheralParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForPeripheralParams)
+	mapStringForPeripheralParams := "map[string]string{"
+	for _, k := range keysForPeripheralParams {
+		mapStringForPeripheralParams += fmt.Sprintf("%v: %v,", k, this.PeripheralParams[k])
+	}
+	mapStringForPeripheralParams += "}"
+	keysForReporterParams := make([]string, 0, len(this.ReporterParams))
+	for k, _ := range this.ReporterParams {
+		keysForReporterParams = append(keysForReporterParams, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForReporterParams)
+	mapStringForReporterParams := "map[string]string{"
+	for _, k := range keysForReporterParams {
+		mapStringForReporterParams += fmt.Sprintf("%v: %v,", k, this.ReporterParams[k])
+	}
+	mapStringForReporterParams += "}"
+	s := strings.Join([]string{`&PeripheralMetric{`,
+		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
+		`ReportMethod:` + fmt.Sprintf("%v", this.ReportMethod) + `,`,
+		`ValueType:` + fmt.Sprintf("%v", this.ValueType) + `,`,
+		`PeripheralParams:` + mapStringForPeripheralParams + `,`,
+		`ReporterName:` + fmt.Sprintf("%v", this.ReporterName) + `,`,
+		`ReporterParams:` + mapStringForReporterParams + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *PeripheralEnsureCmd) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForOperations := "[]*PeripheralOperation{"
+	for _, f := range this.Operations {
+		repeatedStringForOperations += strings.Replace(f.String(), "PeripheralOperation", "PeripheralOperation", 1) + ","
+	}
+	repeatedStringForOperations += "}"
+	repeatedStringForMetrics := "[]*PeripheralMetric{"
+	for _, f := range this.Metrics {
+		repeatedStringForMetrics += strings.Replace(f.String(), "PeripheralMetric", "PeripheralMetric", 1) + ","
+	}
+	repeatedStringForMetrics += "}"
+	s := strings.Join([]string{`&PeripheralEnsureCmd{`,
+		`Kind:` + fmt.Sprintf("%v", this.Kind) + `,`,
+		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
+		`Connector:` + strings.Replace(this.Connector.String(), "Connectivity", "Connectivity", 1) + `,`,
+		`Operations:` + repeatedStringForOperations + `,`,
+		`Metrics:` + repeatedStringForMetrics + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *PeripheralListCmd) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&PeripheralListCmd{`,
+		`PeripheralNames:` + fmt.Sprintf("%v", this.PeripheralNames) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *PeripheralDeleteCmd) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&PeripheralDeleteCmd{`,
+		`PeripheralNames:` + fmt.Sprintf("%v", this.PeripheralNames) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *PeripheralOperateCmd) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&PeripheralOperateCmd{`,
+		`PeripheralName:` + fmt.Sprintf("%v", this.PeripheralName) + `,`,
+		`OperationId:` + fmt.Sprintf("%v", this.OperationId) + `,`,
+		`Data:` + fmt.Sprintf("%v", this.Data) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *PeripheralMetricsCollectCmd) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&PeripheralMetricsCollectCmd{`,
+		`PeripheralNames:` + fmt.Sprintf("%v", this.PeripheralNames) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *PeripheralStatusMsg) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&PeripheralStatusMsg{`,
+		`Kind:` + fmt.Sprintf("%v", this.Kind) + `,`,
+		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
+		`State:` + fmt.Sprintf("%v", this.State) + `,`,
+		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *PeripheralStatusListMsg) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForPeripherals := "[]*PeripheralStatusMsg{"
+	for _, f := range this.Peripherals {
+		repeatedStringForPeripherals += strings.Replace(f.String(), "PeripheralStatusMsg", "PeripheralStatusMsg", 1) + ","
+	}
+	repeatedStringForPeripherals += "}"
+	s := strings.Join([]string{`&PeripheralStatusListMsg{`,
+		`Peripherals:` + repeatedStringForPeripherals + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *PeripheralOperationResultMsg) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&PeripheralOperationResultMsg{`,
+		`Data:` + fmt.Sprintf("%v", this.Data) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func valueToStringPeripheral(v interface{}) string {
+	rv := reflect.ValueOf(v)
+	if rv.IsNil() {
+		return "nil"
+	}
+	pv := reflect.Indirect(rv).Interface()
+	return fmt.Sprintf("*%v", pv)
+}
+func (m *TLSConfig) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: TLSConfig: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: TLSConfig: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ServerName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ServerName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InsecureSkipVerify", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.InsecureSkipVerify = bool(v != 0)
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MinVersion", wireType)
+			}
+			m.MinVersion = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.MinVersion |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MaxVersion", wireType)
+			}
+			m.MaxVersion = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.MaxVersion |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CaCert", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.CaCert = append(m.CaCert[:0], dAtA[iNdEx:postIndex]...)
+			if m.CaCert == nil {
+				m.CaCert = []byte{}
+			}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Cert", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Cert = append(m.Cert[:0], dAtA[iNdEx:postIndex]...)
+			if m.Cert == nil {
+				m.Cert = []byte{}
+			}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Key = append(m.Key[:0], dAtA[iNdEx:postIndex]...)
+			if m.Key == nil {
+				m.Key = []byte{}
+			}
+			iNdEx = postIndex
+		case 8:
+			if wireType == 0 {
+				var v uint32
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowPeripheral
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					v |= uint32(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				m.CipherSuites = append(m.CipherSuites, v)
+			} else if wireType == 2 {
+				var packedLen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowPeripheral
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					packedLen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if packedLen < 0 {
+					return ErrInvalidLengthPeripheral
+				}
+				postIndex := iNdEx + packedLen
+				if postIndex < 0 {
+					return ErrInvalidLengthPeripheral
+				}
+				if postIndex > l {
+					return io.ErrUnexpectedEOF
+				}
+				var elementCount int
+				var count int
+				for _, integer := range dAtA[iNdEx:postIndex] {
+					if integer < 128 {
+						count++
+					}
+				}
+				elementCount = count
+				if elementCount != 0 && len(m.CipherSuites) == 0 {
+					m.CipherSuites = make([]uint32, 0, elementCount)
+				}
+				for iNdEx < postIndex {
+					var v uint32
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowPeripheral
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						v |= uint32(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					m.CipherSuites = append(m.CipherSuites, v)
+				}
+			} else {
+				return fmt.Errorf("proto: wrong wireType = %d for field CipherSuites", wireType)
+			}
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NextProtos", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.NextProtos = append(m.NextProtos, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Connectivity) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Connectivity: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Connectivity: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Method", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Method = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Target", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Target = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Params", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Params == nil {
+				m.Params = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowPeripheral
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowPeripheral
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowPeripheral
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipPeripheral(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if skippy < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.Params[mapkey] = mapvalue
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Tls", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Tls == nil {
+				m.Tls = &TLSConfig{}
+			}
+			if err := m.Tls.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PeripheralOperation) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PeripheralOperation: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PeripheralOperation: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OperationId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OperationId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Params", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Params == nil {
+				m.Params = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowPeripheral
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowPeripheral
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowPeripheral
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipPeripheral(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if skippy < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.Params[mapkey] = mapvalue
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PeripheralMetric) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PeripheralMetric: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PeripheralMetric: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ReportMethod", wireType)
+			}
+			m.ReportMethod = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ReportMethod |= PeripheralMetric_ReportMethod(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ValueType", wireType)
+			}
+			m.ValueType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ValueType |= PeripheralMetric_ValueType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PeripheralParams", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.PeripheralParams == nil {
+				m.PeripheralParams = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowPeripheral
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowPeripheral
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowPeripheral
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipPeripheral(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if skippy < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.PeripheralParams[mapkey] = mapvalue
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ReporterName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ReporterName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ReporterParams", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ReporterParams == nil {
+				m.ReporterParams = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowPeripheral
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowPeripheral
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowPeripheral
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipPeripheral(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if skippy < 0 {
+						return ErrInvalidLengthPeripheral
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.ReporterParams[mapkey] = mapvalue
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PeripheralEnsureCmd) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PeripheralEnsureCmd: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PeripheralEnsureCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Kind", wireType)
+			}
+			m.Kind = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Kind |= PeripheralType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Connector", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Connector == nil {
+				m.Connector = &Connectivity{}
+			}
+			if err := m.Connector.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Operations", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Operations = append(m.Operations, &PeripheralOperation{})
+			if err := m.Operations[len(m.Operations)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Metrics", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Metrics = append(m.Metrics, &PeripheralMetric{})
+			if err := m.Metrics[len(m.Metrics)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PeripheralListCmd) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PeripheralListCmd: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PeripheralListCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PeripheralNames", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PeripheralNames = append(m.PeripheralNames, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PeripheralDeleteCmd) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PeripheralDeleteCmd: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PeripheralDeleteCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PeripheralNames", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PeripheralNames = append(m.PeripheralNames, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PeripheralOperateCmd) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PeripheralOperateCmd: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PeripheralOperateCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PeripheralName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PeripheralName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OperationId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OperationId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Data = append(m.Data[:0], dAtA[iNdEx:postIndex]...)
+			if m.Data == nil {
+				m.Data = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PeripheralMetricsCollectCmd) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PeripheralMetricsCollectCmd: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PeripheralMetricsCollectCmd: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PeripheralNames", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PeripheralNames = append(m.PeripheralNames, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PeripheralStatusMsg) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PeripheralStatusMsg: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PeripheralStatusMsg: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Kind", wireType)
+			}
+			m.Kind = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Kind |= PeripheralType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field State", wireType)
+			}
+			m.State = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.State |= PeripheralState(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Message", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Message = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PeripheralStatusListMsg) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PeripheralStatusListMsg: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PeripheralStatusListMsg: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Peripherals", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Peripherals = append(m.Peripherals, &PeripheralStatusMsg{})
+			if err := m.Peripherals[len(m.Peripherals)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PeripheralOperationResultMsg) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PeripheralOperationResultMsg: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PeripheralOperationResultMsg: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Data = append(m.Data, make([]byte, postIndex-iNdEx))
+			copy(m.Data[len(m.Data)-1], dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPeripheral(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPeripheral
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func skipPeripheral(dAtA []byte) (n int, err error) {
+	l := len(dAtA)
+	iNdEx := 0
+	depth := 0
+	for iNdEx < l {
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return 0, ErrIntOverflowPeripheral
+			}
+			if iNdEx >= l {
+				return 0, io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		wireType := int(wire & 0x7)
+		switch wireType {
+		case 0:
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return 0, ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				iNdEx++
+				if dAtA[iNdEx-1] < 0x80 {
+					break
+				}
+			}
+		case 1:
+			iNdEx += 8
+		case 2:
+			var length int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return 0, ErrIntOverflowPeripheral
+				}
+				if iNdEx >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				length |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if length < 0 {
+				return 0, ErrInvalidLengthPeripheral
+			}
+			iNdEx += length
+		case 3:
+			depth++
+		case 4:
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupPeripheral
+			}
+			depth--
+		case 5:
+			iNdEx += 4
+		default:
+			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
+		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthPeripheral
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
+	}
+	return 0, io.ErrUnexpectedEOF
+}
+
+var (
+	ErrInvalidLengthPeripheral        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowPeripheral          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupPeripheral = fmt.Errorf("proto: unexpected end of group")
+)

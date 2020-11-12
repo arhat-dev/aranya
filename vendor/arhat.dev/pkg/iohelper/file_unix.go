@@ -24,8 +24,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"go.uber.org/multierr"
 )
 
 // WriteFile write data to target file
@@ -109,7 +107,14 @@ func WriteFile(file string, data []byte, perm os.FileMode, overwrite bool) (undo
 		return func() error {
 			var undoErr error
 			for i := len(undoActions) - 1; i >= 0; i-- {
-				undoErr = multierr.Append(undoErr, undoActions[i]())
+				err2 := undoActions[i]()
+				if err2 != nil {
+					if undoErr != nil {
+						undoErr = fmt.Errorf("%s; %w", undoErr.Error(), err2)
+					} else {
+						undoErr = err2
+					}
+				}
 			}
 
 			return undoErr
