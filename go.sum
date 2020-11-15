@@ -487,8 +487,8 @@ github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQL
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.10.3 h1:OP96hzwJVBIHYU52pVTI6CczrxPvrGfgqF9N5eTO0Q8=
 github.com/klauspost/compress v1.10.3/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
-github.com/klauspost/compress v1.11.2 h1:MiK62aErc3gIiVEtyzKfeOHgW7atJb5g/KNX5m3c2nQ=
-github.com/klauspost/compress v1.11.2/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
+github.com/klauspost/compress v1.11.3 h1:dB4Bn0tN3wdCzQxnS8r06kV74qN/TAfaIS0bVE8h3jc=
+github.com/klauspost/compress v1.11.3/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
 github.com/klauspost/cpuid v1.2.0/go.mod h1:Pj4uuM528wm8OyEC2QMXAi2YiTZ96dNQPGgoMS4s3ek=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.2/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
@@ -525,8 +525,8 @@ github.com/kubernetes/cri-api v0.19.4 h1:guo6pdnkTmxJcMr2BTGb+7Wrh9ntOvgMkvi9/UH
 github.com/kubernetes/cri-api v0.19.4/go.mod h1:UN/iU9Ua0iYdDREBXNE9vqCJ7MIh/FW3VIL0d8pw7Fw=
 github.com/kubernetes/csi-translation-lib v0.19.4 h1:Wx7T0OflK8BiwyVvmzzi3qjsyjHgaoAqw/dy49HppHY=
 github.com/kubernetes/csi-translation-lib v0.19.4/go.mod h1:Zqw8qVIHp6OU65hvIYeOlkMwHLpKy72h3P15AkY90W0=
-github.com/kubernetes/klog/v2 v2.3.0 h1:xFNikP6Uz6/k9WwNXJ2SPqE0w0ECYyAVpYFfrKjwchI=
-github.com/kubernetes/klog/v2 v2.3.0/go.mod h1:Od+F08eJP+W3HUb4pSrPpgp9DGU4GzlpG/TmITuYh/Y=
+github.com/kubernetes/klog/v2 v2.4.0 h1:dBOWoh4GiNB9p+t94nn2ZM5JXUQxQT0wa9Hs7m3ljxs=
+github.com/kubernetes/klog/v2 v2.4.0/go.mod h1:Od+F08eJP+W3HUb4pSrPpgp9DGU4GzlpG/TmITuYh/Y=
 github.com/kubernetes/kube-aggregator v0.19.4/go.mod h1:cTkvun110194d797AuThyydBBlgm+cKIFUeS2uzGJfU=
 github.com/kubernetes/kube-controller-manager v0.19.4/go.mod h1:39Dh9ygYryrvBn6PCeGJRK7qHB0SjSOPmv32h2wT7Kc=
 github.com/kubernetes/kube-proxy v0.19.4/go.mod h1:HqXWMgFOJQB0geLBXeMn2e5k9864NM/t3wrHxJjqqrk=

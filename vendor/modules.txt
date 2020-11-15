@@ -198,7 +198,7 @@ github.com/json-iterator/go
 github.com/jstemmer/go-junit-report
 github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
-# github.com/klauspost/compress v1.11.2
+# github.com/klauspost/compress v1.11.3
 ## explicit
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/fse
@@ -935,7 +935,7 @@ k8s.io/cri-api/pkg/apis/runtime/v1alpha2
 ## explicit
 k8s.io/csi-translation-lib
 k8s.io/csi-translation-lib/plugins
-# k8s.io/klog/v2 v2.3.0 => github.com/kubernetes/klog/v2 v2.3.0
+# k8s.io/klog/v2 v2.4.0 => github.com/kubernetes/klog/v2 v2.4.0
 ## explicit
 k8s.io/klog/v2
 # k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6
@@ -1120,7 +1120,7 @@ sigs.k8s.io/yaml
 # k8s.io/cri-api => github.com/kubernetes/cri-api v0.19.4
 # k8s.io/csi-translation-lib => github.com/kubernetes/csi-translation-lib v0.19.4
 # k8s.io/klog => github.com/kubernetes/klog v1.0.0
-# k8s.io/klog/v2 => github.com/kubernetes/klog/v2 v2.3.0
+# k8s.io/klog/v2 => github.com/kubernetes/klog/v2 v2.4.0
 # k8s.io/kube-aggregator => github.com/kubernetes/kube-aggregator v0.19.4
 # k8s.io/kube-controller-manager => github.com/kubernetes/kube-controller-manager v0.19.4
 # k8s.io/kube-proxy => github.com/kubernetes/kube-proxy v0.19.4

@@ -29,7 +29,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/itchyny/gojq v0.11.2
-	github.com/klauspost/compress v1.11.2
+	github.com/klauspost/compress v1.11.3
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onsi/ginkgo v1.14.0 // indirect
@@ -58,7 +58,7 @@ require (
 	k8s.io/cloud-provider v0.19.4
 	k8s.io/cri-api v0.19.4
 	k8s.io/csi-translation-lib v0.19.4
-	k8s.io/klog/v2 v2.3.0
+	k8s.io/klog/v2 v2.4.0
 	k8s.io/kubelet v0.19.4
 	k8s.io/kubernetes v1.19.4
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
@@ -144,7 +144,7 @@ replace (
 	k8s.io/cri-api => github.com/kubernetes/cri-api v0.19.4
 	k8s.io/csi-translation-lib => github.com/kubernetes/csi-translation-lib v0.19.4
 	k8s.io/klog => github.com/kubernetes/klog v1.0.0
-	k8s.io/klog/v2 => github.com/kubernetes/klog/v2 v2.3.0
+	k8s.io/klog/v2 => github.com/kubernetes/klog/v2 v2.4.0
 	k8s.io/kube-aggregator => github.com/kubernetes/kube-aggregator v0.19.4
 	k8s.io/kube-controller-manager => github.com/kubernetes/kube-controller-manager v0.19.4
 	k8s.io/kube-proxy => github.com/kubernetes/kube-proxy v0.19.4
