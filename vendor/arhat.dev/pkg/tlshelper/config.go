@@ -49,8 +49,12 @@ var CipherSuites = map[string]uint16{
 	"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256": tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 	"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384":   tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 	"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-	"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305":    tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-	"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305":  tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+
+	"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305":   tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+	"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305": tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+
+	"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256":   tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+	"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256": tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
 
 	// TLS 1.3 cipher suites.
 	"TLS_AES_128_GCM_SHA256":       tls.TLS_AES_128_GCM_SHA256,
@@ -86,7 +90,7 @@ var CipherSuites = map[string]uint16{
 
 type TLSPreSharedKeyConfig struct {
 	// map server hint(s) to pre shared key(s)
-	// column separated base64 encoded key value pairs
+	// colon separated base64 encoded key value pairs
 	ServerHintMapping []string `json:"serverHintMapping" yaml:"serverHintMapping"`
 	// the client hint provided to server, base64 encoded value
 	IdentityHint string `json:"identityHint" yaml:"identityHint"`

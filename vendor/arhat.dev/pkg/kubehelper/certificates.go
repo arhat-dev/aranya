@@ -20,32 +20,28 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/kubernetes"
-
-	//certapiv1 "k8s.io/api/certificates/v1"
+	certapiv1 "k8s.io/api/certificates/v1"
 	certapiv1b1 "k8s.io/api/certificates/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-
-	//"k8s.io/client-go/kubernetes/typed/certificates/v1"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/kubernetes"
+	v1 "k8s.io/client-go/kubernetes/typed/certificates/v1"
 	"k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
 	"k8s.io/kubernetes/pkg/apis/certificates"
-
-	//certv1 "k8s.io/kubernetes/pkg/apis/certificates/v1"
+	certv1 "k8s.io/kubernetes/pkg/apis/certificates/v1"
 	certv1b1 "k8s.io/kubernetes/pkg/apis/certificates/v1beta1"
 )
 
 func CreateCertificateSigningRequestClient(apiResources []*metav1.APIResourceList, kubeClient kubernetes.Interface) *CertificateSigningRequestClient {
 	client := &CertificateSigningRequestClient{}
 
-	discovery.FilteredBy(discovery.ResourcePredicateFunc(func(groupVersion string, r *metav1.APIResource) bool {
-		// nolint:gocritic
+	_ = discovery.FilteredBy(discovery.ResourcePredicateFunc(func(groupVersion string, r *metav1.APIResource) bool {
 		switch groupVersion + r.Kind {
-		//case certv1.SchemeGroupVersion.String() + "CertificateSigningRequest":
-		//	client.V1Client = kubeClient.CertificatesV1().CertificateSigningRequests()
+		case certv1.SchemeGroupVersion.String() + "CertificateSigningRequest":
+			client.V1Client = kubeClient.CertificatesV1().CertificateSigningRequests()
 		case certv1b1.SchemeGroupVersion.String() + "CertificateSigningRequest":
 			client.V1b1Client = kubeClient.CertificatesV1beta1().CertificateSigningRequests()
 		}
@@ -57,7 +53,7 @@ func CreateCertificateSigningRequestClient(apiResources []*metav1.APIResourceLis
 }
 
 type CertificateSigningRequestClient struct {
-	//V1Client   v1.CertificateSigningRequestInterface
+	V1Client   v1.CertificateSigningRequestInterface
 	V1b1Client v1beta1.CertificateSigningRequestInterface
 }
 
@@ -68,20 +64,20 @@ func (c *CertificateSigningRequestClient) Create(ctx context.Context, csr *certi
 	)
 
 	switch {
-	//case c.V1Client != nil:
-	//	out := new(certapiv1.Lease)
-	//	// scope is not used
-	//	err = certv1.Convert_certificates_CertificateSigningRequest_To_v1_CertificateSigningRequest(csr, out, conversion.Scope(nil))
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	out, err = c.V1Client.Create(ctx, out, opts)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(out, result, conversion.Scope(nil))
+	case c.V1Client != nil:
+		out := new(certapiv1.CertificateSigningRequest)
+		// scope is not used
+		err = certv1.Convert_certificates_CertificateSigningRequest_To_v1_CertificateSigningRequest(csr, out, conversion.Scope(nil))
+		if err != nil {
+			return nil, err
+		}
+
+		out, err = c.V1Client.Create(ctx, out, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(out, result, conversion.Scope(nil))
 	case c.V1b1Client != nil:
 		out := new(certapiv1b1.CertificateSigningRequest)
 		// scope is not used
@@ -114,20 +110,20 @@ func (c *CertificateSigningRequestClient) Update(ctx context.Context, csr *certi
 	)
 
 	switch {
-	//case c.V1Client != nil:
-	//	out := new(certapiv1.CertificateSigningRequest)
-	//	// scope is not used
-	//	err = certv1.Convert_certificates_CertificateSigningRequest_To_v1_CertificateSigningRequest(csr, out, conversion.Scope(nil))
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	out, err = c.V1Client.Update(ctx, out, opts)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(out, result, conversion.Scope(nil))
+	case c.V1Client != nil:
+		out := new(certapiv1.CertificateSigningRequest)
+		// scope is not used
+		err = certv1.Convert_certificates_CertificateSigningRequest_To_v1_CertificateSigningRequest(csr, out, conversion.Scope(nil))
+		if err != nil {
+			return nil, err
+		}
+
+		out, err = c.V1Client.Update(ctx, out, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(out, result, conversion.Scope(nil))
 	case c.V1b1Client != nil:
 		out := new(certapiv1b1.CertificateSigningRequest)
 		// scope is not used
@@ -155,8 +151,8 @@ func (c *CertificateSigningRequestClient) Update(ctx context.Context, csr *certi
 
 func (c *CertificateSigningRequestClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	switch {
-	//case c.V1Client != nil:
-	//	return c.V1Client.Delete(ctx, name, opts)
+	case c.V1Client != nil:
+		return c.V1Client.Delete(ctx, name, opts)
 	case c.V1b1Client != nil:
 		return c.V1b1Client.Delete(ctx, name, opts)
 	default:
@@ -166,8 +162,8 @@ func (c *CertificateSigningRequestClient) Delete(ctx context.Context, name strin
 
 func (c *CertificateSigningRequestClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	switch {
-	//case c.V1Client != nil:
-	//	return c.V1Client.DeleteCollection(ctx, opts, listOpts)
+	case c.V1Client != nil:
+		return c.V1Client.DeleteCollection(ctx, opts, listOpts)
 	case c.V1b1Client != nil:
 		return c.V1b1Client.DeleteCollection(ctx, opts, listOpts)
 	default:
@@ -182,14 +178,14 @@ func (c *CertificateSigningRequestClient) Get(ctx context.Context, name string, 
 	)
 
 	switch {
-	//case c.V1Client != nil:
-	//	var ret *certapiv1.CertificateSigningRequest
-	//	ret, err = c.V1Client.Get(ctx, name, opts)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(ret, result, conversion.Scope(nil))
+	case c.V1Client != nil:
+		var ret *certapiv1.CertificateSigningRequest
+		ret, err = c.V1Client.Get(ctx, name, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(ret, result, conversion.Scope(nil))
 	case c.V1b1Client != nil:
 		var ret *certapiv1b1.CertificateSigningRequest
 		ret, err = c.V1b1Client.Get(ctx, name, opts)
@@ -216,14 +212,14 @@ func (c *CertificateSigningRequestClient) List(ctx context.Context, opts metav1.
 	)
 
 	switch {
-	//case c.V1Client != nil:
-	//	var ret *certapiv1.CertificateSigningRequestList
-	//	ret, err = c.V1Client.List(ctx, opts)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	err = certv1.Convert_v1_CertificateSigningRequestList_To_certificates_CertificateSigningRequestList(ret, result, conversion.Scope(nil))
+	case c.V1Client != nil:
+		var ret *certapiv1.CertificateSigningRequestList
+		ret, err = c.V1Client.List(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		err = certv1.Convert_v1_CertificateSigningRequestList_To_certificates_CertificateSigningRequestList(ret, result, conversion.Scope(nil))
 	case c.V1b1Client != nil:
 		var ret *certapiv1b1.CertificateSigningRequestList
 		ret, err = c.V1b1Client.List(ctx, opts)
@@ -245,8 +241,8 @@ func (c *CertificateSigningRequestClient) List(ctx context.Context, opts metav1.
 
 func (c *CertificateSigningRequestClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	switch {
-	//case c.V1Client != nil:
-	//	return c.V1Client.Watch(ctx, opts)
+	case c.V1Client != nil:
+		return c.V1Client.Watch(ctx, opts)
 	case c.V1b1Client != nil:
 		return c.V1b1Client.Watch(ctx, opts)
 	default:
@@ -261,14 +257,14 @@ func (c *CertificateSigningRequestClient) Patch(ctx context.Context, name string
 	)
 
 	switch {
-	//case c.V1Client != nil:
-	//	var ret *certapiv1.CertificateSigningRequest
-	//	ret, err = c.V1Client.Patch(ctx, name, pt, data, opts, subResources...)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(ret, result, conversion.Scope(nil))
+	case c.V1Client != nil:
+		var ret *certapiv1.CertificateSigningRequest
+		ret, err = c.V1Client.Patch(ctx, name, pt, data, opts, subResources...)
+		if err != nil {
+			return nil, err
+		}
+
+		err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(ret, result, conversion.Scope(nil))
 	case c.V1b1Client != nil:
 		var ret *certapiv1b1.CertificateSigningRequest
 		ret, err = c.V1b1Client.Patch(ctx, name, pt, data, opts, subResources...)
@@ -295,20 +291,20 @@ func (c *CertificateSigningRequestClient) UpdateStatus(ctx context.Context, csr 
 	)
 
 	switch {
-	//case c.V1Client != nil:
-	//	out := new(certapiv1.CertificateSigningRequest)
-	//	// scope is not used
-	//	err = certv1.Convert_certificates_CertificateSigningRequest_To_v1_CertificateSigningRequest(csr, out, conversion.Scope(nil))
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	out, err = c.V1Client.Update(ctx, out, opts)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(out, result, conversion.Scope(nil))
+	case c.V1Client != nil:
+		out := new(certapiv1.CertificateSigningRequest)
+		// scope is not used
+		err = certv1.Convert_certificates_CertificateSigningRequest_To_v1_CertificateSigningRequest(csr, out, conversion.Scope(nil))
+		if err != nil {
+			return nil, err
+		}
+
+		out, err = c.V1Client.Update(ctx, out, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(out, result, conversion.Scope(nil))
 	case c.V1b1Client != nil:
 		out := new(certapiv1b1.CertificateSigningRequest)
 		// scope is not used
@@ -341,20 +337,20 @@ func (c *CertificateSigningRequestClient) UpdateApproval(ctx context.Context, cs
 	)
 
 	switch {
-	//case c.V1Client != nil:
-	//	out := new(certapiv1.CertificateSigningRequest)
-	//	// scope is not used
-	//	err = certv1.Convert_certificates_CertificateSigningRequest_To_v1_CertificateSigningRequest(csr, out, conversion.Scope(nil))
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	out, err = c.V1Client.Update(ctx, out, opts)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(out, result, conversion.Scope(nil))
+	case c.V1Client != nil:
+		out := new(certapiv1.CertificateSigningRequest)
+		// scope is not used
+		err = certv1.Convert_certificates_CertificateSigningRequest_To_v1_CertificateSigningRequest(csr, out, conversion.Scope(nil))
+		if err != nil {
+			return nil, err
+		}
+
+		out, err = c.V1Client.Update(ctx, out, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		err = certv1.Convert_v1_CertificateSigningRequest_To_certificates_CertificateSigningRequest(out, result, conversion.Scope(nil))
 	case c.V1b1Client != nil:
 		out := new(certapiv1b1.CertificateSigningRequest)
 		// scope is not used

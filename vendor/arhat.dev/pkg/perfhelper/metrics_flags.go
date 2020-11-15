@@ -1,3 +1,4 @@
+// +build !noperfhelper_metrics
 // +build !noflaghelper
 
 /*

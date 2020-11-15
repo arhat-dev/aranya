@@ -1,3 +1,4 @@
+// +build !noperfhelper_tracing
 // +build !noflaghelper
 
 /*
@@ -36,7 +37,7 @@ func FlagsForTracing(prefix string, c *TracingConfig) *pflag.FlagSet {
 		"set endpoint type of collector (only used for jaeger)")
 	fs.StringVar(&c.Endpoint, prefix+"endpoint", "", "set collector endpoint for tracing stats collection")
 	fs.Float64Var(&c.SampleRate, prefix+"sampleRate", 1.0, "set tracing sample rate")
-	fs.StringVar(&c.ReportedServiceName, prefix+"reportedServiceName",
+	fs.StringVar(&c.ServiceName, prefix+"reportedServiceName",
 		fmt.Sprintf("%s.%s", envhelper.ThisPodName(), envhelper.ThisPodNS()), "set service name used for tracing stats")
 	fs.AddFlagSet(tlshelper.FlagsForTLSConfig(prefix+"tls", &c.TLS))
 

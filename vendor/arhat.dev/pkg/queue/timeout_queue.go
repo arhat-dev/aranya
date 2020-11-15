@@ -1,3 +1,5 @@
+// +build !noqueue_timeoutqueue
+
 /*
 Copyright 2019 The arhat.dev Authors.
 

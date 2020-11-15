@@ -30,7 +30,7 @@ func NewStrategy(initialDelay, maxDelay time.Duration, factor float64, backoffTh
 		backoffThreshold: backoffThreshold,
 
 		m:  make(map[interface{}]backoffItem),
-		mu: new(sync.RWMutex),
+		mu: new(sync.Mutex),
 	}
 }
 
@@ -47,7 +47,7 @@ type Strategy struct {
 	backoffThreshold uint64
 
 	m  map[interface{}]backoffItem
-	mu *sync.RWMutex
+	mu *sync.Mutex
 }
 
 // Next returns next backoff time of key

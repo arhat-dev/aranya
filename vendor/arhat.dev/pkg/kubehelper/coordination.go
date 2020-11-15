@@ -38,7 +38,7 @@ import (
 func CreateLeaseClient(apiResources []*metav1.APIResourceList, kubeClient kubernetes.Interface, namespace string) *LeaseClient {
 	client := &LeaseClient{}
 
-	discovery.FilteredBy(discovery.ResourcePredicateFunc(func(groupVersion string, r *metav1.APIResource) bool {
+	_ = discovery.FilteredBy(discovery.ResourcePredicateFunc(func(groupVersion string, r *metav1.APIResource) bool {
 		switch groupVersion + r.Kind {
 		case codv1.SchemeGroupVersion.String() + "Lease":
 			client.V1Client = kubeClient.CoordinationV1().Leases(namespace)

@@ -1,3 +1,5 @@
+// +build !noperfhelper_metrics
+
 /*
 Copyright 2020 The arhat.dev Authors.
 
@@ -17,12 +19,8 @@ limitations under the License.
 package perfhelper
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
-	"os"
 	"time"
 
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -36,7 +34,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"google.golang.org/grpc/credentials"
 
-	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/tlshelper"
 )
 
@@ -44,37 +41,39 @@ type MetricsConfig struct {
 	// Enabled metrics collection
 	Enabled bool `json:"enabled" yaml:"enabled"`
 
-	// Endpoint address for metrics/tracing collection,
-	// for prometheus, it's a listen address (SHOULD NOT be empty or use random port (:0))
-	// for otlp, it's the otlp collector address
-	Endpoint string `json:"listen" yaml:"listen"`
-
-	// Format of exposed metrics
+	// Format of exposed metrics, one of [prometheus, otlp]
 	Format string `json:"format" yaml:"format"`
 
-	// HTTPPath for metrics collection
+	// Endpoint address for metrics/tracing collection,
+	// when format is prometheus: it's a listen address (SHOULD NOT be empty or use random port (:0))
+	// when format is otlp: it's the otlp collector address
+	Endpoint string `json:"endpoint" yaml:"endpoint"`
+
+	// HTTPPath for metrics collection, used when format is prometheus
 	HTTPPath string `json:"httpPath" yaml:"httpPath"`
 
 	// TLS config for client/server
 	TLS tlshelper.TLSConfig `json:"tls" yaml:"tls"`
 }
 
-func (c *MetricsConfig) RegisterIfEnabled(ctx context.Context, logger log.Interface) (err error) {
+func (c *MetricsConfig) CreateIfEnabled(setGlobal bool) (otapimetric.MeterProvider, http.Handler, error) {
 	if !c.Enabled {
-		return nil
+		return nil, nil, nil
 	}
 
 	var (
 		metricsProvider otapimetric.MeterProvider
+		httpHandler     http.Handler
 	)
-
-	tlsConfig, err := c.TLS.GetTLSConfig(true)
-	if err != nil {
-		return fmt.Errorf("failed to create tls config: %w", err)
-	}
 
 	switch c.Format {
 	case "otlp":
+		// get client tls config
+		tlsConfig, err := c.TLS.GetTLSConfig(false)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to create tls config: %w", err)
+		}
+
 		opts := []otexporterotlp.ExporterOption{
 			otexporterotlp.WithAddress(c.Endpoint),
 		}
@@ -88,7 +87,7 @@ func (c *MetricsConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 		var exporter *otexporterotlp.Exporter
 		exporter, err = otexporterotlp.NewExporter(opts...)
 		if err != nil {
-			return fmt.Errorf("failed to create otlp exporter: %w", err)
+			return nil, nil, fmt.Errorf("failed to create otlp exporter: %w", err)
 		}
 
 		pusher := push.New(
@@ -100,73 +99,25 @@ func (c *MetricsConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 
 		metricsProvider = pusher.MeterProvider()
 	case "prometheus":
-		var metricsListener net.Listener
-		metricsListener, err = net.Listen("tcp", c.Endpoint)
-		if err != nil {
-			return fmt.Errorf("failed to create listener for metrics: %w", err)
-		}
-
-		defer func() {
-			if err != nil {
-				_ = metricsListener.Close()
-			}
-		}()
-
 		promCfg := otprom.Config{Registry: prom.NewRegistry()}
 
 		var exporter *otprom.Exporter
-		exporter, err = otprom.NewExportPipeline(promCfg,
+		exporter, err := otprom.NewExportPipeline(promCfg,
 			otsdkmetricspull.WithCachePeriod(5*time.Second),
 		)
 		if err != nil {
-			return fmt.Errorf("failed to install global metrics collector")
+			return nil, nil, fmt.Errorf("failed to install global metrics collector")
 		}
 
-		mux := http.NewServeMux()
-		mux.HandleFunc(c.HTTPPath, func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet {
-				http.Error(w, fmt.Sprintf("method %q not allowed", r.Method), http.StatusMethodNotAllowed)
-				return
-			}
-			exporter.ServeHTTP(w, r)
-		})
-
-		if tlsConfig != nil {
-			tlsConfig.NextProtos = []string{"h2", "http/1.1"}
-		}
-
-		srv := http.Server{
-			Handler:   mux,
-			TLSConfig: tlsConfig,
-			BaseContext: func(net.Listener) context.Context {
-				return ctx
-			},
-		}
-
-		go func() {
-			var err error
-			defer func() {
-				_ = srv.Close()
-				_ = metricsListener.Close()
-
-				if err != nil {
-					os.Exit(1)
-				}
-			}()
-
-			if err = srv.Serve(metricsListener); err != nil {
-				if errors.Is(err, http.ErrServerClosed) {
-					err = nil
-				} else {
-					logger.E("failed to serve metrics", log.Error(err))
-				}
-			}
-		}()
+		httpHandler = exporter
+		metricsProvider = exporter.MeterProvider()
 	default:
-		return fmt.Errorf("unsupported metrics format %q", c.Format)
+		return nil, nil, fmt.Errorf("unsupported metrics format %q", c.Format)
 	}
 
-	otapiglobal.SetMeterProvider(metricsProvider)
+	if setGlobal {
+		otapiglobal.SetMeterProvider(metricsProvider)
+	}
 
-	return nil
+	return metricsProvider, httpHandler, nil
 }

@@ -1,3 +1,5 @@
+// +build !noperfhelper_tracing
+
 /*
 Copyright 2020 The arhat.dev Authors.
 
@@ -17,12 +19,10 @@ limitations under the License.
 package perfhelper
 
 import (
-	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"time"
 
 	otapiglobal "go.opentelemetry.io/otel/api/global"
@@ -35,7 +35,6 @@ import (
 	otsemconv "go.opentelemetry.io/otel/semconv"
 	"google.golang.org/grpc/credentials"
 
-	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/tlshelper"
 )
 
@@ -43,10 +42,10 @@ type TracingConfig struct {
 	// Enabled tracing stats
 	Enabled bool `json:"enabled" yaml:"enabled"`
 
-	// Format of exposed tracing stats
+	// Format of exposed tracing stats, one of [otlp, zipkin, jaeger]
 	Format string `json:"format" yaml:"format"`
 
-	// EndpointType the type of collector (used for jaeger), can be one of [agent, collector]
+	// EndpointType the type of collector used by jaeger, can be one of [agent, collector]
 	EndpointType string `json:"endpointType" yaml:"endpointType"`
 
 	// Endpoint to report tracing stats
@@ -55,62 +54,25 @@ type TracingConfig struct {
 	// SampleRate
 	SampleRate float64 `json:"sampleRate" yaml:"sampleRate"`
 
-	// ReportedServiceName used when reporting tracing stats
-	ReportedServiceName string `json:"serviceName" yaml:"serviceName"`
+	// ServiceName used when reporting tracing stats
+	ServiceName string `json:"serviceName" yaml:"serviceName"`
 
 	// TLS config for client/server
 	TLS tlshelper.TLSConfig `json:"tls" yaml:"tls"`
 }
 
-func (c *TracingConfig) newHTTPClient(tlsConfig *tls.Config) *http.Client {
-	if tlsConfig != nil {
-		tlsConfig.NextProtos = []string{"h2", "http/1.1"}
-	}
-
-	// TODO: set reasonable defaults, currently using default client and transport
-	return &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:       30 * time.Second,
-				KeepAlive:     30 * time.Second,
-				FallbackDelay: 300 * time.Millisecond,
-			}).DialContext,
-			ForceAttemptHTTP2:     true,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-
-			DialTLS:                nil,
-			TLSClientConfig:        tlsConfig,
-			DisableKeepAlives:      false,
-			DisableCompression:     false,
-			MaxIdleConnsPerHost:    0,
-			MaxConnsPerHost:        0,
-			ResponseHeaderTimeout:  0,
-			TLSNextProto:           nil,
-			ProxyConnectHeader:     nil,
-			MaxResponseHeaderBytes: 0,
-			WriteBufferSize:        0,
-			ReadBufferSize:         0,
-		},
-		CheckRedirect: nil,
-		Jar:           nil,
-		Timeout:       0,
-	}
-}
-
-func (c *TracingConfig) RegisterIfEnabled(ctx context.Context, logger log.Interface) (err error) {
+func (c *TracingConfig) CreateIfEnabled(setGlobal bool, client *http.Client) (otapitrace.TracerProvider, error) {
 	if !c.Enabled {
-		return nil
+		return nil, nil
 	}
 
-	var traceProvider otapitrace.TracerProvider
+	var (
+		traceProvider otapitrace.TracerProvider
+	)
 
 	tlsConfig, err := c.TLS.GetTLSConfig(true)
 	if err != nil {
-		return fmt.Errorf("failed to create tls config: %w", err)
+		return nil, fmt.Errorf("failed to create tls config: %w", err)
 	}
 
 	switch c.Format {
@@ -128,12 +90,12 @@ func (c *TracingConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 		var exporter *otexporterotlp.Exporter
 		exporter, err = otexporterotlp.NewExporter(opts...)
 		if err != nil {
-			return fmt.Errorf("failed to create otlp exporter: %w", err)
+			return nil, fmt.Errorf("failed to create otlp exporter: %w", err)
 		}
 
 		bsp := otsdktrace.NewBatchSpanProcessor(exporter)
 
-		otsdktrace.WithResource(otsdkresource.New(otsemconv.ServiceNameKey.String(c.ReportedServiceName)))
+		otsdktrace.WithResource(otsdkresource.New(otsemconv.ServiceNameKey.String(c.ServiceName)))
 		traceProvider = otsdktrace.NewTracerProvider(
 			otsdktrace.WithConfig(otsdktrace.Config{DefaultSampler: otsdktrace.TraceIDRatioBased(c.SampleRate)}),
 			otsdktrace.WithSyncer(exporter),
@@ -142,12 +104,12 @@ func (c *TracingConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 	case "zipkin":
 		var exporter *otexporterzipkin.Exporter
 
-		exporter, err = otexporterzipkin.NewRawExporter(c.Endpoint, c.ReportedServiceName,
-			otexporterzipkin.WithClient(c.newHTTPClient(tlsConfig)),
+		exporter, err = otexporterzipkin.NewRawExporter(c.Endpoint, c.ServiceName,
+			otexporterzipkin.WithClient(c.newHTTPClient(client, tlsConfig)),
 			otexporterzipkin.WithLogger(nil),
 		)
 		if err != nil {
-			return fmt.Errorf("failed to create zipkin exporter: %w", err)
+			return nil, fmt.Errorf("failed to create zipkin exporter: %w", err)
 		}
 
 		traceProvider = otsdktrace.NewTracerProvider(
@@ -162,21 +124,26 @@ func (c *TracingConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 		var endpoint otexporterjaeger.EndpointOption
 		switch c.EndpointType {
 		case "agent":
-			endpoint = otexporterjaeger.WithAgentEndpoint(c.Endpoint)
+			endpoint = otexporterjaeger.WithAgentEndpoint(
+				c.Endpoint,
+				otexporterjaeger.WithAttemptReconnectingInterval(5*time.Second),
+			)
 		case "collector":
-			otexporterjaeger.WithCollectorEndpoint(c.Endpoint,
-				otexporterjaeger.WithUsername(os.Getenv("JAEGER_COLLECTOR_USERNAME")),
-				otexporterjaeger.WithPassword(os.Getenv("JAEGER_COLLECTOR_PASSWORD")),
-				otexporterjaeger.WithHTTPClient(c.newHTTPClient(tlsConfig)),
+			endpoint = otexporterjaeger.WithCollectorEndpoint(
+				c.Endpoint,
+				// use environ JAEGER_USERNAME and JAEGER_PASSWORD
+				otexporterjaeger.WithCollectorEndpointOptionFromEnv(),
+				otexporterjaeger.WithHTTPClient(c.newHTTPClient(client, tlsConfig)),
 			)
 		default:
-			return fmt.Errorf("unsupported tracing endpoint type %q", c.EndpointType)
+			return nil, fmt.Errorf("unsupported tracing endpoint type %q", c.EndpointType)
 		}
 
 		var flush func()
-		traceProvider, flush, err = otexporterjaeger.NewExportPipeline(endpoint,
+		traceProvider, flush, err = otexporterjaeger.NewExportPipeline(
+			endpoint,
 			otexporterjaeger.WithProcess(otexporterjaeger.Process{
-				ServiceName: c.ReportedServiceName,
+				ServiceName: c.ServiceName,
 			}),
 			otexporterjaeger.WithSDK(&otsdktrace.Config{
 				DefaultSampler: otsdktrace.TraceIDRatioBased(c.SampleRate),
@@ -184,14 +151,60 @@ func (c *TracingConfig) RegisterIfEnabled(ctx context.Context, logger log.Interf
 		)
 		_ = flush
 	default:
-		return fmt.Errorf("unsupported tracing format %q", c.Format)
+		return nil, fmt.Errorf("unsupported tracing format %q", c.Format)
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to create %q tracing provider: %w", c.Format, err)
+		return nil, fmt.Errorf("failed to create %q tracing provider: %w", c.Format, err)
 	}
 
-	otapiglobal.SetTracerProvider(traceProvider)
+	if setGlobal {
+		otapiglobal.SetTracerProvider(traceProvider)
+	}
 
-	return nil
+	return traceProvider, nil
+}
+
+func (c *TracingConfig) newHTTPClient(client *http.Client, tlsConfig *tls.Config) *http.Client {
+	if tlsConfig != nil {
+		tlsConfig.NextProtos = []string{"h2", "http/1.1"}
+	}
+
+	if client == nil {
+		client = &http.Client{
+			// TODO: set reasonable defaults, currently using default client and transport
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				DialContext: (&net.Dialer{
+					Timeout:       30 * time.Second,
+					KeepAlive:     30 * time.Second,
+					FallbackDelay: 300 * time.Millisecond,
+				}).DialContext,
+				ForceAttemptHTTP2:     true,
+				MaxIdleConns:          100,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+				TLSClientConfig:       tlsConfig,
+
+				DisableKeepAlives:      false,
+				DisableCompression:     false,
+				MaxIdleConnsPerHost:    0,
+				MaxConnsPerHost:        0,
+				ResponseHeaderTimeout:  0,
+				TLSNextProto:           nil,
+				ProxyConnectHeader:     nil,
+				MaxResponseHeaderBytes: 0,
+				WriteBufferSize:        0,
+				ReadBufferSize:         0,
+			},
+		}
+	}
+
+	return &http.Client{
+		Transport:     client.Transport,
+		CheckRedirect: client.CheckRedirect,
+		Jar:           client.Jar,
+		Timeout:       client.Timeout,
+	}
 }

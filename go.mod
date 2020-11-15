@@ -5,7 +5,7 @@ go 1.15
 require (
 	arhat.dev/abbot-proto v0.1.0
 	arhat.dev/aranya-proto v0.2.3
-	arhat.dev/pkg v0.3.6-0.20201112201959-efe9404198be
+	arhat.dev/pkg v0.4.1
 	cloud.google.com/go/pubsub v1.3.1
 	github.com/Azure/azure-amqp-common-go/v3 v3.0.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.0
@@ -40,31 +40,28 @@ require (
 	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
-	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
+	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.6.1
-	go.etcd.io/bbolt v1.3.5 // indirect
-	go.etcd.io/etcd v0.0.0-20200401174654-e694b7bb0875 // indirect
 	go.uber.org/multierr v1.6.0
-	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
-	golang.org/x/net v0.0.0-20201027133719-8eef5233e2a1 // indirect
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
-	golang.org/x/tools v0.0.0-20200811032001-fd80f4dbb3ea // indirect
+	golang.org/x/crypto v0.0.0-20201112155050-0c6587e931a9
+	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
+	golang.org/x/tools v0.0.0-20201114224030-61ea331ec02b // indirect
 	google.golang.org/api v0.32.0
 	google.golang.org/genproto v0.0.0-20201026171402-d4b8fe4fd877 // indirect
 	google.golang.org/grpc v1.33.2
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
-	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api v0.18.10
-	k8s.io/apimachinery v0.18.10
-	k8s.io/apiserver v0.18.10
-	k8s.io/client-go v0.18.10
-	k8s.io/cloud-provider v0.18.10
-	k8s.io/cri-api v0.18.10
-	k8s.io/csi-translation-lib v0.18.10
-	k8s.io/kubelet v0.18.10
-	k8s.io/kubernetes v1.18.10
-	k8s.io/utils v0.0.0-20201015054608-420da100c033
+	k8s.io/api v0.19.4
+	k8s.io/apimachinery v0.19.4
+	k8s.io/apiserver v0.19.4
+	k8s.io/client-go v0.19.4
+	k8s.io/cloud-provider v0.19.4
+	k8s.io/cri-api v0.19.4
+	k8s.io/csi-translation-lib v0.19.4
+	k8s.io/klog/v2 v2.3.0
+	k8s.io/kubelet v0.19.4
+	k8s.io/kubernetes v1.19.4
+	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 )
 
 // misc
@@ -114,19 +111,19 @@ replace (
 
 // go experimental
 replace (
-	golang.org/x/crypto => github.com/golang/crypto v0.0.0-20200728195943-123391ffb6de
-	golang.org/x/exp => github.com/golang/exp v0.0.0-20200513190911-00229845015e
+	golang.org/x/crypto => github.com/golang/crypto v0.0.0-20201112155050-0c6587e931a9
+	golang.org/x/exp => github.com/golang/exp v0.0.0-20201008143054-e3b2a7f2fdc7
 	golang.org/x/lint => github.com/golang/lint v0.0.0-20200302205851-738671d3881b
-	golang.org/x/net => github.com/golang/net v0.0.0-20200707034311-ab3426394381
-	golang.org/x/oauth2 => github.com/golang/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sync => github.com/golang/sync v0.0.0-20200317015054-43a5402ce75a
-	golang.org/x/sys => github.com/golang/sys v0.0.0-20200821140526-fda516888d29
+	golang.org/x/net => github.com/golang/net v0.0.0-20201110031124-69a78807bb2b
+	golang.org/x/oauth2 => github.com/golang/oauth2 v0.0.0-20201109201403-9fd604954f58
+	golang.org/x/sync => github.com/golang/sync v0.0.0-20201020160332-67f06af15bc9
+	golang.org/x/sys => github.com/golang/sys v0.0.0-20201113233024-12cec1faf1ba
 	golang.org/x/text => github.com/golang/text v0.3.2
-	golang.org/x/tools => github.com/golang/tools v0.0.0-20200811032001-fd80f4dbb3ea
+	golang.org/x/tools => github.com/golang/tools v0.0.0-20201114224030-61ea331ec02b
 	golang.org/x/xerrors => github.com/golang/xerrors v0.0.0-20200804184101-5ec99f83aff1
 )
 
-// Kubernetes v1.18.10
+// Kubernetes v1.19.4
 replace (
 	github.com/Azure/azure-sdk-for-go => github.com/Azure/azure-sdk-for-go v37.1.0+incompatible
 	github.com/container-storage-interface/spec => github.com/container-storage-interface/spec v1.3.0
@@ -134,31 +131,31 @@ replace (
 	github.com/evanphx/json-patch => github.com/evanphx/json-patch/v5 v5.0.0
 	github.com/heketi/heketi => github.com/heketi/heketi v9.0.1-0.20190917153846-c2e2a4ab7ab9+incompatible
 	github.com/mindprince/gonvml => github.com/mindprince/gonvml v0.0.0-20190828220739-9ebdce4bb989
-	k8s.io/api => github.com/kubernetes/api v0.18.10
-	k8s.io/apiextensions-apiserver => github.com/kubernetes/apiextensions-apiserver v0.18.10
-	k8s.io/apimachinery => github.com/kubernetes/apimachinery v0.18.10
-	k8s.io/apiserver => github.com/kubernetes/apiserver v0.18.10
-	k8s.io/cli-runtime => github.com/kubernetes/cli-runtime v0.18.10
-	k8s.io/client-go => github.com/kubernetes/client-go v0.18.10
-	k8s.io/cloud-provider => github.com/kubernetes/cloud-provider v0.18.10
-	k8s.io/cluster-bootstrap => github.com/kubernetes/cluster-bootstrap v0.18.10
-	k8s.io/code-generator => github.com/kubernetes/code-generator v0.18.10
-	k8s.io/component-base => github.com/kubernetes/component-base v0.18.10
-	k8s.io/cri-api => github.com/kubernetes/cri-api v0.18.10
-	k8s.io/csi-translation-lib => github.com/kubernetes/csi-translation-lib v0.18.10
+	k8s.io/api => github.com/kubernetes/api v0.19.4
+	k8s.io/apiextensions-apiserver => github.com/kubernetes/apiextensions-apiserver v0.19.4
+	k8s.io/apimachinery => github.com/kubernetes/apimachinery v0.19.4
+	k8s.io/apiserver => github.com/kubernetes/apiserver v0.19.4
+	k8s.io/cli-runtime => github.com/kubernetes/cli-runtime v0.19.4
+	k8s.io/client-go => github.com/kubernetes/client-go v0.19.4
+	k8s.io/cloud-provider => github.com/kubernetes/cloud-provider v0.19.4
+	k8s.io/cluster-bootstrap => github.com/kubernetes/cluster-bootstrap v0.19.4
+	k8s.io/code-generator => github.com/kubernetes/code-generator v0.19.4
+	k8s.io/component-base => github.com/kubernetes/component-base v0.19.4
+	k8s.io/cri-api => github.com/kubernetes/cri-api v0.19.4
+	k8s.io/csi-translation-lib => github.com/kubernetes/csi-translation-lib v0.19.4
 	k8s.io/klog => github.com/kubernetes/klog v1.0.0
 	k8s.io/klog/v2 => github.com/kubernetes/klog/v2 v2.3.0
-	k8s.io/kube-aggregator => github.com/kubernetes/kube-aggregator v0.18.10
-	k8s.io/kube-controller-manager => github.com/kubernetes/kube-controller-manager v0.18.10
-	k8s.io/kube-proxy => github.com/kubernetes/kube-proxy v0.18.10
-	k8s.io/kube-scheduler => github.com/kubernetes/kube-scheduler v0.18.10
-	k8s.io/kubectl => github.com/kubernetes/kubectl v0.18.10
-	k8s.io/kubelet => github.com/kubernetes/kubelet v0.18.10
-	k8s.io/kubernetes => github.com/kubernetes/kubernetes v1.18.10
-	k8s.io/legacy-cloud-providers => github.com/kubernetes/legacy-cloud-providers v0.18.10
-	k8s.io/metrics => github.com/kubernetes/metrics v0.18.10
-	k8s.io/sample-apiserver => github.com/kubernetes/sample-apiserver v0.18.10
-	k8s.io/utils => github.com/kubernetes/utils v0.0.0-20201015054608-420da100c033
+	k8s.io/kube-aggregator => github.com/kubernetes/kube-aggregator v0.19.4
+	k8s.io/kube-controller-manager => github.com/kubernetes/kube-controller-manager v0.19.4
+	k8s.io/kube-proxy => github.com/kubernetes/kube-proxy v0.19.4
+	k8s.io/kube-scheduler => github.com/kubernetes/kube-scheduler v0.19.4
+	k8s.io/kubectl => github.com/kubernetes/kubectl v0.19.4
+	k8s.io/kubelet => github.com/kubernetes/kubelet v0.19.4
+	k8s.io/kubernetes => github.com/kubernetes/kubernetes v1.19.4
+	k8s.io/legacy-cloud-providers => github.com/kubernetes/legacy-cloud-providers v0.19.4
+	k8s.io/metrics => github.com/kubernetes/metrics v0.19.4
+	k8s.io/sample-apiserver => github.com/kubernetes/sample-apiserver v0.19.4
+	k8s.io/utils => github.com/kubernetes/utils v0.0.0-20201110183641-67b214c5f920
 )
 
 // kubelet
