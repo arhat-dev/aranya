@@ -35,7 +35,8 @@ import (
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
 	kubeclient "k8s.io/client-go/kubernetes"
 	kubecache "k8s.io/client-go/tools/cache"
-	"k8s.io/kubernetes/pkg/controller/cloud"
+	cloudnodecontroller "k8s.io/cloud-provider/controllers/node"
+	cloudnodelifecyclecontroller "k8s.io/cloud-provider/controllers/nodelifecycle"
 
 	aranyaclient "arhat.dev/aranya/pkg/apis/aranya/generated/clientset/versioned"
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
@@ -209,14 +210,14 @@ func NewController(
 
 	if config.Aranya.RunAsCloudProvider {
 		var err2 error
-		ctrl.cloudNodeController, err2 = cloud.NewCloudNodeController(
+		ctrl.cloudNodeController, err2 = cloudnodecontroller.NewCloudNodeController(
 			nodeInformerTyped, kubeClient, ctrl, 10*time.Second,
 		)
 		if err2 != nil {
 			return nil, fmt.Errorf("failed to create cloud node controller: %w", err2)
 		}
 
-		ctrl.cloudNodeLifecycleController, err2 = cloud.NewCloudNodeLifecycleController(
+		ctrl.cloudNodeLifecycleController, err2 = cloudnodelifecyclecontroller.NewCloudNodeLifecycleController(
 			nodeInformerTyped, kubeClient, ctrl, 5*time.Second)
 		if err2 != nil {
 			return nil, fmt.Errorf("failed to create cloud lifecycle controller: %w", err2)
@@ -258,8 +259,8 @@ type Controller struct {
 	csiDriverLister *kubehelper.CSIDriverLister
 
 	// unused fields
-	cloudNodeController          *cloud.CloudNodeController
-	cloudNodeLifecycleController *cloud.CloudNodeLifecycleController
+	cloudNodeController          *cloudnodecontroller.CloudNodeController
+	cloudNodeLifecycleController *cloudnodelifecyclecontroller.CloudNodeLifecycleController
 }
 
 func (c *Controller) Start() error {

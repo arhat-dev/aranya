@@ -21,9 +21,11 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -105,12 +107,38 @@ func run(appCtx context.Context, config *conf.Config) error {
 		return fmt.Errorf("failed to create kube client from kubeconfig: %w", err)
 	}
 
-	if err = config.Aranya.Metrics.RegisterIfEnabled(appCtx, logger); err != nil {
+	_, mtHandler, err := config.Aranya.Metrics.CreateIfEnabled(true)
+	if err != nil {
 		logger.E("failed to register metrics controller", log.Error(err))
 		return err
 	}
 
-	if err = config.Aranya.Tracing.RegisterIfEnabled(appCtx, logger); err != nil {
+	if mtHandler != nil {
+		// TODO: listen for metrics when metrics handler is not nil (prometheus)
+		mux := http.NewServeMux()
+		mux.Handle(config.Aranya.Metrics.HTTPPath, mtHandler)
+
+		tlsConfig, err2 := config.Aranya.Metrics.TLS.GetTLSConfig(true)
+		if err2 != nil {
+			return fmt.Errorf("failed to get tls config for metrics listener: %w", err2)
+		}
+
+		srv := &http.Server{
+			Handler:   mux,
+			Addr:      config.Aranya.Metrics.Endpoint,
+			TLSConfig: tlsConfig,
+		}
+
+		go func() {
+			err2 = srv.ListenAndServe()
+			if err2 != nil && !errors.Is(err2, http.ErrServerClosed) {
+				panic(err2)
+			}
+		}()
+	}
+
+	_, err = config.Aranya.Tracing.CreateIfEnabled(true, nil)
+	if err != nil {
 		logger.E("failed to register tracing controller")
 		return err
 	}

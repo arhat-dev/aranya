@@ -31,7 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
-	kubeletrc "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
+	kubeletrc "k8s.io/kubernetes/pkg/kubelet/cri/streaming/remotecommand"
 
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/logutil"
@@ -331,9 +331,6 @@ func (m *Manager) doServeTerminalStream(
 	}
 
 	if stdin != nil {
-		r := iohelper.NewTimeoutReader(stdin)
-		go r.FallbackReading()
-
 		readTimeout := constant.DefaultNonInteractiveStreamReadTimeout
 		if resizeCh != nil {
 			readTimeout = constant.DefaultInteractiveStreamReadTimeout
@@ -357,15 +354,20 @@ func (m *Manager) doServeTerminalStream(
 				logger.D("finished terminal input")
 			}()
 
+			r := iohelper.NewTimeoutReader(stdin)
+			go r.FallbackReading(closeSig)
+
 			buf := make([]byte, m.ConnectivityManager.MaxPayloadSize())
 			for r.WaitForData(closeSig) {
-				n, err2 := r.Read(readTimeout, buf)
-				if err2 != nil {
+				data, shouldCopy, err2 := r.Read(readTimeout, buf)
+				if err2 != nil && err2 != iohelper.ErrDeadlineExceeded {
 					break
 				}
 
-				data := make([]byte, n)
-				_ = copy(data, buf[:n])
+				if shouldCopy {
+					data = make([]byte, len(data))
+					_ = copy(data, buf[:len(data)])
+				}
 
 				_, _, lastSeq, err2 := m.ConnectivityManager.PostData(
 					sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,

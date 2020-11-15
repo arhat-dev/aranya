@@ -13,8 +13,45 @@ import (
 )
 
 var (
-	_ cloudprovider.Interface = &Controller{}
+	_ cloudprovider.Interface = (*Controller)(nil)
 )
+
+// InstanceExists returns true if the instance for the given node exists according to the cloud provider.
+// Use the node.name or node.spec.providerID field to find the node in the cloud provider.
+func (c *Controller) InstanceExists(ctx context.Context, node *corev1.Node) (bool, error) {
+	if _, ok := c.getEdgeDeviceObject(node.Name); !ok {
+		return true, fmt.Errorf("no such edge device for node name %q", node.Name)
+	}
+
+	return true, nil
+}
+
+// InstanceShutdown returns true if the instance is shutdown according to the cloud provider.
+// Use the node.name or node.spec.providerID field to find the node in the cloud provider.
+func (c *Controller) InstanceShutdown(ctx context.Context, node *corev1.Node) (bool, error) {
+	return false, nil
+}
+
+// InstanceMetadata returns the instance's metadata. The values returned in InstanceMetadata are
+// translated into specific fields in the Node object on registration.
+// Use the node.name or node.spec.providerID field to find the node in the cloud provider.
+func (c *Controller) InstanceMetadata(ctx context.Context, node *corev1.Node) (*cloudprovider.InstanceMetadata, error) {
+	addrs, err := c.NodeAddresses(ctx, types.NodeName(node.Name))
+	if err != nil {
+		return nil, err
+	}
+
+	instanceType, err := c.InstanceType(ctx, types.NodeName(node.Name))
+	if err != nil {
+		return nil, err
+	}
+
+	return &cloudprovider.InstanceMetadata{
+		ProviderID:    c.getNodeProviderID("", node.Name),
+		InstanceType:  instanceType,
+		NodeAddresses: addrs,
+	}, nil
+}
 
 // Initialize provides the cloud with a kubernetes client builder and may spawn goroutines
 // to perform housekeeping or run custom controllers specific to the cloud provider.
@@ -25,6 +62,15 @@ func (c *Controller) Initialize(clientBuilder cloudprovider.ControllerClientBuil
 // LoadBalancer returns a balancer interface. Also returns true if the interface is supported, false otherwise.
 func (c *Controller) LoadBalancer() (cloudprovider.LoadBalancer, bool) {
 	return c, false
+}
+
+// InstancesV2 is an implementation for instances and should only be implemented by external cloud providers.
+// Implementing InstancesV2 is behaviorally identical to Instances but is optimized to significantly reduce
+// API calls to the cloud provider when registering and syncing nodes.
+// Also returns true if the interface is supported, false otherwise.
+// WARNING: InstancesV2 is an experimental interface and is subject to change in v1.20.
+func (c *Controller) InstancesV2() (cloudprovider.InstancesV2, bool) {
+	return c, true
 }
 
 // Instances returns an instances interface. Also returns true if the interface is supported, false otherwise.

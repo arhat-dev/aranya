@@ -63,7 +63,7 @@ type edgeDeviceController struct {
 	edgeDeviceInformer kubecache.SharedIndexInformer
 }
 
-func (c edgeDeviceController) init(
+func (c *edgeDeviceController) init(
 	ctrl *Controller,
 	config *conf.Config,
 	aranyaClient aranyaclient.Interface,

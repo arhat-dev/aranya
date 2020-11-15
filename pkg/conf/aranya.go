@@ -21,8 +21,9 @@ package conf
 import (
 	"github.com/spf13/pflag"
 
-	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/pkg/kubehelper"
+
+	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 )
 
 type Config struct {

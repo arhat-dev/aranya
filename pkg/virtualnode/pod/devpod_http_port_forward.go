@@ -33,7 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/httpstream/spdy"
 	"k8s.io/apiserver/pkg/util/wsstream"
 	api "k8s.io/kubernetes/pkg/apis/core"
-	kubeletpf "k8s.io/kubernetes/pkg/kubelet/server/portforward"
+	kubeletpf "k8s.io/kubernetes/pkg/kubelet/cri/streaming/portforward"
 
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
@@ -246,19 +246,7 @@ func (m *Manager) doPortForward(s *stream) {
 
 	var seq uint64
 	go func() {
-		timer := time.NewTimer(0)
-		if !timer.Stop() {
-			<-timer.C
-		}
-
 		defer func() {
-			if !timer.Stop() {
-				select {
-				case <-timer.C:
-				default:
-				}
-			}
-
 			_, _, _, err2 := m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
 			if err2 != nil {
 				s.writeErr(fmt.Sprintf("failed to post port-forward read close cmd: %v", err2))
@@ -266,18 +254,19 @@ func (m *Manager) doPortForward(s *stream) {
 		}()
 
 		r := iohelper.NewTimeoutReader(s.data)
-		go r.FallbackReading()
+		go r.FallbackReading(m.Context().Done())
 
 		buf := make([]byte, m.ConnectivityManager.MaxPayloadSize())
 		for r.WaitForData(m.Context().Done()) {
-			timer.Reset(constant.DefaultPortForwardStreamReadTimeout)
-			n, err2 := r.Read(constant.DefaultPortForwardStreamReadTimeout, buf)
+			data, shouldCopy, err2 := r.Read(constant.DefaultPortForwardStreamReadTimeout, buf)
 			if err2 != nil && err2 != iohelper.ErrDeadlineExceeded {
 				break
 			}
 
-			data := make([]byte, n)
-			_ = copy(data, buf[:n])
+			if shouldCopy {
+				data = make([]byte, len(data))
+				_ = copy(data, buf[:len(data)])
+			}
 
 			_, _, lastSeq, err2 := m.ConnectivityManager.PostData(
 				sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,

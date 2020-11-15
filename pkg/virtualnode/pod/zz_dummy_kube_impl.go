@@ -111,7 +111,7 @@ func (m *runtimeForVolumeManager) UpdatePodCIDR(podCIDR string) error           
 func (m *runtimeForVolumeManager) ListImages() ([]kubecontainer.Image, error)      { return nil, nil }
 func (m *runtimeForVolumeManager) RemoveImage(image kubecontainer.ImageSpec) error { return nil }
 func (m *runtimeForVolumeManager) ImageStats() (*kubecontainer.ImageStats, error)  { return nil, nil }
-func (m *runtimeForVolumeManager) GarbageCollect(gcPolicy kubecontainer.ContainerGCPolicy, allSourcesReady bool, evictNonDeletedPods bool) error {
+func (m *runtimeForVolumeManager) GarbageCollect(gcPolicy kubecontainer.GCPolicy, allSourcesReady bool, evictNonDeletedPods bool) error {
 	return nil
 }
 func (m *runtimeForVolumeManager) SyncPod(pod *corev1.Pod, podStatus *kubecontainer.PodStatus, pullSecrets []corev1.Secret, backOff *flowcontrol.Backoff) kubecontainer.PodSyncResult {
@@ -138,6 +138,10 @@ func (m *runtimeForVolumeManager) GetImageRef(image kubecontainer.ImageSpec) (st
 
 type podManagerForVolumeManager struct {
 	store *cache.PodCache
+}
+
+func (m *podManagerForVolumeManager) GetOrphanedMirrorPodNames() []string {
+	return make([]string, 0)
 }
 
 func (m *podManagerForVolumeManager) GetPods() []*corev1.Pod {

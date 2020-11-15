@@ -38,8 +38,8 @@ import (
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	_ "k8s.io/kubernetes/pkg/apis/core/install" // install legacyscheme
 	"k8s.io/kubernetes/pkg/apis/core/v1/validation"
-	kubeletpf "k8s.io/kubernetes/pkg/kubelet/server/portforward"
-	kubeletrc "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
+	kubeletpf "k8s.io/kubernetes/pkg/kubelet/cri/streaming/portforward"
+	kubeletrc "k8s.io/kubernetes/pkg/kubelet/cri/streaming/remotecommand"
 
 	"arhat.dev/aranya/pkg/constant"
 )

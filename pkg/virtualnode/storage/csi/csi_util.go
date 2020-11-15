@@ -1,9 +1,12 @@
 /*
 Copyright 2018 The Kubernetes Authors.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-	http://www.apache.org/licenses/LICENSE-2.0
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +27,10 @@ import (
 
 	api "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/volume"
 	utilstrings "k8s.io/utils/strings"
 )
@@ -52,7 +58,7 @@ func getCredentialsFromSecret(k8s kubernetes.Interface, secretRef *api.SecretRef
 // saveVolumeData persists parameter data as json file at the provided location
 func saveVolumeData(dir string, fileName string, data map[string]string) error {
 	dataFilePath := filepath.Join(dir, fileName)
-	//klog.V(4).Info(log("saving volume data file [%s]", dataFilePath))
+	klog.V(4).Info(log("saving volume data file [%s]", dataFilePath))
 	file, err := os.Create(dataFilePath)
 	if err != nil {
 		return errors.New(log("failed to save volume data file %s: %v", dataFilePath, err))
@@ -61,7 +67,7 @@ func saveVolumeData(dir string, fileName string, data map[string]string) error {
 	if err := json.NewEncoder(file).Encode(data); err != nil {
 		return errors.New(log("failed to save volume data file %s: %v", dataFilePath, err))
 	}
-	//klog.V(4).Info(log("volume data file saved successfully [%s]", dataFilePath))
+	klog.V(4).Info(log("volume data file saved successfully [%s]", dataFilePath))
 	return nil
 }
 
@@ -69,7 +75,7 @@ func saveVolumeData(dir string, fileName string, data map[string]string) error {
 func loadVolumeData(dir string, fileName string) (map[string]string, error) {
 	// remove /mount at the end
 	dataFileName := filepath.Join(dir, fileName)
-	//klog.V(4).Info(log("loading volume data file [%s]", dataFileName))
+	klog.V(4).Info(log("loading volume data file [%s]", dataFileName))
 
 	file, err := os.Open(dataFileName)
 	if err != nil {
@@ -102,20 +108,24 @@ func log(msg string, parts ...interface{}) string {
 	return fmt.Sprintf(fmt.Sprintf("%s: %s", CSIPluginName, msg), parts...)
 }
 
+// getVolumePluginDir returns the path where CSI plugin keeps metadata for given volume
+func getVolumePluginDir(specVolID string, host volume.VolumeHost) string {
+	sanitizedSpecVolID := utilstrings.EscapeQualifiedName(specVolID)
+	return filepath.Join(host.GetVolumeDevicePluginDir(CSIPluginName), sanitizedSpecVolID)
+}
+
 // getVolumeDevicePluginDir returns the path where the CSI plugin keeps the
 // symlink for a block device associated with a given specVolumeID.
 // path: plugins/kubernetes.io/csi/volumeDevices/{specVolumeID}/dev
 func getVolumeDevicePluginDir(specVolID string, host volume.VolumeHost) string {
-	sanitizedSpecVolID := utilstrings.EscapeQualifiedName(specVolID)
-	return filepath.Join(host.GetVolumeDevicePluginDir(CSIPluginName), sanitizedSpecVolID, "dev")
+	return filepath.Join(getVolumePluginDir(specVolID, host), "dev")
 }
 
 // getVolumeDeviceDataDir returns the path where the CSI plugin keeps the
 // volume data for a block device associated with a given specVolumeID.
 // path: plugins/kubernetes.io/csi/volumeDevices/{specVolumeID}/data
 func getVolumeDeviceDataDir(specVolID string, host volume.VolumeHost) string {
-	sanitizedSpecVolID := utilstrings.EscapeQualifiedName(specVolID)
-	return filepath.Join(host.GetVolumeDevicePluginDir(CSIPluginName), sanitizedSpecVolID, "data")
+	return filepath.Join(getVolumePluginDir(specVolID, host), "data")
 }
 
 // hasReadWriteOnce returns true if modes contains v1.ReadWriteOnce
@@ -139,8 +149,7 @@ func getSourceFromSpec(spec *volume.Spec) (*api.CSIVolumeSource, *api.CSIPersist
 	if spec.Volume != nil && spec.PersistentVolume != nil {
 		return nil, nil, fmt.Errorf("volume.Spec has both volume and persistent volume sources")
 	}
-	//inlineEnabled := utilfeature.DefaultFeatureGate.Enabled(features.CSIInlineVolume)
-	if spec.Volume != nil && spec.Volume.CSI != nil && inlineEnabled {
+	if spec.Volume != nil && spec.Volume.CSI != nil && utilfeature.DefaultFeatureGate.Enabled(features.CSIInlineVolume) {
 		return spec.Volume.CSI, nil, nil
 	}
 	if spec.PersistentVolume != nil &&
@@ -161,4 +170,9 @@ func getPVSourceFromSpec(spec *volume.Spec) (*api.CSIPersistentVolumeSource, err
 		return nil, fmt.Errorf("unexpected api.CSIVolumeSource found in volume.Spec")
 	}
 	return pvSrc, nil
+}
+
+// GetCSIMounterPath returns the mounter path given the base path.
+func GetCSIMounterPath(path string) string {
+	return filepath.Join(path, "/mount")
 }
