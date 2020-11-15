@@ -49,7 +49,10 @@ jobs:
 
     - name: Lint
       run: |
-        make lint.all
+        make lint.file
+        make lint.shell
+        # make lint.go
+        make lint.yaml
 
   unit-tests:
     if: contains(github.head_ref, 'deps/') == false
