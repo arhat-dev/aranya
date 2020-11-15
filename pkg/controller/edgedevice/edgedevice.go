@@ -801,7 +801,7 @@ func (c *Controller) prepareNetworkOptions(
 	secret *corev1.Secret,
 ) (_ *network.Options, err error) {
 	if !vnConfig.Network.Enabled {
-		return nil, nil
+		return &network.Options{}, nil
 	}
 
 	if c.meshIPAMv4 == nil && c.meshIPAMv6 == nil {
