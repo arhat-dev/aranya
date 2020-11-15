@@ -49,49 +49,46 @@ jobs:
 
     - name: Lint
       run: |
-        make lint.file
-        make lint.shell
-        # make lint.go
-        make lint.yaml
+        make lint.all
 
-  # unit-tests:
-  #   if: contains(github.head_ref, 'deps/') == false
-  #   needs:
-  #   - stylecheck
-  #   strategy:
-  #     matrix:
-  #       go:
-  #       # - 1.14.x
-  #       - 1.15.x
-  #       os:
-  #       - ubuntu-latest
-  #       # - windows-latest
-  #   runs-on: ${{ matrix.os }}
-  #   steps:
-  #   - uses: actions/checkout@v2
-  #   - uses: actions/setup-go@v2
-  #     with:
-  #       go-version: ${{ matrix.go }}
+  unit-tests:
+    if: contains(github.head_ref, 'deps/') == false
+    needs:
+    - stylecheck
+    strategy:
+      matrix:
+        go:
+        # - 1.14.x
+        - 1.15.x
+        os:
+        - ubuntu-latest
+        # - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
 
-  #   - name: Test Packages
-  #     run: |
-  #       make test.pkg
+    - name: Test Packages
+      run: |
+        make test.pkg
 
-  #   - name: Test Commands
-  #     run: |
-  #       make test.cmd
+    - name: Test Commands
+      run: |
+        make test.cmd
 
-  #   - name: Report Test Coverage
-  #     uses: codecov/codecov-action@v1
-  #     # with:
-  #     #   token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-  #     #   fail_ci_if_error: true # optional (default = false)
+    - name: Report Test Coverage
+      uses: codecov/codecov-action@v1
+      # with:
+      #   token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+      #   fail_ci_if_error: true # optional (default = false)
 
   build-linux-images:
     if: contains(github.head_ref, 'deps/') == false
     needs:
     - stylecheck
-    # - unit-tests
+    - unit-tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -138,7 +135,7 @@ jobs:
     if: contains(github.head_ref, 'deps/') == false
     needs:
     - stylecheck
-    # - unit-tests
+    - unit-tests
     - build-linux-images
     # TODO: uncomment this after for windows e2e tests
     # - build-windows-images
