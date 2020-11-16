@@ -360,8 +360,10 @@ func (m *Manager) doServeTerminalStream(
 			buf := make([]byte, m.ConnectivityManager.MaxPayloadSize())
 			for r.WaitForData(closeSig) {
 				data, shouldCopy, err2 := r.Read(readTimeout, buf)
-				if err2 != nil && err2 != iohelper.ErrDeadlineExceeded {
-					break
+				if err2 != nil {
+					if len(data) == 0 && err2 != iohelper.ErrDeadlineExceeded {
+						break
+					}
 				}
 
 				if shouldCopy {

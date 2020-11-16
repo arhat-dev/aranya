@@ -259,8 +259,10 @@ func (m *Manager) doPortForward(s *stream) {
 		buf := make([]byte, m.ConnectivityManager.MaxPayloadSize())
 		for r.WaitForData(m.Context().Done()) {
 			data, shouldCopy, err2 := r.Read(constant.DefaultPortForwardStreamReadTimeout, buf)
-			if err2 != nil && err2 != iohelper.ErrDeadlineExceeded {
-				break
+			if err2 != nil {
+				if len(data) == 0 && err2 != iohelper.ErrDeadlineExceeded {
+					break
+				}
 			}
 
 			if shouldCopy {
@@ -271,6 +273,7 @@ func (m *Manager) doPortForward(s *stream) {
 			_, _, lastSeq, err2 := m.ConnectivityManager.PostData(
 				sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
 			)
+
 			atomic.StoreUint64(&seq, lastSeq+1)
 			if err2 != nil {
 				s.writeErr(err2.Error())
