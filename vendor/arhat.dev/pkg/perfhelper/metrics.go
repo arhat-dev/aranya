@@ -19,21 +19,6 @@ limitations under the License.
 package perfhelper
 
 import (
-	"fmt"
-	"net/http"
-	"time"
-
-	prom "github.com/prometheus/client_golang/prometheus"
-	otapiglobal "go.opentelemetry.io/otel/api/global"
-	otapimetric "go.opentelemetry.io/otel/api/metric"
-	otprom "go.opentelemetry.io/otel/exporters/metric/prometheus"
-	otexporterotlp "go.opentelemetry.io/otel/exporters/otlp"
-	otsdkmetricspull "go.opentelemetry.io/otel/sdk/metric/controller/pull"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
-	"google.golang.org/grpc/credentials"
-
 	"arhat.dev/pkg/tlshelper"
 )
 
@@ -54,70 +39,4 @@ type MetricsConfig struct {
 
 	// TLS config for client/server
 	TLS tlshelper.TLSConfig `json:"tls" yaml:"tls"`
-}
-
-func (c *MetricsConfig) CreateIfEnabled(setGlobal bool) (otapimetric.MeterProvider, http.Handler, error) {
-	if !c.Enabled {
-		return nil, nil, nil
-	}
-
-	var (
-		metricsProvider otapimetric.MeterProvider
-		httpHandler     http.Handler
-	)
-
-	switch c.Format {
-	case "otlp":
-		// get client tls config
-		tlsConfig, err := c.TLS.GetTLSConfig(false)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create tls config: %w", err)
-		}
-
-		opts := []otexporterotlp.ExporterOption{
-			otexporterotlp.WithAddress(c.Endpoint),
-		}
-
-		if tlsConfig != nil {
-			opts = append(opts, otexporterotlp.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
-		} else {
-			opts = append(opts, otexporterotlp.WithInsecure())
-		}
-
-		var exporter *otexporterotlp.Exporter
-		exporter, err = otexporterotlp.NewExporter(opts...)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create otlp exporter: %w", err)
-		}
-
-		pusher := push.New(
-			basic.New(simple.NewWithExactDistribution(), exporter),
-			exporter,
-			push.WithPeriod(5*time.Second),
-		)
-		pusher.Start()
-
-		metricsProvider = pusher.MeterProvider()
-	case "prometheus":
-		promCfg := otprom.Config{Registry: prom.NewRegistry()}
-
-		var exporter *otprom.Exporter
-		exporter, err := otprom.NewExportPipeline(promCfg,
-			otsdkmetricspull.WithCachePeriod(5*time.Second),
-		)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to install global metrics collector")
-		}
-
-		httpHandler = exporter
-		metricsProvider = exporter.MeterProvider()
-	default:
-		return nil, nil, fmt.Errorf("unsupported metrics format %q", c.Format)
-	}
-
-	if setGlobal {
-		otapiglobal.SetMeterProvider(metricsProvider)
-	}
-
-	return metricsProvider, httpHandler, nil
 }

@@ -1,5 +1,3 @@
-// +build !noperfhelper_pprof
-
 /*
 Copyright 2020 The arhat.dev Authors.
 
@@ -17,19 +15,3 @@ limitations under the License.
 */
 
 package perfhelper
-
-import (
-	"arhat.dev/pkg/tlshelper"
-)
-
-type PProfConfig struct {
-	Enabled  bool   `json:"enabled" yaml:"enabled"`
-	Listen   string `json:"listen" yaml:"listen"`
-	HTTPPath string `json:"httpPath" yaml:"httpPath"`
-
-	CPUProfileFrequencyHz int `json:"cpuProfileFrequencyHz" yaml:"cpuProfileFrequencyHz"`
-	MutexProfileFraction  int `json:"mutexProfileFraction" yaml:"mutexProfileFraction"`
-	BlockProfileFraction  int `json:"blockProfileFraction" yaml:"blockProfileFraction"`
-
-	TLS tlshelper.TLSConfig `json:"tls" yaml:"tls"`
-}
