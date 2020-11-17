@@ -25,7 +25,7 @@ import (
 	"runtime"
 )
 
-func (c *PProfConfig) CreateHTTPHandlerIfEnabled(applyProfileConfig bool) http.Handler {
+func (c *PProfConfig) CreateHTTPHandlersIfEnabled(applyProfileConfig bool) map[string]http.Handler {
 	if !c.Enabled {
 		return nil
 	}
@@ -36,27 +36,17 @@ func (c *PProfConfig) CreateHTTPHandlerIfEnabled(applyProfileConfig bool) http.H
 		runtime.SetBlockProfileRate(c.BlockProfileFraction)
 	}
 
-	mux := http.NewServeMux()
-
-	// index
-	mux.HandleFunc("/", pprofweb.Index)
-
-	// category
-	mux.HandleFunc("/cmdline", pprofweb.Cmdline)
-	mux.HandleFunc("/symbol", pprofweb.Symbol)
-	mux.HandleFunc("/trace", pprofweb.Trace)
-
-	// actual profile stats
-
-	// cpu profile
-	mux.HandleFunc("/profile", pprofweb.Profile)
-
-	mux.Handle("/allocs", pprofweb.Handler("allocs"))
-	mux.Handle("/block", pprofweb.Handler("block"))
-	mux.Handle("/goroutine", pprofweb.Handler("goroutine"))
-	mux.Handle("/heap", pprofweb.Handler("heap"))
-	mux.Handle("/mutex", pprofweb.Handler("mutex"))
-	mux.Handle("/threadcreate", pprofweb.Handler("threadcreate"))
-
-	return mux
+	return map[string]http.Handler{
+		"":             http.HandlerFunc(pprofweb.Index),
+		"cmdline":      http.HandlerFunc(pprofweb.Cmdline),
+		"symbol":       http.HandlerFunc(pprofweb.Symbol),
+		"trace":        http.HandlerFunc(pprofweb.Trace),
+		"profile":      http.HandlerFunc(pprofweb.Profile),
+		"allocs":       pprofweb.Handler("allocs"),
+		"block":        pprofweb.Handler("block"),
+		"goroutine":    pprofweb.Handler("goroutine"),
+		"heap":         pprofweb.Handler("heap"),
+		"mutex":        pprofweb.Handler("mutex"),
+		"threadcreate": pprofweb.Handler("threadcreate"),
+	}
 }

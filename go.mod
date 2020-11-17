@@ -4,8 +4,8 @@ go 1.15
 
 require (
 	arhat.dev/abbot-proto v0.1.0
-	arhat.dev/aranya-proto v0.2.3
-	arhat.dev/pkg v0.4.3
+	arhat.dev/aranya-proto v0.2.4
+	arhat.dev/pkg v0.4.4
 	cloud.google.com/go/pubsub v1.3.1
 	github.com/Azure/azure-amqp-common-go/v3 v3.0.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.0
