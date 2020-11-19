@@ -14,26 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package aranyagopb
+package wellknownerrors
 
-import (
-	"math"
-)
+import "errors"
 
 var (
-	EmptyMsgSize int
+	ErrNotFound         = errors.New("not found")
+	ErrAlreadyExists    = errors.New("already exists")
+	ErrNotSupported     = errors.New("not supported")
+	ErrInvalidOperation = errors.New("invalid operation")
 )
-
-func init() {
-	emptyBody, _ := (&Empty{}).Marshal()
-	emptyMsg := &Msg{
-		Kind:      math.MaxInt32,
-		Sid:       math.MaxUint64,
-		Seq:       math.MaxUint64,
-		Completed: true,
-		Payload:   emptyBody,
-	}
-
-	EmptyMsgSize = emptyMsg.Size()
-	_ = EmptyMsgSize
-}

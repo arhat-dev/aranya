@@ -1,7 +1,7 @@
 arhat.dev/abbot-proto v0.1.0 h1:wW2aPeetAtGkR+cY1lVblq3FvIts3VTuezDqPh8ZX4E=
 arhat.dev/abbot-proto v0.1.0/go.mod h1:Z9UjRS2oRNKXyWghyKKw37HRMZCCjGXAJaoMvYHhHmk=
-arhat.dev/aranya-proto v0.2.4 h1:ghIno82x1OOZidx6I/PqQJv/kbaOYzR/yGX8o1CpZDs=
-arhat.dev/aranya-proto v0.2.4/go.mod h1:mEX3WnwrKm+M/gQgbBkfrRZ1nu1ME0vaXPk14UZPXmk=
+arhat.dev/aranya-proto v0.2.5 h1:hooP1U+bcdotl0fyJW4xXprer3rlHHDUkfzeGfb9twU=
+arhat.dev/aranya-proto v0.2.5/go.mod h1:mEX3WnwrKm+M/gQgbBkfrRZ1nu1ME0vaXPk14UZPXmk=
 arhat.dev/pkg v0.4.4 h1:PgvjiTJjA1OKU5hi9PgT+Gc3J4ltDEBj3Vc6CHkCFo8=
 arhat.dev/pkg v0.4.4/go.mod h1:f9aXyFUZhlx68pOrJi0WyCELR1TYwEy7XfVR7uRRX+I=
 bitbucket.org/bertimus9/systemstat v0.0.0-20180207000608-0eeff89b0690/go.mod h1:Ulb78X89vxKYgdL24HMTiXYHlyHEvruOj1ZPlqeNEZM=
@@ -24,6 +24,8 @@ cloud.google.com/go/storage v1.6.0/go.mod h1:N7U0C8pVQ/+NIKOBQyamJIeKQKkZ+mxpohl
 cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RXyy7KQOVs=
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
+ext.arhat.dev/runtimeutil v0.2.4 h1:eF6AaZSoJe/6Grydi1Z3VkBTGVzpMJVCg/BJf1xOuD4=
+ext.arhat.dev/runtimeutil v0.2.4/go.mod h1:iNiKXgKdAv3h8/zn4MuUfsYNOWGYoqnplqQLLp3Smk8=
 github.com/Azure/azure-amqp-common-go/v3 v3.0.0 h1:j9tjcwhypb/jek3raNrwlCIl7iKQYOug7CLpSyBBodc=
 github.com/Azure/azure-amqp-common-go/v3 v3.0.0/go.mod h1:SY08giD/XbhTz07tJdpw1SoxQXHPN30+DI3Z04SYqyg=
 github.com/Azure/azure-event-hubs-go/v3 v3.3.0 h1:Sxcll2O/5VLuyW8wgA3Qc/yUpVfoHWIS8gb637LqzBY=

@@ -4,9 +4,10 @@ go 1.15
 
 require (
 	arhat.dev/abbot-proto v0.1.0
-	arhat.dev/aranya-proto v0.2.4
+	arhat.dev/aranya-proto v0.2.5
 	arhat.dev/pkg v0.4.4
 	cloud.google.com/go/pubsub v1.3.1
+	ext.arhat.dev/runtimeutil v0.2.4
 	github.com/Azure/azure-amqp-common-go/v3 v3.0.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.0
 	github.com/Azure/azure-sdk-for-go v45.1.0+incompatible // indirect
@@ -18,7 +19,6 @@ require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/container-storage-interface/spec v1.3.0
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
-	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gogo/protobuf v1.3.1
 	github.com/goiiot/libmqtt v0.9.6
 	github.com/google/cadvisor v0.37.0

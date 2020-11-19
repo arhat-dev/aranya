@@ -1,3 +1,5 @@
+// +build js plan9 aix
+
 /*
 Copyright 2020 The arhat.dev Authors.
 
@@ -14,16 +16,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package runtimepb
+package actionutil
 
-func NewPodStatusMsg(podUID string, network []byte, containerStatus map[string]*ContainerStatus) *PodStatusMsg {
-	return &PodStatusMsg{
-		Uid:        podUID,
-		Network:    network,
-		Containers: containerStatus,
-	}
-}
+import (
+	"context"
+	"io"
 
-func NewPodStatusListMsg(pods []*PodStatusMsg) *PodStatusListMsg {
-	return &PodStatusListMsg{Pods: pods}
+	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/pkg/wellknownerrors"
+)
+
+func ReadLogs(ctx context.Context, path string, options *aranyagopb.LogsCmd, stdout, stderr io.Writer) error {
+	return wellknownerrors.ErrNotSupported
 }
