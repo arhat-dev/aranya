@@ -509,7 +509,11 @@ func (m *Manager) doServeTerminalStream(
 			r := iohelper.NewTimeoutReader(stdin)
 			go r.FallbackReading(closeRead)
 
-			buf := make([]byte, m.ConnectivityManager.MaxPayloadSize())
+			bufSize := m.ConnectivityManager.MaxPayloadSize()
+			if bufSize > constant.MaxBufSize {
+				bufSize = constant.MaxBufSize
+			}
+			buf := make([]byte, bufSize)
 			for r.WaitForData(closeRead) {
 				data, shouldCopy, err2 := r.Read(readTimeout, buf)
 				if err2 != nil {
