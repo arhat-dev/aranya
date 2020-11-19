@@ -154,17 +154,22 @@ func (m *Manager) handleHTTPPortForward(
 
 	wg := new(sync.WaitGroup)
 	timeoutCheckTk := time.NewTicker(streamCreationTimeout / 5)
-	defer func() {
-		timeoutCheckTk.Stop()
-
-		wg.Wait()
-		_ = conn.Close()
-	}()
 
 	streamPairs := make(map[string]*stream)
 	for {
 		select {
 		case <-conn.CloseChan():
+			// connection closed, close all streams
+			timeoutCheckTk.Stop()
+
+			for _, s := range streamPairs {
+				s.close("")
+			}
+
+			_ = conn.Close()
+
+			wg.Wait()
+
 			return nil
 		case <-timeoutCheckTk.C:
 			var toDelete []string
@@ -180,21 +185,21 @@ func (m *Manager) handleHTTPPortForward(
 			for _, id := range toDelete {
 				delete(streamPairs, id)
 			}
-		case s := <-streamChan:
-			reqID := s.Headers().Get(api.PortForwardRequestIDHeader)
-			p, hasStreamPair := streamPairs[reqID]
+		case hs := <-streamChan:
+			reqID := hs.Headers().Get(api.PortForwardRequestIDHeader)
+			s, hasStreamPair := streamPairs[reqID]
 			if !hasStreamPair {
-				p = &stream{
+				s = &stream{
 					creationFailAt: time.Now().Add(streamCreationTimeout),
 					podUID:         podUID,
 					protocol:       "tcp",
 				}
-				streamPairs[reqID] = p
+				streamPairs[reqID] = s
 			}
 
-			err = m.handleNewHTTPStream(wg, p, s)
+			err = m.handleNewHTTPStream(wg, s, hs)
 			if err != nil {
-				p.writeErr(err.Error())
+				s.writeErr(err.Error())
 			}
 		}
 	}
@@ -218,6 +223,9 @@ func (m *Manager) handleNewHTTPStream(wg *sync.WaitGroup, s *stream, hs httpstre
 		}
 
 		s.error = hs
+	default:
+		// ignore other streams
+		return nil
 	}
 
 	if !s.prepared() {
@@ -287,7 +295,11 @@ func (m *Manager) doPortForward(s *stream) {
 		r := iohelper.NewTimeoutReader(s.data)
 		go r.FallbackReading(m.Context().Done())
 
-		buf := make([]byte, m.ConnectivityManager.MaxPayloadSize())
+		bufSize := m.ConnectivityManager.MaxPayloadSize()
+		if bufSize > constant.MaxBufSize {
+			bufSize = constant.MaxBufSize
+		}
+		buf := make([]byte, bufSize)
 		for r.WaitForData(m.Context().Done()) {
 			data, shouldCopy, err2 := r.Read(constant.DefaultPortForwardStreamReadTimeout, buf)
 			if err2 != nil {
