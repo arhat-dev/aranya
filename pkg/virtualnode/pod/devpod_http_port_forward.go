@@ -28,7 +28,9 @@ import (
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/aranya-proto/aranyagopb/runtimepb"
 	"arhat.dev/pkg/iohelper"
+	"github.com/gogo/protobuf/proto"
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/apimachinery/pkg/util/httpstream/spdy"
 	"k8s.io/apiserver/pkg/util/wsstream"
@@ -44,7 +46,7 @@ const (
 	v4Base64WebsocketProtocol = "v4." + wsstream.Base64ChannelWebSocketProtocol
 )
 
-func (m *Manager) serverPortForward(
+func (m *Manager) servePortForward(
 	w http.ResponseWriter,
 	r *http.Request,
 	podUID string,
@@ -53,13 +55,13 @@ func (m *Manager) serverPortForward(
 	supportedProtocols []string,
 ) error {
 	if wsstream.IsWebSocketRequest(r) {
-		return m.handleWebSocketStreams(w, r, podUID, idleTimeout, opts)
+		return m.handleWebSocketPortForward(w, r, podUID, idleTimeout, opts)
 	}
 
-	return m.handleHTTPStreams(w, r, podUID, idleTimeout, streamCreationTimeout, supportedProtocols)
+	return m.handleHTTPPortForward(w, r, podUID, idleTimeout, streamCreationTimeout, supportedProtocols)
 }
 
-func (m *Manager) handleWebSocketStreams(
+func (m *Manager) handleWebSocketPortForward(
 	w http.ResponseWriter,
 	r *http.Request,
 	podUID string,
@@ -128,7 +130,7 @@ func (m *Manager) handleWebSocketStreams(
 	return nil
 }
 
-func (m *Manager) handleHTTPStreams(
+func (m *Manager) handleHTTPPortForward(
 	w http.ResponseWriter,
 	r *http.Request,
 	podUID string,
@@ -237,8 +239,37 @@ func (m *Manager) handleNewHTTPStream(wg *sync.WaitGroup, s *stream, hs httpstre
 }
 
 func (m *Manager) doPortForward(s *stream) {
-	pfCmd := aranyagopb.NewPortForwardCmd(s.podUID, s.port, s.protocol)
-	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_PORT_FORWARD, pfCmd)
+	pfCmd := &aranyagopb.PortForwardCmd{
+		PodUid:   s.podUID,
+		Port:     s.port,
+		Protocol: s.protocol,
+	}
+
+	var (
+		kind aranyagopb.CmdType
+		cmd  proto.Marshaler
+	)
+
+	if s.podUID == "" {
+		// is host port-forward
+		kind = aranyagopb.CMD_PORT_FORWARD
+		cmd = pfCmd
+	} else {
+		// is runtime pod port-forward
+		data, err := pfCmd.Marshal()
+		if err != nil {
+			s.writeErr(fmt.Sprintf("failed to marshal port-forward options: %v", err))
+			return
+		}
+
+		kind = aranyagopb.CMD_RUNTIME
+		cmd = &runtimepb.Packet{
+			Kind:    runtimepb.CMD_PORT_FORWARD,
+			Payload: data,
+		}
+	}
+
+	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, kind, cmd)
 	if err != nil {
 		s.writeErr(fmt.Sprintf("failed to create port-forward session: %v", err))
 		return
@@ -297,7 +328,7 @@ func (m *Manager) doPortForward(s *stream) {
 		}
 
 		return false
-	}, connectivity.HandleUnknownMessage(m.Log))
+	}, connectivity.LogUnknownMessage(m.Log))
 }
 
 type stream struct {

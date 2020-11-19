@@ -177,14 +177,14 @@ func (m *Manager) serveMetrics(cache *cache.MetricsCache, resp http.ResponseWrit
 			return
 		}
 
-		m.retrieveDeviceMetrics(aranyagopb.NewMetricsCollectCmd(aranyagopb.METRICS_TARGET_NODE))
+		m.retrieveDeviceMetrics(&aranyagopb.MetricsCollectCmd{Target: aranyagopb.METRICS_TARGET_NODE})
 	case m.containerMetricsCache:
 		if !m.options.ContainerMetrics.Enabled || !m.containerMetricsSupported() {
 			http.Error(resp, "container metrics not supported", http.StatusNotImplemented)
 			return
 		}
 
-		m.retrieveDeviceMetrics(aranyagopb.NewMetricsCollectCmd(aranyagopb.METRICS_TARGET_CONTAINER))
+		m.retrieveDeviceMetrics(&aranyagopb.MetricsCollectCmd{Target: aranyagopb.METRICS_TARGET_CONTAINER})
 	}
 
 	contentType := expfmt.Negotiate(r.Header)

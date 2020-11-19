@@ -16,7 +16,9 @@ func (m *Manager) CollectMetrics(peripheralName string) error {
 	msgCh, _, err := m.ConnectivityManager.PostCmd(
 		0,
 		aranyagopb.CMD_PERIPHERAL_OPERATE,
-		aranyagopb.NewPeripheralMetricsCollectCmd(peripheralName),
+		&aranyagopb.PeripheralMetricsCollectCmd{
+			PeripheralNames: []string{peripheralName},
+		},
 	)
 
 	if err != nil {
@@ -33,7 +35,7 @@ func (m *Manager) CollectMetrics(peripheralName string) error {
 
 		// should get done
 		return false
-	}, nil, connectivity.HandleUnknownMessage(m.Log))
+	}, nil, connectivity.LogUnknownMessage(m.Log))
 
 	return err
 }

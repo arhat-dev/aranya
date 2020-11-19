@@ -882,7 +882,7 @@ func (c *Controller) prepareNetworkOptions(
 	}
 
 	switch d := vnConfig.Network.Backend.Driver; d {
-	case constant.NetworkBackendDriverWireguard:
+	case constant.NetworkMeshDriverWireguard:
 		cfg := vnConfig.Network.Backend.Wireguard
 
 		privateKey, ok := accessMap(secret.StringData, secret.Data, constant.MeshConfigKeyWireguardPrivateKey)

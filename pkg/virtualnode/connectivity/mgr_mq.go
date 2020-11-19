@@ -122,8 +122,18 @@ func (m *MessageQueueManager) Reject(reason aranyagopb.RejectionReason, message 
 	m.onReject(func() {
 		// best effort
 		if m.sendCmd != nil {
-			data, _ := aranyagopb.NewRejectCmd(reason, message).Marshal()
-			_ = m.sendCmd(aranyagopb.NewCmd(aranyagopb.CMD_REJECT, 0, 0, true, data))
+			data, _ := (&aranyagopb.RejectCmd{
+				Reason:  reason,
+				Message: message,
+			}).Marshal()
+
+			_ = m.sendCmd(&aranyagopb.Cmd{
+				Kind:      aranyagopb.CMD_REJECT,
+				Sid:       0,
+				Seq:       0,
+				Completed: true,
+				Payload:   data,
+			})
 		}
 	})
 }

@@ -33,7 +33,13 @@ func BenchmarkSession_deliverMsg(b *testing.B) {
 			data := make([]*aranyagopb.Msg, b.N)
 			payload := make([]byte, size)
 			for i := 0; i < b.N; i++ {
-				data[i] = aranyagopb.NewMsg(aranyagopb.MSG_CRED_STATUS, 1, uint64(i), i == b.N-1, payload)
+				data[i] = &aranyagopb.Msg{
+					Kind:      aranyagopb.MSG_CRED_STATUS,
+					Sid:       1,
+					Seq:       uint64(i),
+					Completed: i == b.N-1,
+					Payload:   payload,
+				}
 			}
 
 			msgCh := s.msgCh
@@ -49,7 +55,13 @@ func BenchmarkSession_deliverMsg(b *testing.B) {
 			data := make([]*aranyagopb.Msg, b.N)
 			payload := make([]byte, size)
 			for i := 0; i < b.N; i++ {
-				data[i] = aranyagopb.NewMsg(aranyagopb.MSG_DATA_DEFAULT, 1, uint64(i), i == b.N-1, payload)
+				data[i] = &aranyagopb.Msg{
+					Kind:      aranyagopb.MSG_DATA,
+					Sid:       1,
+					Seq:       uint64(i),
+					Completed: i == b.N-1,
+					Payload:   payload,
+				}
 			}
 
 			msgCh := s.msgCh

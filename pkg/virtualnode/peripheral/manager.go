@@ -63,7 +63,7 @@ func (m *Manager) Start() error {
 			)
 
 			msgCh, _, err := m.ConnectivityManager.PostCmd(
-				0, aranyagopb.CMD_PERIPHERAL_LIST, aranyagopb.NewPeripheralListCmd(),
+				0, aranyagopb.CMD_PERIPHERAL_LIST, &aranyagopb.PeripheralListCmd{},
 			)
 			if err != nil {
 				logger.I("failed to post device list cmd", log.Error(err))
@@ -111,7 +111,7 @@ func (m *Manager) Start() error {
 				}
 
 				return false
-			}, nil, connectivity.HandleUnknownMessage(logger))
+			}, nil, connectivity.LogUnknownMessage(logger))
 
 			if err != nil {
 				goto waitUntilDisconnected
@@ -179,20 +179,20 @@ func (m *Manager) Close() {
 	m.OnClose(nil)
 }
 
-func (m *Manager) removePeripherals(deviceToRemove sets.String) sets.String {
-	if deviceToRemove.Len() == 0 {
-		return deviceToRemove
+func (m *Manager) removePeripherals(peripheralsToRemove sets.String) sets.String {
+	if peripheralsToRemove.Len() == 0 {
+		return peripheralsToRemove
 	}
 
 	var (
-		devices = deviceToRemove.UnsortedList()
+		peripherals = peripheralsToRemove.UnsortedList()
 	)
 
-	logger := m.Log.WithFields(log.Strings("devices", devices))
+	logger := m.Log.WithFields(log.Strings("peripherals", peripherals))
 
-	logger.D("removing unwanted devices")
+	logger.D("removing unwanted peripherals")
 	msgCh, _, err := m.ConnectivityManager.PostCmd(
-		0, aranyagopb.CMD_PERIPHERAL_DELETE, aranyagopb.NewPeripheralDeleteCmd(devices...),
+		0, aranyagopb.CMD_PERIPHERAL_DELETE, &aranyagopb.PeripheralDeleteCmd{PeripheralNames: peripherals},
 	)
 	if err != nil {
 		logger.I("failed to post device remove cmd", log.Error(err))
@@ -210,14 +210,14 @@ func (m *Manager) removePeripherals(deviceToRemove sets.String) sets.String {
 
 			// TODO: update pod status
 			for _, ds := range dsl.Peripherals {
-				deviceToRemove = deviceToRemove.Delete(ds.Name)
+				peripheralsToRemove = peripheralsToRemove.Delete(ds.Name)
 			}
 
 			return false
-		}, nil, connectivity.HandleUnknownMessage(logger))
+		}, nil, connectivity.LogUnknownMessage(logger))
 	}
 
-	return deviceToRemove
+	return peripheralsToRemove
 }
 
 func (m *Manager) ensurePeripherals(
@@ -264,7 +264,7 @@ func (m *Manager) ensurePeripherals(
 			}
 
 			return false
-		}, nil, connectivity.HandleUnknownMessage(logger))
+		}, nil, connectivity.LogUnknownMessage(logger))
 	}
 
 	return nextRound

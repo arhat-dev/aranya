@@ -320,7 +320,7 @@ func (m *baseManager) onRecvMsg(msg *aranyagopb.Msg) {
 	case aranyagopb.MSG_ERROR:
 		if msg.GetError().GetKind() == aranyagopb.ERR_TIMEOUT {
 			// close session with best effort
-			_, _, _ = m.PostCmd(0, aranyagopb.CMD_SESSION_CLOSE, aranyagopb.NewSessionCloseCmd(msg.Sid))
+			_, _, _ = m.PostCmd(0, aranyagopb.CMD_SESSION_CLOSE, &aranyagopb.SessionCloseCmd{Sid: msg.Sid})
 		}
 	}
 }
@@ -420,7 +420,13 @@ func (m *baseManager) PostData(
 
 	n := m.MaxPayloadSize()
 	for len(data) > n {
-		err = m.sendCmd(aranyagopb.NewCmd(kind, sid, seq, false, data[:n]))
+		err = m.sendCmd(&aranyagopb.Cmd{
+			Kind:      kind,
+			Sid:       sid,
+			Seq:       seq,
+			Completed: false,
+			Payload:   data[:n],
+		})
 		if err != nil {
 			return nil, 0, seq, fmt.Errorf("failed to post cmd chunk: %w", err)
 		}
@@ -428,7 +434,13 @@ func (m *baseManager) PostData(
 		data = data[n:]
 	}
 
-	err = m.sendCmd(aranyagopb.NewCmd(kind, sid, seq, completed, data))
+	err = m.sendCmd(&aranyagopb.Cmd{
+		Kind:      kind,
+		Sid:       sid,
+		Seq:       seq,
+		Completed: completed,
+		Payload:   data,
+	})
 	if err != nil {
 		return nil, 0, seq, fmt.Errorf("failed to post cmd chunk: %w", err)
 	}

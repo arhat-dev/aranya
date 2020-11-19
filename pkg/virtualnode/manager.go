@@ -231,7 +231,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 		// send storage credentials when storage enabled
 		vn.log.D("sending credentials to node")
 		msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(
-			0, aranyagopb.CMD_CRED_ENSURE, aranyagopb.NewCredentialEnsureCmd(vn.opt.SSHPrivateKey),
+			0, aranyagopb.CMD_CRED_ENSURE, &aranyagopb.CredentialEnsureCmd{SshPrivateKey: vn.opt.SSHPrivateKey},
 		)
 		if err != nil {
 			vn.log.E("failed to send storage credentials", log.Error(err))
@@ -260,7 +260,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 			}
 
 			return false
-		}, nil, connectivity.HandleUnknownMessage(vn.log))
+		}, nil, connectivity.LogUnknownMessage(vn.log))
 
 		if err != nil {
 			if e, ok := err.(*aranyagopb.ErrorMsg); ok && e.Kind == aranyagopb.ERR_NOT_SUPPORTED {

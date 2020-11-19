@@ -25,27 +25,20 @@ import (
 )
 
 const (
-	EnvKeyPodUID         = "POD_UID"
 	EnvKeyWatchNamespace = "WATCH_NAMESPACE"
 )
 
 var (
-	podUID  string
 	watchNS string
 )
 
 func init() {
 	var ok bool
-	podUID = os.Getenv(EnvKeyPodUID)
 
 	watchNS, ok = os.LookupEnv(EnvKeyWatchNamespace)
 	if !ok {
 		watchNS = envhelper.ThisPodNS()
 	}
-}
-
-func ThisPodUID() string {
-	return podUID
 }
 
 func WatchNS() string {

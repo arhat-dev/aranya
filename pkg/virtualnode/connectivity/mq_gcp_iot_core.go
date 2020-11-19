@@ -62,8 +62,14 @@ func newGCPIoTCoreClient(parent *MessageQueueManager) (*gcpIoTCoreClient, error)
 		pollInterval = time.Minute
 	}
 
-	onlineMsgBytes, _ := aranyagopb.NewOnlineStateMsg(opts.Config.CloudIoT.DeviceID).Marshal()
-	offlineMsgBytes, _ := aranyagopb.NewOfflineStateMsg(opts.Config.CloudIoT.DeviceID).Marshal()
+	onlineMsgBytes, _ := (&aranyagopb.StateMsg{
+		Kind:     aranyagopb.STATE_ONLINE,
+		DeviceId: opts.Config.CloudIoT.DeviceID,
+	}).Marshal()
+	offlineMsgBytes, _ := (&aranyagopb.StateMsg{
+		Kind:     aranyagopb.STATE_OFFLINE,
+		DeviceId: opts.Config.CloudIoT.DeviceID,
+	}).Marshal()
 
 	client := &gcpIoTCoreClient{
 		log:          parent.log,
@@ -84,8 +90,20 @@ func newGCPIoTCoreClient(parent *MessageQueueManager) (*gcpIoTCoreClient, error)
 		rejectAgent: func() {
 			parent.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "gcp iot core connection lost")
 		},
-		onlineMsg:  aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, true, onlineMsgBytes),
-		offlineMsg: aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, true, offlineMsgBytes),
+		onlineMsg: &aranyagopb.Msg{
+			Kind:      aranyagopb.MSG_STATE,
+			Sid:       0,
+			Seq:       0,
+			Completed: true,
+			Payload:   onlineMsgBytes,
+		},
+		offlineMsg: &aranyagopb.Msg{
+			Kind:      aranyagopb.MSG_STATE,
+			Sid:       0,
+			Seq:       0,
+			Completed: true,
+			Payload:   offlineMsgBytes,
+		},
 	}
 
 	return client, nil

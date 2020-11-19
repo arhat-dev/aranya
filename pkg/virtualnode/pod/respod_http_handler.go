@@ -17,15 +17,14 @@ limitations under the License.
 package pod
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"reflect"
 	"strings"
 
-	"arhat.dev/aranya-proto/aranyagopb"
+	"k8s.io/apiserver/pkg/util/flushwriter"
+
 	"arhat.dev/pkg/log"
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
@@ -34,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	rcconst "k8s.io/apimachinery/pkg/util/remotecommand"
-	"k8s.io/apiserver/pkg/util/flushwriter"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	_ "k8s.io/kubernetes/pkg/apis/core/install" // install legacyscheme
 	"k8s.io/kubernetes/pkg/apis/core/v1/validation"
@@ -46,7 +44,6 @@ import (
 
 // PathParams http path var
 const (
-	PathParamNamespace = "namespace"
 	PathParamPodName   = "name"
 	PathParamPodUID    = "uid"
 	PathParamContainer = "container"
@@ -131,44 +128,11 @@ func (m *Manager) HandleHostLog(w http.ResponseWriter, r *http.Request) {
 	logPath := strings.TrimPrefix(r.URL.Path, "/logs/")
 
 	logger.D("serving host logs", log.String("path", logPath))
-	_, logReader, err := m.doGetContainerLogs("", "", logPath, nil)
+
+	err := m.doHandleLogs("", "", logPath, nil, w)
 	if err != nil {
 		logger.I("failed to get host logs", log.Error(err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer func() { _ = logReader.Close() }()
-
-	s := bufio.NewScanner(logReader)
-	s.Split(bufio.ScanLines)
-
-	_ = s.Scan()
-	firstLine := s.Text()
-	switch firstLine {
-	case constant.IdentifierLogDir:
-		_, err = w.Write([]byte("<pre>\n"))
-		if err != nil {
-			break
-		}
-
-		for s.Scan() {
-			line := s.Text()
-			_, err = w.Write([]byte(fmt.Sprintf("<a href=\"%s\">%s</a>\n", line, line)))
-			if err != nil {
-				break
-			}
-		}
-
-		_, err = w.Write([]byte("</pre>\n"))
-	case constant.IdentifierLogFile:
-		_, err = io.Copy(w, logReader)
-	default:
-		http.Error(w, "unknown log result type", http.StatusInternalServerError)
-		logger.I("bad first line, unknown type", log.String("firstLine", firstLine))
-	}
-
-	if err != nil {
-		logger.I("failed to write host log response", log.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
@@ -178,7 +142,7 @@ func (m *Manager) HandlePodLog(w http.ResponseWriter, r *http.Request) {
 	logger := m.Log.WithFields(log.String("type", "http"), log.String("action", "podLog"))
 
 	logger.D("resolving log options")
-	podName, opt, err := getParamsForContainerLog(r)
+	podName, opts, err := getParamsForContainerLog(r)
 	if err != nil {
 		logger.I("failed to parse container log options", log.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -198,37 +162,20 @@ func (m *Manager) HandlePodLog(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	logger.D("serving container logs")
-	sid, logReader, err := m.doGetContainerLogs(podUID, podName, "", opt)
-	if err != nil {
-		logger.I("failed to fetch container logs", log.Error(err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer func() { _ = logReader.Close() }()
-
-	if _, ok := w.(http.Flusher); !ok {
+	// requires flush writer when follow is enabled
+	if _, ok := w.(http.Flusher); opts.Follow && !ok {
 		http.Error(w, fmt.Sprintf("unable to convert %v into http.Flusher, cannot show logs",
 			reflect.TypeOf(w)), http.StatusInternalServerError)
 		return
 	}
 
-	if sid != 0 {
-		defer func() {
-			// best effort to close logging in edge device
-			_, _, err := m.ConnectivityManager.PostCmd(
-				sid, aranyagopb.CMD_SESSION_CLOSE, aranyagopb.NewSessionCloseCmd(sid),
-			)
-			if err != nil {
-				logger.I("failed to post log session close cmd", log.Error(err))
-			}
-		}()
-	}
-
-	fw := flushwriter.Wrap(w)
 	w.Header().Set("Transfer-Encoding", "chunked")
-	if _, err := io.Copy(fw, logReader); err != nil {
-		logger.I("failed to write container log response", log.Error(err))
+
+	logger.D("serving logs")
+	err = m.doHandleLogs(podUID, podName, "", opts, flushwriter.Wrap(w))
+	if err != nil {
+		logger.I("failed to fetch container logs", log.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
@@ -256,12 +203,12 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 	logger.D("starting to serve exec")
 	kubeletrc.ServeExec(
 		w, r, /* http context */
-		m.doHandleExecInContainer(), /* wrapped pod executor */
-		"",                          /* pod name (unused) */
-		podUID,                      /* unique id of pod */
-		containerName,               /* container name to execute in*/
-		cmd,                         /* commands to execute */
-		getRemoteCommandOptions(r),  /* stream options */
+		m.doHandleExec(),           /* wrapped pod executor */
+		"",                         /* pod name (unused) */
+		podUID,                     /* unique id of pod */
+		containerName,              /* container name to execute in*/
+		cmd,                        /* commands to execute */
+		getRemoteCommandOptions(r), /* stream options */
 		// timeout options
 		m.options.Config.Timers.StreamIdleTimeout, m.options.Config.Timers.StreamCreationTimeout,
 		// supported protocols
@@ -291,11 +238,11 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 	logger.D("serving container attach")
 	kubeletrc.ServeAttach(
 		w, r, /* http context */
-		m.doHandleAttachContainer(), /* wrapped pod attacher */
-		"",                          /* pod name (not used) */
-		podUID,                      /* unique id of pod */
-		containerName,               /* container to execute in */
-		getRemoteCommandOptions(r),  /* stream options */
+		m.doHandleAttach(),         /* wrapped pod attacher */
+		"",                         /* pod name (unused) */
+		podUID,                     /* unique id of pod */
+		containerName,              /* container to execute in */
+		getRemoteCommandOptions(r), /* stream options */
 		// timeout options
 		m.options.Config.Timers.StreamIdleTimeout, m.options.Config.Timers.StreamCreationTimeout,
 		// supported protocols
@@ -351,7 +298,7 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.D("serving port forward")
-	err = m.serverPortForward(
+	err = m.servePortForward(
 		w, r, /* http context */
 		string(podUID),     /* unique id of pod */
 		portForwardOptions, /* port forward options (ports) */
@@ -361,7 +308,7 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 		kubeletpf.SupportedProtocols)
 
 	if err != nil {
-		logger.I("failed to serve portforward", log.Error(err))
+		logger.I("failed to serve port-forward", log.Error(err))
 	}
 }
 

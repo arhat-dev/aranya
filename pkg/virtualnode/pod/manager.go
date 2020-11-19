@@ -292,6 +292,6 @@ func (m *Manager) Close() {
 //		}
 //
 //		return false
-//	}, nil, connectivity.HandleUnknownMessage(m.Log))
+//	}, nil, connectivity.LogUnknownMessage(m.Log))
 //	return nil
 //}

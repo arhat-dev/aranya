@@ -25,11 +25,11 @@ const (
 	// VirtualImageNameHost is the special image name respected by aranya
 	VirtualImageNameHost = "virtualimage.arhat.dev/host"
 
-	// VirtualImageNameDevice is the special image name respected by aranya,
+	// VirtualImageNamePeripheral is the special image name respected by aranya,
 	// aranya will treat exec commands to the container with this image name
 	// as device operation, if command is valid, will send operate command to
 	// arhat, then arhat will perform the requested device operation
-	VirtualImageNameDevice = "virtualimage.arhat.dev/device"
+	VirtualImageNamePeripheral = "virtualimage.arhat.dev/peripheral"
 
 	// VirtualImageNameHostExec is the special image name respected by aranya,
 	// aranya will treat exec commands to the container with this image name
@@ -43,15 +43,15 @@ const (
 )
 
 const (
-	VirtualImageIDHost     = "virtualimage://host"
-	VirtualImageIDDevice   = "virtualimage://device"
-	VirtualImageIDHostExec = "virtualimage://hostexec"
+	VirtualImageIDHost       = "virtualimage://host"
+	VirtualImageIDPeripheral = "virtualimage://peripheral"
+	VirtualImageIDHostExec   = "virtualimage://hostexec"
 )
 
 const (
-	VirtualContainerNameHost = "host"
-	VirtualContainerIDHost   = "virtualcontainer://host"
-	VirtualContainerIDDevice = "virtualcontainer://device"
+	VirtualContainerNameHost     = "host"
+	VirtualContainerIDHost       = "virtualcontainer://host"
+	VirtualContainerIDPeripheral = "virtualcontainer://peripheral"
 )
 
 const (
@@ -59,7 +59,7 @@ const (
 )
 
 const (
-	NetworkBackendDriverWireguard = "wireguard"
+	NetworkMeshDriverWireguard = "wireguard"
 )
 
 const (

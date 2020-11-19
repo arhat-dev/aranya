@@ -98,9 +98,13 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 			// nolint:gosimple
 			select {
 			// deliver a new message with complete msgBytes
-			case s.msgCh <- aranyagopb.NewMsg(
-				kind, sid, seq, true, s.msgBuffer.Bytes(),
-			):
+			case s.msgCh <- &aranyagopb.Msg{
+				Kind:      kind,
+				Sid:       sid,
+				Seq:       seq,
+				Completed: true,
+				Payload:   s.msgBuffer.Bytes(),
+			}:
 				//	TODO: add context cancel
 			}
 		} else {
@@ -186,8 +190,19 @@ func (m *SessionManager) Start(stopCh <-chan struct{}) error {
 				}
 
 				if sid, ok := session.Key.(uint64); ok {
-					data, _ := aranyagopb.NewTimeoutErrorMsg(sid).Marshal()
-					m.Dispatch(aranyagopb.NewMsg(aranyagopb.MSG_ERROR, sid, 0, true, data))
+					data, _ := (&aranyagopb.ErrorMsg{
+						Kind:        aranyagopb.ERR_TIMEOUT,
+						Description: "timeout",
+						Code:        0,
+					}).Marshal()
+
+					m.Dispatch(&aranyagopb.Msg{
+						Kind:      aranyagopb.MSG_ERROR,
+						Sid:       sid,
+						Seq:       0,
+						Completed: true,
+						Payload:   data,
+					})
 					m.Delete(sid)
 				}
 			case <-stopCh:

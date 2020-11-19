@@ -116,11 +116,11 @@ func (m *Manager) Start() error {
 			if len(nodeMetricsCollect) > 0 {
 				m.Log.I("configuring device node metrics")
 				m.configureMetricsCollection(
-					aranyagopb.NewMetricsConfigCmd(
-						aranyagopb.METRICS_TARGET_NODE,
-						nodeMetricsCollect,
-						nodeMetricsExtraArgs,
-					),
+					&aranyagopb.MetricsConfigCmd{
+						Target:    aranyagopb.METRICS_TARGET_NODE,
+						Collect:   nodeMetricsCollect,
+						ExtraArgs: nodeMetricsExtraArgs,
+					},
 				)
 			} else {
 				m.Log.I("skipped node metrics configuration")
@@ -129,11 +129,11 @@ func (m *Manager) Start() error {
 			if m.options.ContainerMetrics.Enabled {
 				m.Log.I("configuring device container metrics")
 				m.configureMetricsCollection(
-					aranyagopb.NewMetricsConfigCmd(
-						aranyagopb.METRICS_TARGET_CONTAINER,
-						m.options.ContainerMetrics.Collect,
-						m.options.ContainerMetrics.ExtraArgs,
-					),
+					&aranyagopb.MetricsConfigCmd{
+						Target:    aranyagopb.METRICS_TARGET_NODE,
+						Collect:   m.options.ContainerMetrics.Collect,
+						ExtraArgs: m.options.ContainerMetrics.ExtraArgs,
+					},
 				)
 			} else {
 				m.Log.I("skipped container metrics configuration")
@@ -193,7 +193,7 @@ func (m *Manager) configureMetricsCollection(cmd *aranyagopb.MetricsConfigCmd) {
 		}
 
 		return false
-	}, nil, connectivity.HandleUnknownMessage(m.Log))
+	}, nil, connectivity.LogUnknownMessage(m.Log))
 }
 
 func (m *Manager) retrieveDeviceMetrics(cmd *aranyagopb.MetricsCollectCmd) {
@@ -228,7 +228,7 @@ func (m *Manager) retrieveDeviceMetrics(cmd *aranyagopb.MetricsCollectCmd) {
 	}, func(data *connectivity.Data) (exit bool) {
 		metricsData = append(metricsData, data.Payload...)
 		return false
-	}, connectivity.HandleUnknownMessage(m.Log))
+	}, connectivity.LogUnknownMessage(m.Log))
 
 	err = m.UpdateMetrics(cmd.Target, metricsData)
 	if err != nil {

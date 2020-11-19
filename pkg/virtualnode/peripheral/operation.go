@@ -11,15 +11,19 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
-func (m *Manager) Operate(deviceName, operationName string, data []byte, out io.Writer) error {
+func (m *Manager) Operate(peripheralName, operationName string, data []byte, out io.Writer) error {
 	logger := m.Log.WithFields(
-		log.String("device", deviceName),
+		log.String("device", peripheralName),
 		log.String("operation", operationName),
 	)
 	msgCh, _, err := m.ConnectivityManager.PostCmd(
 		0,
 		aranyagopb.CMD_PERIPHERAL_OPERATE,
-		aranyagopb.NewPeripheralOperateCmd(deviceName, operationName, data),
+		&aranyagopb.PeripheralOperateCmd{
+			PeripheralName: peripheralName,
+			OperationId:    operationName,
+			Data:           data,
+		},
 	)
 
 	if err != nil {
@@ -48,6 +52,6 @@ func (m *Manager) Operate(deviceName, operationName string, data []byte, out io.
 		}
 
 		return false
-	}, nil, connectivity.HandleUnknownMessage(m.Log))
+	}, nil, connectivity.LogUnknownMessage(m.Log))
 	return nil
 }

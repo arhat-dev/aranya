@@ -512,7 +512,7 @@ func (c *Controller) newVirtualPodForEdgeDevice(device *aranyaapi.EdgeDevice) (*
 
 		virtualCtrs = append(virtualCtrs, corev1.Container{
 			Name:            d.Name,
-			Image:           constant.VirtualImageNameDevice,
+			Image:           constant.VirtualImageNamePeripheral,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			// just list available commands as side notes
 			Command: commands,

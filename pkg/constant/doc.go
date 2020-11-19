@@ -15,4 +15,4 @@ limitations under the License.
 */
 
 // Package constant
-package constant // import "arhat.dev/aranya/pkg/constant"
+package constant

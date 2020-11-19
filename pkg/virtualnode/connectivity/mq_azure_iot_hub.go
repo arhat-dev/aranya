@@ -62,8 +62,14 @@ func newAzureIoTHubClient(parent *MessageQueueManager) (*azureIoTHubClient, erro
 		pollInterval = time.Minute
 	}
 
-	onlineMsgBytes, _ := aranyagopb.NewOnlineStateMsg(opts.Config.DeviceID).Marshal()
-	offlineMsgBytes, _ := aranyagopb.NewOfflineStateMsg(opts.Config.DeviceID).Marshal()
+	onlineMsgBytes, _ := (&aranyagopb.StateMsg{
+		Kind:     aranyagopb.STATE_ONLINE,
+		DeviceId: opts.Config.DeviceID,
+	}).Marshal()
+	offlineMsgBytes, _ := (&aranyagopb.StateMsg{
+		Kind:     aranyagopb.STATE_OFFLINE,
+		DeviceId: opts.Config.DeviceID,
+	}).Marshal()
 
 	clientCtx, exit := context.WithCancel(parent.ctx)
 	client := &azureIoTHubClient{
@@ -81,8 +87,20 @@ func newAzureIoTHubClient(parent *MessageQueueManager) (*azureIoTHubClient, erro
 		rejectAgent: func() {
 			parent.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "iot hub connection lost")
 		},
-		onlineMsg:  aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, true, onlineMsgBytes),
-		offlineMsg: aranyagopb.NewMsg(aranyagopb.MSG_STATE, 0, 0, true, offlineMsgBytes),
+		onlineMsg: &aranyagopb.Msg{
+			Kind:      aranyagopb.MSG_STATE,
+			Sid:       0,
+			Seq:       0,
+			Completed: true,
+			Payload:   onlineMsgBytes,
+		},
+		offlineMsg: &aranyagopb.Msg{
+			Kind:      aranyagopb.MSG_STATE,
+			Sid:       0,
+			Seq:       0,
+			Completed: true,
+			Payload:   offlineMsgBytes,
+		},
 
 		recvOpts:        recvOpts,
 		senderStore:     new(atomic.Value),

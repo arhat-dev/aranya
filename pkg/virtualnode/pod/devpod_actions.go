@@ -205,7 +205,15 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 
 	// pull images if contains non virtual images
 	if len(imgOpts.Images) > 0 {
-		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, imgOpts)
+		data, err2 := imgOpts.Marshal()
+		if err2 != nil {
+			return fmt.Errorf("failed to marshal image ensure options: %w", err2)
+		}
+
+		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
+			Kind:    runtimepb.CMD_IMAGE_ENSURE,
+			Payload: data,
+		})
 		if err2 != nil {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 				"FailedToPostImageEnsureCmd", err2.Error())
@@ -232,7 +240,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 					"Pulled", "Successfully pulled all images")
 			}
 			return false
-		}, nil, connectivity.HandleUnknownMessage(m.Log))
+		}, nil, connectivity.LogUnknownMessage(m.Log))
 
 		if err != nil {
 			return err
@@ -273,8 +281,16 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 				return nil
 			}
 		} else {
+			data, err2 := initOpts.Marshal()
+			if err2 != nil {
+				return fmt.Errorf("failed to marshal pod ensure options: %w", err2)
+			}
+
 			// normal init containers
-			msgCh, _, err3 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, initOpts)
+			msgCh, _, err3 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
+				Kind:    runtimepb.CMD_POD_ENSURE,
+				Payload: data,
+			})
 			if err3 != nil {
 				m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 					"PostCreateInitCmdError", err3.Error())
@@ -300,7 +316,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 					"PodInitialized", "Init container(s) created and finished")
 				_ = m.UpdateMirrorPod(pod, ps, true)
 				return false
-			}, nil, connectivity.HandleUnknownMessage(m.Log))
+			}, nil, connectivity.LogUnknownMessage(m.Log))
 
 			if err != nil {
 				return err
@@ -340,8 +356,16 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 			return nil
 		}
 	} else {
+		data, err2 := workOpts.Marshal()
+		if err2 != nil {
+			return fmt.Errorf("failed to marshal pod ensure options: %w", err2)
+		}
+
 		// create work containers
-		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, workOpts)
+		msgCh, _, err2 := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
+			Kind:    runtimepb.CMD_POD_ENSURE,
+			Payload: data,
+		})
 		if err2 != nil {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal,
 				"PostCreateWorkCmdError", err2.Error())
@@ -374,7 +398,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "Started", "Container(s) created and started")
 			_ = m.UpdateMirrorPod(pod, ps, false)
 			return false
-		}, nil, connectivity.HandleUnknownMessage(m.Log))
+		}, nil, connectivity.LogUnknownMessage(m.Log))
 	}
 
 	// do not return nil here, we may have collected err from message channel
@@ -417,8 +441,21 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 	}
 
 	// post cmd anyway, check pod cache when processing message
-	podDeleteCmd := runtimepb.NewPodDeleteCmd(string(podUID), graceTime, preStopHooks)
-	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, podDeleteCmd)
+	podDeleteCmd := &runtimepb.PodDeleteCmd{
+		PodUid:      string(podUID),
+		Containers:  nil,
+		GraceTime:   int64(graceTime),
+		HookPreStop: preStopHooks,
+	}
+	data, err2 := podDeleteCmd.Marshal()
+	if err2 != nil {
+		return fmt.Errorf("failed to marshal pod delete options: %w", err2)
+	}
+
+	msgCh, _, err := m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
+		Kind:    runtimepb.CMD_POD_DELETE,
+		Payload: data,
+	})
 	if err != nil {
 		if hasPodObj {
 			m.options.EventRecorder.Event(podToDelete, corev1.EventTypeNormal, "PostDeleteCmdError", err.Error())
@@ -452,7 +489,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 			m.options.EventRecorder.Event(podToDelete, corev1.EventTypeNormal, "Killed", "Delete pod succeeded")
 		}
 		return false
-	}, nil, connectivity.HandleUnknownMessage(m.Log))
+	}, nil, connectivity.LogUnknownMessage(m.Log))
 
 	return err
 }
@@ -462,8 +499,16 @@ func (m *Manager) SyncDevicePods() error {
 	logger := m.Log.WithFields(log.String("type", "device"), log.String("action", "sync"))
 
 	logger.I("syncing device pods")
+
+	data, err := (&runtimepb.PodListCmd{All: true}).Marshal()
+	if err != nil {
+		return fmt.Errorf("failed to marshal pod list options")
+	}
 	msgCh, _, err := m.ConnectivityManager.PostCmd(
-		0, aranyagopb.CMD_RUNTIME, runtimepb.NewPodListCmd(true),
+		0, aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
+			Kind:    runtimepb.CMD_POD_LIST,
+			Payload: data,
+		},
 	)
 	if err != nil {
 		logger.I("failed to post pod list cmd", log.Error(err))
@@ -524,7 +569,7 @@ func (m *Manager) SyncDevicePods() error {
 		}
 
 		return false
-	}, nil, connectivity.HandleUnknownMessage(logger))
+	}, nil, connectivity.LogUnknownMessage(logger))
 
 	if err != nil {
 		return err

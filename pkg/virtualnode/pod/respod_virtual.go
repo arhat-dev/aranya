@@ -57,7 +57,7 @@ func (m *Manager) updateVirtualPodToRunningPhase() error {
 				case constant.VirtualContainerNameHost:
 					return constant.VirtualImageNameHost
 				default:
-					return constant.VirtualImageNameDevice
+					return constant.VirtualImageNamePeripheral
 				}
 			}(),
 			ImageID: func() string {
@@ -65,7 +65,7 @@ func (m *Manager) updateVirtualPodToRunningPhase() error {
 				case constant.VirtualContainerNameHost:
 					return constant.VirtualImageIDHost
 				default:
-					return constant.VirtualImageIDDevice
+					return constant.VirtualImageIDPeripheral
 				}
 			}(),
 			ContainerID: func() string {
@@ -73,7 +73,7 @@ func (m *Manager) updateVirtualPodToRunningPhase() error {
 				case constant.VirtualContainerNameHost:
 					return constant.VirtualContainerIDHost
 				default:
-					return constant.VirtualContainerIDDevice
+					return constant.VirtualContainerIDPeripheral
 				}
 			}(),
 		})
@@ -161,15 +161,23 @@ func (m *Manager) handleContainerAsHostExec(opts *runtimepb.PodEnsureCmd) (*runt
 
 		var err error
 		for _, arg := range ctr.Args {
-			execCmd := aranyagopb.NewExecCmd("", constant.VirtualContainerNameHost,
-				append(append([]string{}, cmd...), arg), ctr.Stdin, true, true, ctr.Tty, ctr.Envs,
-			)
+			execCmd := &aranyagopb.ExecOrAttachCmd{
+				PodUid:    "",
+				Container: constant.VirtualContainerNameHost,
+				Stdin:     ctr.Stdin,
+				Stdout:    true,
+				Stderr:    true,
+				Tty:       ctr.Tty,
+				Command:   append(append([]string{}, cmd...), arg),
+				Envs:      ctr.Envs,
+			}
 
 			stderrR, stderr := iohelper.Pipe()
 			stdoutR, stdout := iohelper.Pipe()
 
 			logger.V("Executing: " + arg)
 
+			// mock kubernetes log entry
 			go func() {
 				defer func() {
 					_ = stdoutR.Close()
@@ -192,7 +200,6 @@ func (m *Manager) handleContainerAsHostExec(opts *runtimepb.PodEnsureCmd) (*runt
 				s := bufio.NewScanner(stderrR)
 				s.Split(bufio.ScanLines)
 				for s.Scan() {
-					// TODO: investigate whether stderr logging is not working
 					_, _ = logFile.WriteString(
 						time.Now().UTC().Format(time.RFC3339Nano) + " stderr F " + s.Text() + "\n")
 				}
@@ -242,5 +249,9 @@ func (m *Manager) handleContainerAsHostExec(opts *runtimepb.PodEnsureCmd) (*runt
 		}
 	}
 
-	return runtimepb.NewPodStatusMsg(opts.PodUid, nil, containerStatus), nil
+	return &runtimepb.PodStatusMsg{
+		Uid:        opts.PodUid,
+		Network:    nil,
+		Containers: containerStatus,
+	}, nil
 }

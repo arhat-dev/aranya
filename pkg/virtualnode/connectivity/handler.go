@@ -32,7 +32,7 @@ type (
 	UnknownMsgHandleFunc func(u interface{}) (exit bool)
 )
 
-func HandleUnknownMessage(logger log.Interface) UnknownMsgHandleFunc {
+func LogUnknownMessage(logger log.Interface) UnknownMsgHandleFunc {
 	return func(u interface{}) bool {
 		logger.I("unknown message type", log.Any("msg", u))
 		return true

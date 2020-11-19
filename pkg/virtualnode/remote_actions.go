@@ -32,7 +32,7 @@ import (
 // generate in cluster node cache for remote node
 func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeInfoGetCmd_Kind) error {
 	msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(
-		0, aranyagopb.CMD_NODE_INFO_GET, aranyagopb.NewNodeCmd(action),
+		0, aranyagopb.CMD_NODE_INFO_GET, &aranyagopb.NodeInfoGetCmd{Kind: action},
 	)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeInfoGetCmd_Kin
 
 		vn.updateNodeCache(ns)
 		return false
-	}, nil, connectivity.HandleUnknownMessage(vn.log))
+	}, nil, connectivity.LogUnknownMessage(vn.log))
 
 	if err != nil {
 		return fmt.Errorf("failed to sync node status: %w", err)
@@ -139,7 +139,7 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 		logger.D("received orphan data", log.Binary("data", data))
 		// close previous session, best effort
 		_, _, _ = vn.opt.ConnectivityManager.PostCmd(
-			0, aranyagopb.CMD_SESSION_CLOSE, aranyagopb.NewSessionCloseCmd(msg.Sid),
+			0, aranyagopb.CMD_SESSION_CLOSE, &aranyagopb.SessionCloseCmd{Sid: msg.Sid},
 		)
 	case aranyagopb.MSG_RUNTIME:
 		if ps := msg.GetPodStatus(); ps != nil {
