@@ -352,8 +352,13 @@ func (s *stream) close(reason string) {
 		s.writeErr(reason)
 	}
 
-	_ = s.data.Close()
-	_ = s.error.Close()
+	if s.data != nil {
+		_ = s.data.Close()
+	}
+
+	if s.error != nil {
+		_ = s.error.Close()
+	}
 }
 
 func (s *stream) writeErr(err string) {
