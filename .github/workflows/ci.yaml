@@ -163,7 +163,8 @@ jobs:
 
     - name: Install helm-stack
       run: |
-        curl -Lo "${HOME}/bin/helm-stack" https://github.com/arhat-dev/helm-stack/releases/download/v0.1.1/helm-stack.linux.amd64
+        curl -Lo "${HOME}/bin/helm-stack" \
+          https://github.com/arhat-dev/helm-stack/releases/download/v0.1.1/helm-stack.linux.amd64
         chmod +x "${HOME}/bin/helm-stack"
 
     # - name: Test on Kubernetes ${{ matrix.kube }}
