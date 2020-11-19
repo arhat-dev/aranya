@@ -191,6 +191,11 @@ func (m *Manager) doHandleLogs(
 			return err2
 		}
 
+		defer func() {
+			_ = pw.Close()
+			_ = pr.Close()
+		}()
+
 		go func() {
 			s := bufio.NewScanner(pr)
 			s.Split(bufio.ScanLines)
