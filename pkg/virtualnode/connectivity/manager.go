@@ -359,7 +359,11 @@ func (m *baseManager) OnDisconnected(finalize func() (id string, all bool)) {
 }
 
 func (m *baseManager) PostData(
-	sid uint64, kind aranyagopb.CmdType, seq uint64, completed bool, data []byte,
+	sid uint64,
+	kind aranyagopb.CmdType,
+	seq uint64,
+	completed bool,
+	data []byte,
 ) (msgCh <-chan interface{}, realSid, lastSeq uint64, err error) {
 	m.mu.RLock()
 	defer func() {
@@ -448,7 +452,9 @@ func (m *baseManager) PostData(
 }
 
 func (m *baseManager) PostCmd(
-	sid uint64, kind aranyagopb.CmdType, cmd proto.Marshaler,
+	sid uint64,
+	kind aranyagopb.CmdType,
+	cmd proto.Marshaler,
 ) (msgCh <-chan interface{}, realSID uint64, err error) {
 	data, err := cmd.Marshal()
 	if err != nil {

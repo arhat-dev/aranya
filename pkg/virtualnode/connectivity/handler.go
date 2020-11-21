@@ -58,6 +58,8 @@ func HandleMessages(
 	}
 
 	exit := false
+
+	// always drain message channel
 	for msg := range msgCh {
 		if exit {
 			continue

@@ -29,7 +29,7 @@ import (
 func BenchmarkSession_deliverMsg(b *testing.B) {
 	for _, size := range []int{1, 8, 256, 512, 1024, 64 * 1024, 256 * 1024, 1024 * 1024} {
 		b.Run(fmt.Sprintf("normal msg payload size %d", size), func(b *testing.B) {
-			s := newSession(1)
+			s := newSession(1, true)
 			data := make([]*aranyagopb.Msg, b.N)
 			payload := make([]byte, size)
 			for i := 0; i < b.N; i++ {
@@ -51,7 +51,7 @@ func BenchmarkSession_deliverMsg(b *testing.B) {
 		})
 
 		b.Run(fmt.Sprintf("stream msg payload size %d", size), func(b *testing.B) {
-			s := newSession(1)
+			s := newSession(1, true)
 			data := make([]*aranyagopb.Msg, b.N)
 			payload := make([]byte, size)
 			for i := 0; i < b.N; i++ {
@@ -112,7 +112,7 @@ func TestSession_deliverMsg(t *testing.T) {
 
 	for i, serial := range seqSeries {
 		t.Run(fmt.Sprintf("serial %d", i), func(t *testing.T) {
-			s := newSession(1)
+			s := newSession(1, true)
 			msgCh := s.msgCh
 			go func() {
 				for j, seq := range serial {

@@ -25,10 +25,14 @@ import (
 	"arhat.dev/pkg/queue"
 )
 
-func newSession(epoch uint64) *session {
+func newSession(epoch uint64, isStream bool) *session {
 	return &session{
-		msgCh:     make(chan interface{}, 1),
-		epoch:     epoch,
+		epoch:    epoch,
+		isStream: isStream,
+
+		closed: false,
+		msgCh:  make(chan interface{}, 1),
+
 		msgBuffer: new(bytes.Buffer),
 		seqQ:      queue.NewSeqQueue(),
 		mu:        new(sync.RWMutex),
@@ -36,7 +40,8 @@ func newSession(epoch uint64) *session {
 }
 
 type session struct {
-	epoch uint64
+	epoch    uint64
+	isStream bool
 
 	closed bool
 	msgCh  chan interface{}
@@ -56,7 +61,6 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 	}
 
 	var (
-		sid  = msg.Sid
 		seq  = msg.Seq
 		kind = msg.Kind
 	)
@@ -111,7 +115,7 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 	if checkedMsgData {
 		s.msgCh <- &aranyagopb.Msg{
 			Kind:      kind,
-			Sid:       sid,
+			Sid:       msg.Sid,
 			Seq:       0,
 			Completed: true,
 			Payload:   s.msgBuffer.Bytes(),
@@ -229,7 +233,7 @@ func (m *SessionManager) Add(
 		ch = oldSession.msgCh
 	} else {
 		// create new channel if invalid
-		session := newSession(m.epoch)
+		session := newSession(m.epoch, timeout == 0)
 
 		ch = session.msgCh
 		realSid = m.nextSid()
@@ -250,28 +254,27 @@ func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
 	}
 
 	sid := msg.Sid
+
 	m.mu.RLock()
 	session, ok := m.m[sid]
 	m.mu.RUnlock()
 
-	if ok {
-		// only deliver msg for this epoch or it is stream message
-		session.mu.RLock() // protect session.msgBuffer
-		if session.epoch == m.epoch || session.msgBuffer == nil {
-			session.mu.RUnlock()
-			delivered, complete := session.deliverMsg(msg)
-
-			if complete {
-				m.Delete(sid)
-			}
-			return delivered
-		}
-
-		session.mu.RUnlock()
+	if !ok {
+		return false
 	}
 
-	m.Delete(sid)
-	return false
+	// only deliver msg for this epoch or it is stream message
+	if session.epoch != m.epoch && !session.isStream {
+		m.Delete(sid)
+		return false
+	}
+
+	delivered, complete := session.deliverMsg(msg)
+	if complete {
+		m.Delete(sid)
+	}
+
+	return delivered
 }
 
 func (m *SessionManager) Delete(sid uint64) {
@@ -292,7 +295,7 @@ func (m *SessionManager) Cleanup() {
 	allSid := make([]uint64, len(m.m))
 	i := 0
 	for sid, session := range m.m {
-		if session.msgBuffer == nil {
+		if session.isStream {
 			// do not close streams
 			continue
 		}
