@@ -200,7 +200,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	logger.D("starting to serve exec")
+	logger.D("serving exec")
 	kubeletrc.ServeExec(
 		w, r, /* http context */
 		m.doHandleExec(),           /* wrapped pod executor */

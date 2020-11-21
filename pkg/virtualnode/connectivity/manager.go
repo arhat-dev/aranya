@@ -367,7 +367,7 @@ func (m *baseManager) PostData(
 		if m.log.Enabled(log.LevelVerbose) {
 			m.log.V("remaining sessions",
 				log.Any("all", m.sessions.Remains()),
-				log.Any("timeout", m.sessions.TimeoutRemains()),
+				log.Any("timed", m.sessions.TimeoutRemains()),
 			)
 		}
 		m.mu.RUnlock()

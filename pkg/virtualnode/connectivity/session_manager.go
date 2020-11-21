@@ -27,10 +27,11 @@ import (
 
 func newSession(epoch uint64) *session {
 	return &session{
-		msgCh: make(chan interface{}, 1),
-		epoch: epoch,
-		seqQ:  queue.NewSeqQueue(),
-		mu:    new(sync.RWMutex),
+		msgCh:     make(chan interface{}, 1),
+		epoch:     epoch,
+		msgBuffer: new(bytes.Buffer),
+		seqQ:      queue.NewSeqQueue(),
+		mu:        new(sync.RWMutex),
 	}
 }
 
@@ -48,6 +49,8 @@ type session struct {
 func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 	s.mu.RLock()
 	if s.closed {
+		s.mu.RUnlock()
+
 		// session closed, no message shall be delivered
 		return false, true
 	}
@@ -58,73 +61,66 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 		kind = msg.Kind
 	)
 
-	dataChunks, complete := s.seqQ.Offer(seq, msg.Payload)
+	// all in one packet, no need to reassemble packets
+	if seq == 0 && msg.Completed {
+		s.msgCh <- msg
+		s.mu.RUnlock()
+
+		s.close()
+		return true, true
+	}
+
+	dataChunks, complete := s.seqQ.Offer(seq, &Data{
+		Kind:    kind,
+		Payload: msg.Payload,
+	})
 
 	if msg.Completed {
 		complete = s.seqQ.SetMaxSeq(seq)
 	}
 
-	switch kind {
-	case aranyagopb.MSG_DATA_DEFAULT, aranyagopb.MSG_DATA_STDERR:
-		// stream data
-		for _, ck := range dataChunks {
-			// nolint:gosimple
-			select {
-			case s.msgCh <- &Data{
-				Kind:    kind,
-				Payload: ck.([]byte),
-			}:
-				//	TODO: add context cancel
+	checkedMsgData := false
+	// handle ordered data chunks
+	for _, ck := range dataChunks {
+		data := ck.(*Data)
+
+		switch data.Kind {
+		case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
+			// is stream data, send directly
+			s.msgCh <- data
+		default:
+			checkedMsgData = true
+			// is message data, collect until complete
+			// message data can be the last several data chunks in a stream
+			if data.Kind != kind {
+				// invalid message data chunk, discard
+				continue
 			}
-		}
 
-		s.mu.RUnlock()
-		if complete {
-			s.mu.Lock()
-		}
-	default:
-		s.mu.RUnlock()
-		s.mu.Lock()
-		if s.msgBuffer == nil {
-			s.msgBuffer = new(bytes.Buffer)
-		}
-
-		// normal msg
-		for _, ck := range dataChunks {
-			s.msgBuffer.Write(ck.([]byte))
-		}
-
-		if complete {
-			// nolint:gosimple
-			select {
-			// deliver a new message with complete msgBytes
-			case s.msgCh <- &aranyagopb.Msg{
-				Kind:      kind,
-				Sid:       sid,
-				Seq:       seq,
-				Completed: true,
-				Payload:   s.msgBuffer.Bytes(),
-			}:
-				//	TODO: add context cancel
-			}
-		} else {
-			s.mu.Unlock()
+			s.msgBuffer.Write(data.Payload)
 		}
 	}
 
-	if complete {
-		s.closed = true
-		if s.msgBuffer != nil {
-			s.msgBuffer.Reset()
-		}
-
-		if s.msgCh != nil {
-			close(s.msgCh)
-			s.msgCh = nil
-		}
-
-		s.mu.Unlock()
+	if !complete {
+		s.mu.RUnlock()
+		return true, false
 	}
+
+	// session complete, no more message shall be sent through this session
+
+	if checkedMsgData {
+		s.msgCh <- &aranyagopb.Msg{
+			Kind:      kind,
+			Sid:       sid,
+			Seq:       0,
+			Completed: true,
+			Payload:   s.msgBuffer.Bytes(),
+		}
+	}
+
+	s.mu.RUnlock()
+
+	s.close()
 
 	return true, complete
 }
@@ -138,6 +134,7 @@ func (s *session) close() {
 	}
 
 	s.closed = true
+	s.msgBuffer.Reset()
 	if s.msgCh != nil {
 		close(s.msgCh)
 		s.msgCh = nil
