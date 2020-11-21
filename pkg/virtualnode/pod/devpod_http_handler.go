@@ -18,6 +18,7 @@ package pod
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -278,7 +279,7 @@ func (m *Manager) doHandleLogs(
 	return err
 }
 
-func (m *Manager) doHandleExec() kubeletrc.Executor {
+func (m *Manager) doHandleExec(ctx context.Context) kubeletrc.Executor {
 	return containerExecutor(func(
 		name string,
 		uid types.UID,
@@ -321,7 +322,7 @@ func (m *Manager) doHandleExec() kubeletrc.Executor {
 				return fmt.Errorf("failed to marshal pod exec options: %w", err)
 			}
 
-			return m.doServeTerminalStream(aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
+			return m.doServeTerminalStream(ctx, aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
 				Kind:    runtimepb.CMD_EXEC,
 				Payload: data,
 			}, stdin, stdout, stderr, resize)
@@ -331,7 +332,7 @@ func (m *Manager) doHandleExec() kubeletrc.Executor {
 		switch container {
 		case constant.VirtualContainerNameHost:
 			// is host exec
-			return m.doServeTerminalStream(aranyagopb.CMD_EXEC, execCmd, stdin, stdout, stderr, resize)
+			return m.doServeTerminalStream(ctx, aranyagopb.CMD_EXEC, execCmd, stdin, stdout, stderr, resize)
 		default:
 			// is peripheral operation
 			data := []byte(strings.Join(cmd[1:], " "))
@@ -353,7 +354,7 @@ func (m *Manager) doHandleExec() kubeletrc.Executor {
 	})
 }
 
-func (m *Manager) doHandleAttach() kubeletrc.Attacher {
+func (m *Manager) doHandleAttach(ctx context.Context) kubeletrc.Attacher {
 	return containerAttacher(func(
 		name string,
 		uid types.UID,
@@ -390,7 +391,7 @@ func (m *Manager) doHandleAttach() kubeletrc.Attacher {
 				return fmt.Errorf("failed to marshal pod attach options: %w", err)
 			}
 
-			return m.doServeTerminalStream(aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
+			return m.doServeTerminalStream(ctx, aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
 				Kind:    runtimepb.CMD_EXEC,
 				Payload: data,
 			}, stdin, stdout, stderr, resize)
@@ -399,7 +400,7 @@ func (m *Manager) doHandleAttach() kubeletrc.Attacher {
 		switch container {
 		case constant.VirtualContainerNameHost:
 			// is host attach
-			return m.doServeTerminalStream(aranyagopb.CMD_ATTACH, attachCmd, stdin, stdout, stderr, resize)
+			return m.doServeTerminalStream(ctx, aranyagopb.CMD_ATTACH, attachCmd, stdin, stdout, stderr, resize)
 		default:
 			// is peripheral metrics collection
 			err := m.options.CollectDeviceMetrics(container)
@@ -413,6 +414,7 @@ func (m *Manager) doHandleAttach() kubeletrc.Attacher {
 
 // nolint:gocyclo
 func (m *Manager) doServeTerminalStream(
+	ctx context.Context,
 	kind aranyagopb.CmdType,
 	initialCmd proto.Marshaler,
 	stdin io.Reader,
@@ -433,7 +435,10 @@ func (m *Manager) doServeTerminalStream(
 
 	logger = logger.WithFields(log.Uint64("sid", sid))
 
+	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
+		cancel()
+
 		// close session, best effort
 		_, _, err2 := m.ConnectivityManager.PostCmd(
 			sid, aranyagopb.CMD_SESSION_CLOSE, &aranyagopb.SessionCloseCmd{Sid: sid},
@@ -484,7 +489,6 @@ func (m *Manager) doServeTerminalStream(
 		}()
 	}
 
-	closeRead := make(chan struct{})
 	if stdin != nil {
 		readTimeout := constant.DefaultNonInteractiveStreamReadTimeout
 		if resizeCh != nil {
@@ -507,14 +511,14 @@ func (m *Manager) doServeTerminalStream(
 			}()
 
 			r := iohelper.NewTimeoutReader(stdin)
-			go r.FallbackReading(closeRead)
+			go r.FallbackReading(ctx.Done())
 
 			bufSize := m.ConnectivityManager.MaxPayloadSize()
 			if bufSize > constant.MaxBufSize {
 				bufSize = constant.MaxBufSize
 			}
 			buf := make([]byte, bufSize)
-			for r.WaitForData(closeRead) {
+			for r.WaitForData(ctx.Done()) {
 				data, shouldCopy, err2 := r.Read(readTimeout, buf)
 				if err2 != nil {
 					if len(data) == 0 && err2 != iohelper.ErrDeadlineExceeded {
@@ -527,11 +531,10 @@ func (m *Manager) doServeTerminalStream(
 					_ = copy(data, buf[:len(data)])
 				}
 
-				_, _, lastSeq, err2 := m.ConnectivityManager.PostData(
+				_, _, _, err2 = m.ConnectivityManager.PostData(
 					sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
 				)
 
-				atomic.StoreUint64(&seq, lastSeq+1)
 				if err2 != nil {
 					logger.I("failed to post user input", log.Error(err2))
 					return
@@ -546,11 +549,6 @@ func (m *Manager) doServeTerminalStream(
 		}
 
 		// unwanted message
-		select {
-		case <-closeRead:
-		default:
-			close(closeRead)
-		}
 		return true
 	}, func(dataMsg *connectivity.Data) (exit bool) {
 		// default send to stdout
@@ -562,14 +560,6 @@ func (m *Manager) doServeTerminalStream(
 		_, err = targetOutput.Write(dataMsg.Payload)
 		if err != nil && err != io.EOF {
 			logger.I("failed to write output", log.Error(err))
-
-			// write failure, close read routine
-			select {
-			case <-closeRead:
-			default:
-				close(closeRead)
-			}
-
 			return true
 		}
 		return false
@@ -577,12 +567,6 @@ func (m *Manager) doServeTerminalStream(
 		logger.I("unknown message type", log.Any("msg", u))
 
 		// unexpected message, close read routine
-		select {
-		case <-closeRead:
-		default:
-			close(closeRead)
-		}
-
 		return true
 	})
 
@@ -590,10 +574,5 @@ func (m *Manager) doServeTerminalStream(
 }
 
 func nextSeq(p *uint64) uint64 {
-	seq := atomic.LoadUint64(p)
-	for !atomic.CompareAndSwapUint64(p, seq, seq+1) {
-		seq++
-	}
-
-	return seq
+	return atomic.AddUint64(p, 1) - 1
 }

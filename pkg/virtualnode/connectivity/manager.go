@@ -35,8 +35,7 @@ import (
 )
 
 var (
-	ErrDeviceNotConnected = errors.New("device is not connected")
-	ErrManagerClosed      = errors.New("connectivity manager has been closed")
+	ErrManagerClosed = errors.New("connectivity manager has been closed")
 )
 
 // runtime options
@@ -201,7 +200,7 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) *ba
 		config:   config,
 		sessions: sessions,
 
-		maxDataSize:      maxDataSize - aranyagopb.EmptyMsgSize,
+		maxDataSize:      maxDataSize - aranyagopb.EmptyCmdSize,
 		log:              log.Log.WithName(fmt.Sprintf("conn.%s", name)),
 		sendCmd:          nil,
 		globalMsgChan:    make(chan *aranyagopb.Msg, 1),

@@ -17,6 +17,7 @@ limitations under the License.
 package pod
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -24,7 +25,6 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
@@ -123,7 +123,7 @@ func (m *Manager) handleWebSocketPortForward(
 				s.close("")
 			}()
 
-			m.doPortForward(s)
+			m.doPortForward(r.Context(), s)
 		}()
 	}
 
@@ -197,7 +197,7 @@ func (m *Manager) handleHTTPPortForward(
 				streamPairs[reqID] = s
 			}
 
-			err = m.handleNewHTTPStream(wg, s, hs)
+			err = m.handleNewHTTPStream(r.Context(), wg, s, hs)
 			if err != nil {
 				s.writeErr(err.Error())
 			}
@@ -205,7 +205,7 @@ func (m *Manager) handleHTTPPortForward(
 	}
 }
 
-func (m *Manager) handleNewHTTPStream(wg *sync.WaitGroup, s *stream, hs httpstream.Stream) error {
+func (m *Manager) handleNewHTTPStream(ctx context.Context, wg *sync.WaitGroup, s *stream, hs httpstream.Stream) error {
 	switch hs.Headers().Get(api.StreamType) {
 	case api.StreamTypeData:
 		if s.data != nil {
@@ -240,13 +240,13 @@ func (m *Manager) handleNewHTTPStream(wg *sync.WaitGroup, s *stream, hs httpstre
 			s.close("")
 		}()
 
-		m.doPortForward(s)
+		m.doPortForward(ctx, s)
 	}()
 
 	return nil
 }
 
-func (m *Manager) doPortForward(s *stream) {
+func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 	pfCmd := &aranyagopb.PortForwardCmd{
 		PodUid:   s.podUID,
 		Port:     s.port,
@@ -293,14 +293,14 @@ func (m *Manager) doPortForward(s *stream) {
 		}()
 
 		r := iohelper.NewTimeoutReader(s.data)
-		go r.FallbackReading(m.Context().Done())
+		go r.FallbackReading(ctx.Done())
 
 		bufSize := m.ConnectivityManager.MaxPayloadSize()
 		if bufSize > constant.MaxBufSize {
 			bufSize = constant.MaxBufSize
 		}
 		buf := make([]byte, bufSize)
-		for r.WaitForData(m.Context().Done()) {
+		for r.WaitForData(ctx.Done()) {
 			data, shouldCopy, err2 := r.Read(constant.DefaultPortForwardStreamReadTimeout, buf)
 			if err2 != nil {
 				if len(data) == 0 && err2 != iohelper.ErrDeadlineExceeded {
@@ -313,11 +313,10 @@ func (m *Manager) doPortForward(s *stream) {
 				_ = copy(data, buf[:len(data)])
 			}
 
-			_, _, lastSeq, err2 := m.ConnectivityManager.PostData(
+			_, _, _, err2 = m.ConnectivityManager.PostData(
 				sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
 			)
 
-			atomic.StoreUint64(&seq, lastSeq+1)
 			if err2 != nil {
 				s.writeErr(err2.Error())
 			}

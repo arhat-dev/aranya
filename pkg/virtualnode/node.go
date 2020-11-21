@@ -174,7 +174,7 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 		nodeClient: opt.KubeClient.CoreV1().Nodes(),
 
 		maxPods:           int64(opt.PodOptions.Config.Allocatable) + 1,
-		kubeletSrv:        &http.Server{Handler: m},
+		kubeletSrv:        &http.Server{BaseContext: func(net.Listener) context.Context { return ctx }, Handler: m},
 		networkManager:    networkManager,
 		podManager:        podManager,
 		storageManager:    nil, // initialized later

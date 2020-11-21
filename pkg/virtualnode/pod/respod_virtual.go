@@ -210,7 +210,7 @@ func (m *Manager) handleContainerAsHostExec(opts *runtimepb.PodEnsureCmd) (*runt
 					_, _ = stdout.Close(), stderr.Close()
 				}()
 
-				return m.doServeTerminalStream(aranyagopb.CMD_EXEC, execCmd, nil, stdout, stderr, nil)
+				return m.doServeTerminalStream(m.Context(), aranyagopb.CMD_EXEC, execCmd, nil, stdout, stderr, nil)
 			}()
 
 			if err != nil {

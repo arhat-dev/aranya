@@ -203,12 +203,12 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 	logger.D("serving exec")
 	kubeletrc.ServeExec(
 		w, r, /* http context */
-		m.doHandleExec(),           /* wrapped pod executor */
-		"",                         /* pod name (unused) */
-		podUID,                     /* unique id of pod */
-		containerName,              /* container name to execute in*/
-		cmd,                        /* commands to execute */
-		getRemoteCommandOptions(r), /* stream options */
+		m.doHandleExec(r.Context()), /* wrapped pod executor */
+		"",                          /* pod name (unused) */
+		podUID,                      /* unique id of pod */
+		containerName,               /* container name to execute in*/
+		cmd,                         /* commands to execute */
+		getRemoteCommandOptions(r),  /* stream options */
 		// timeout options
 		m.options.Config.Timers.StreamIdleTimeout, m.options.Config.Timers.StreamCreationTimeout,
 		// supported protocols
@@ -238,11 +238,11 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 	logger.D("serving container attach")
 	kubeletrc.ServeAttach(
 		w, r, /* http context */
-		m.doHandleAttach(),         /* wrapped pod attacher */
-		"",                         /* pod name (unused) */
-		podUID,                     /* unique id of pod */
-		containerName,              /* container to execute in */
-		getRemoteCommandOptions(r), /* stream options */
+		m.doHandleAttach(r.Context()), /* wrapped pod attacher */
+		"",                            /* pod name (unused) */
+		podUID,                        /* unique id of pod */
+		containerName,                 /* container to execute in */
+		getRemoteCommandOptions(r),    /* stream options */
 		// timeout options
 		m.options.Config.Timers.StreamIdleTimeout, m.options.Config.Timers.StreamCreationTimeout,
 		// supported protocols
