@@ -15,4 +15,4 @@ limitations under the License.
 */
 
 // Package controller
-package controller // import "arhat.dev/aranya/pkg/controller"
+package controller
