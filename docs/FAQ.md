@@ -10,7 +10,7 @@
 
 ## Why not `virtual-kubelet`
 
-- `virtual-kubelet` is designed for cloud providers such as `Azure`, `GCP`, `AWS` to run containers at network edge on top of their own container infrastructure. However, most edge device users aren't able to or don't want to setup such kind of network infrastructure.
+- `virtual-kubelet` is designed for cloud providers such as `Azure`, `GCP`, `AWS` to run containers at network edge on top of their own container infrastructure (sometimes a huge managed kubernetes cluster). However, most edge device users aren't able to or don't want to setup such kind of network infrastructure.
 
 - A `virtual-kubelet` is deployed as a pod on behalf of a contaienr runtime, if this model is applied for edge devices, then large scale edge device cluster would claim a lot of pod resource, which requires a lot of node to serve, it's inefficient.
 

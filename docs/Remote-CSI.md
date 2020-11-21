@@ -1,11 +1,11 @@
 # Remote CSI
 
-Use cluster `CSI` plugin in edge devices
+Use cluster `CSI` plugin for edge devices without actual `CSI` plugin deployment
 
 ## Mechanism
 
 - `virtualnode` is responsible for mounting `PersistentVolume` in cluster for your edge devices
-- edge device uses lightweight network FUSE solutions (e.g. `sshfs`) to mount `PersistentVolume` from `virtualnode`
+- edge devices with use lightweight network FUSE solutions (e.g. `sshfs`) to mount `PersistentVolume` from `virtualnode`
 
 ## Pros
 

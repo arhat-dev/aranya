@@ -2,7 +2,7 @@
 
 ## Maintenance Model
 
-`Kubernetes` defines the concept `virtual cluster` via the `namespace` resource type, we will take the advantage of that concept for our maintenance.
+`Kubernetes` abstracts the concept `virtual cluster` with the `namespace` resource type, we will take the advantage of that concept for our maintenance.
 
 1. Both `aranya`'s deployment and `EdgeDevice`s are namespaced (see [Behaviors and Tips](#behaviors-and-tips) for more information).
 2. `Node` objects in `Kubernetes` are not namespaced but those managed by `aranya` will contain a taint for `namespace` name.

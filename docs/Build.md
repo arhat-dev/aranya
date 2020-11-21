@@ -37,7 +37,7 @@ __NOTE:__ All binary build targets includes a `.{OS}.{ARCH}` suffix, available `
 
 ### Build `aranya`
 
-Available `aranya` targets: `aranya.linux.{amd64,armv7,armv6,arm64}`
+Available `aranya` targets: `aranya.{os}.{arch}`
 
 ```bash
 # build the binary directly

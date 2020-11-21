@@ -4,13 +4,12 @@
 - [Spec](#spec)
   - [`spec.connectivity`: In Cloud connectivity to reach your EdgeDevice](#specconnectivity-in-cloud-connectivity-to-reach-your-edgedevice)
   - [`spec.node`: Kubernetes node resource](#specnode-kubernetes-node-resource)
-  - [`spec.network`: Namespaced network mesh among your EdgeDevices](#specnetwork-namespaced-network-mesh-among-your-edgedevices)
+  - [`spec.network`: Network mesh for your cluster nodes and devices](#specnetwork-network-mesh-for-your-cluster-nodes-and-devices)
   - [`spec.storage`: Remote CSI for your EdgeDevices](#specstorage-remote-csi-for-your-edgedevices)
-  - [`spec.pod`: Kubernetes pod resources](#specpod-kubernetes-pod-resources)
+  - [`spec.pod`: Kubernetes pod workload configuration](#specpod-kubernetes-pod-workload-configuration)
   - [`spec.metricsReporters`: Optional metrics push client for your peripherals](#specmetricsreporters-optional-metrics-push-client-for-your-peripherals)
   - [`spec.peripherals`: Peripherals definition and operation](#specperipherals-peripherals-definition-and-operation)
 - [Status](#status)
-- [Appendix.A: List of supported collectors](#appendixa-list-of-supported-collectors)
 
 ## Metadata
 
@@ -221,23 +220,22 @@ spec:
       # example for windows (windows_exporter)
       # - --collector.service.services-where="Name='windows_exporter'"
 
-    fieldHooks:
     # field hook to update annotation/label value according
-    # to current value of some annotation/label
-    - # query in jq syntax
-      query: .metadata.annotations."example.com/foo"
-      # kubernetes field path
+    # to current value of the Node object
+    fieldHooks:
+      # text query in jq syntax
+    - query: .metadata.annotations."example.com/foo"
+      # kubernetes field path to apply resolved value
       targetFieldPath: metadata.labels['example.com/bar']
-      # value to set
+      # explicit value to set target field
       value: "true"
-      # jq syntax expression to process result
-      #
-      # valueExpression: .[0] < 5
+      # jq syntax expression to process query result and set target field
+      #valueExpression: .[0] < 5
 ```
 
-Please refer to [Appendix.A](#appendixa-list-of-supported-collectors) for the full list of supported collectors
+Please refer to [prometheus/node_exporter](https://github.com/prometheus/node_exporter) and [prometheus-community/windows_exporter](https://github.com/prometheus-community/windows_exporter) for the full list of supported collectors and extra args
 
-### `spec.network`: Namespaced network mesh among your EdgeDevices
+### `spec.network`: Network mesh for your cluster nodes and devices
 
 ```yaml
 spec:
@@ -245,6 +243,8 @@ spec:
     # enabled network mesh
     enabled: true
 ```
+
+__HINT:__ You can apply network policies to isolate the EdgeDevice workload namespace for certain group of devices to achieve namespaced network mesh.
 
 ### `spec.storage`: Remote CSI for your EdgeDevices
 
@@ -255,7 +255,7 @@ spec:
     enabled: true
 ```
 
-### `spec.pod`: Kubernetes pod resources
+### `spec.pod`: Kubernetes pod workload configuration
 
 ```yaml
 spec:
@@ -265,7 +265,7 @@ spec:
 
     ipv4CIDR: 10.0.10.0/24
     ipv6CIDR: ::1/128
-    # dns config to override aranya's defaults
+    # dns config to override aranya's config
     dns:
       servers:
       - "1.1.1.1"
@@ -345,104 +345,3 @@ spec:
 status:
   hostNode: <node-name>
 ```
-
-## Appendix.A: List of supported collectors
-
-1. Linux:
-   - `arp`
-   - `bcache`
-   - `bonding`
-   - `conntrack`
-   - `cpu`
-   - `cpufreq`
-   - `diskstats`
-   - `edac`
-   - `entropy`
-   - `filefd`
-   - `filesystem`
-   - `hwmon`
-   - `infiniband`
-   - `ipvs`
-   - `loadavg`
-   - `mdadm`
-   - `meminfo`
-   - `netclass`
-   - `netdev`
-   - `netstat`
-   - `nfs`
-   - `nfsd`
-   - `pressure`
-   - `sockstat`
-   - `stat`
-   - `textfile`
-   - `time`
-   - `timex`
-   - `uname`
-   - `vmstat`
-   - `xfs`
-   - `zfs`
-   - `buddyinfo`
-   - `drbd`
-   - `interrupts`
-   - `ksmd`
-   - `logind`
-   - `meminfo_numa`
-   - `mountstats`
-   - `ntp`
-   - `processes`
-   - `qdisc`
-   - `runit`
-   - `supervisord`
-   - `systemd`
-   - `tcpstat`
-   - `wifi`
-   - `perf`
-
-2. Darwin:
-   - `boottime`
-   - `cpu`
-   - `filesystem`
-   - `diskstats`
-   - `loadavg`
-   - `meminfo`
-   - `netdev`
-   - `uname`
-   - `ntp`
-   - `time`
-
-3. Windows:
-   - `ad`
-   - `adfs`
-   - `cpu`
-   - `cs`
-   - `container`
-   - `dhcp`
-   - `dns`
-   - `exchange`
-   - `fsrmquota`
-   - `hyperv`
-   - `iis`
-   - `logical_disk`
-   - `logon`
-   - `memory`
-   - `msmq`
-   - `mssql`
-   - `netframework_clrexceptions`
-   - `netframework_clrinterop`
-   - `netframework_clrjit`
-   - `netframework_clrloading`
-   - `netframework_clrlocksandthreads`
-   - `netframework_clrmemory`
-   - `netframework_clrremoting`
-   - `netframework_clrsecurity`
-   - `net`
-   - `os`
-   - `process`
-   - `remote_fx`
-   - `service`
-   - `system`
-   - `tcp`
-   - `thermalzone`
-   - `terminal_services`
-   - `textfile`
-   - `vmware`
