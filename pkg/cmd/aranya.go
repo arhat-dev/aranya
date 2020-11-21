@@ -109,12 +109,10 @@ func run(appCtx context.Context, config *conf.Config) error {
 
 	_, mtHandler, err := config.Aranya.Metrics.CreateIfEnabled(true)
 	if err != nil {
-		logger.E("failed to register metrics controller", log.Error(err))
-		return err
+		return fmt.Errorf("failed to create metrics provider: %w", err)
 	}
 
 	if mtHandler != nil {
-		// TODO: listen for metrics when metrics handler is not nil (prometheus)
 		mux := http.NewServeMux()
 		mux.Handle(config.Aranya.Metrics.HTTPPath, mtHandler)
 
@@ -139,8 +137,7 @@ func run(appCtx context.Context, config *conf.Config) error {
 
 	_, err = config.Aranya.Tracing.CreateIfEnabled(true, nil)
 	if err != nil {
-		logger.E("failed to register tracing controller")
-		return err
+		return fmt.Errorf("failed to create tracing provider: %w", err)
 	}
 
 	var (
