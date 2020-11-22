@@ -364,7 +364,11 @@ func (m *baseManager) PostData(
 	seq uint64,
 	completed bool,
 	data []byte,
-) (msgCh <-chan interface{}, realSid, lastSeq uint64, err error) {
+) (
+	msgCh <-chan interface{},
+	realSid, lastSeq uint64,
+	err error,
+) {
 	m.mu.RLock()
 	defer func() {
 		if m.log.Enabled(log.LevelVerbose) {
@@ -381,51 +385,48 @@ func (m *baseManager) PostData(
 	}
 
 	var (
-		sessionMustExist bool
-		recordSession    = true
-		timeout          = m.config.UnarySessionTimeout
+		recordSession = true
+		timeout       = m.config.UnarySessionTimeout
 	)
 
 	// session id should not be empty if it's a input or resize command
 	switch kind {
 	case aranyagopb.CMD_SESSION_CLOSE:
 		recordSession = false
+		realSid = sid
 
-		defer m.sessions.Delete(sid)
+		m.sessions.Delete(realSid)
 	case aranyagopb.CMD_EXEC, aranyagopb.CMD_ATTACH,
 		aranyagopb.CMD_LOGS, aranyagopb.CMD_PORT_FORWARD:
-
+		// do not timeout stream sessions
 		timeout = 0
 	case aranyagopb.CMD_TTY_RESIZE, aranyagopb.CMD_DATA_UPSTREAM:
-		timeout = 0
-		sessionMustExist = true
-
+		// only allowed in existing sessions
 		if sid == 0 {
-			// session must present, but got empty
+			// session must present, but got empty id
 			return nil, 0, seq, fmt.Errorf("invalid zero sid")
 		}
+
+		// avoid unexpected session creation when data sent after
+		// real session closed
+		recordSession = false
+		realSid = sid
 	}
 
 	if recordSession {
 		realSid, msgCh = m.sessions.Add(sid, timeout)
 		defer func() {
 			if err != nil {
-				m.sessions.Delete(sid)
+				m.sessions.Delete(realSid)
 			}
 		}()
-
-		if sessionMustExist && sid != realSid {
-			return nil, 0, seq, fmt.Errorf("failed to find session from sid")
-		}
-
-		sid = realSid
 	}
 
 	n := m.MaxPayloadSize()
 	for len(data) > n {
 		err = m.sendCmd(&aranyagopb.Cmd{
 			Kind:      kind,
-			Sid:       sid,
+			Sid:       realSid,
 			Seq:       seq,
 			Completed: false,
 			Payload:   data[:n],
@@ -439,7 +440,7 @@ func (m *baseManager) PostData(
 
 	err = m.sendCmd(&aranyagopb.Cmd{
 		Kind:      kind,
-		Sid:       sid,
+		Sid:       realSid,
 		Seq:       seq,
 		Completed: completed,
 		Payload:   data,
