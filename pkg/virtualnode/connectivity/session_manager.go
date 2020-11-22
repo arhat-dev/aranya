@@ -24,8 +24,6 @@ import (
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
-	"arhat.dev/pkg/hashhelper"
-	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 )
 
@@ -76,14 +74,6 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 		if msg.Seq == 0 && msg.Completed {
 			switch msg.Kind {
 			case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
-				if log.Log.Enabled(log.LevelVerbose) {
-					log.Log.V("sending complete data",
-						log.Uint64("sid", msg.Sid),
-						log.Int32("kind", int32(msg.Kind)),
-						log.String("md5", hashhelper.MD5SumHex(msg.Payload)),
-					)
-				}
-
 				s.msgCh <- &Data{
 					Kind:    msg.Kind,
 					Payload: msg.Payload,
@@ -118,13 +108,6 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 
 			switch data.Kind {
 			case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
-				if log.Log.Enabled(log.LevelVerbose) {
-					log.Log.V("sending ordered data",
-						log.Uint64("sid", msg.Sid),
-						log.Int32("kind", int32(data.Kind)),
-						log.String("md5", hashhelper.MD5SumHex(data.Payload)),
-					)
-				}
 				// is stream data, send directly
 				s.msgCh <- data
 			default:
@@ -134,14 +117,6 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 				if data.Kind != msg.Kind {
 					// invalid message data chunk, discard
 					continue
-				}
-
-				if log.Log.Enabled(log.LevelVerbose) {
-					log.Log.V("writing message chunk",
-						log.Uint64("sid", msg.Sid),
-						log.Int32("kind", int32(data.Kind)),
-						log.String("md5", hashhelper.MD5SumHex(data.Payload)),
-					)
 				}
 
 				if s.msgBuffer == nil {
