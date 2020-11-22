@@ -37,7 +37,7 @@ func newSession(epoch uint64, isStream bool) *session {
 
 		msgBuffer: new(bytes.Buffer),
 		seqQ:      queue.NewSeqQueue(),
-		mu:        new(sync.RWMutex),
+		mu:        new(sync.Mutex),
 	}
 }
 
@@ -50,14 +50,14 @@ type session struct {
 
 	msgBuffer *bytes.Buffer
 	seqQ      *queue.SeqQueue
-	mu        *sync.RWMutex
+	mu        *sync.Mutex
 }
 
 func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
-	s.mu.RLock()
-	if s.closed {
-		s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
+	if s.closed {
 		// session closed, no message shall be delivered
 		return false, true
 	}
@@ -81,8 +81,6 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 		default:
 			s.msgCh <- msg
 		}
-
-		s.mu.RUnlock()
 
 		s.close()
 		return true, true
@@ -135,7 +133,6 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 	}
 
 	if !complete {
-		s.mu.RUnlock()
 		return true, false
 	}
 
@@ -151,17 +148,12 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 		}
 	}
 
-	s.mu.RUnlock()
-
 	s.close()
 
-	return true, complete
+	return true, true
 }
 
 func (s *session) close() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if s.closed {
 		return
 	}
@@ -311,7 +303,10 @@ func (m *SessionManager) Delete(sid uint64) {
 	defer m.mu.Unlock()
 
 	if session, ok := m.m[sid]; ok {
+		session.mu.Lock()
 		session.close()
+		session.mu.Unlock()
+
 		m.tq.Remove(sid)
 		delete(m.m, sid)
 	}
@@ -329,7 +324,10 @@ func (m *SessionManager) Cleanup() {
 			continue
 		}
 
+		session.mu.Lock()
 		session.close()
+		session.mu.Unlock()
+
 		m.tq.Remove(sid)
 		allSid[i] = sid
 		i++
