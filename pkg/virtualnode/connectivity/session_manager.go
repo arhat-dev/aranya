@@ -101,7 +101,6 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 			complete = s.seqQ.SetMaxSeq(msg.Seq)
 		}
 
-		checkedMsgData := false
 		// handle ordered data chunks
 		for _, ck := range orderedChunks {
 			data := ck.(*Data)
@@ -111,14 +110,11 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 				// is stream data, send directly
 				s.msgCh <- data
 			default:
-				checkedMsgData = true
 				// is message data, collect until complete
 				// message data can be the last several data chunks in a stream
-				if data.Kind != msg.Kind {
-					// invalid message data chunk, discard
-					continue
-				}
-
+				// if there are multiple message data chunks with different types
+				// usually will cause unmarshal error, so we don't take care of
+				// it here
 				if s.msgBuffer == nil {
 					s.msgBuffer = new(bytes.Buffer)
 				}
@@ -134,7 +130,7 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 
 		// session complete, no more message shall be sent through this session
 
-		if checkedMsgData {
+		if s.msgBuffer != nil {
 			s.msgCh <- &aranyagopb.Msg{
 				Kind:      msg.Kind,
 				Sid:       msg.Sid,
