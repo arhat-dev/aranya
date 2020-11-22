@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/pkg/hashhelper"
+	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 )
 
@@ -60,45 +62,72 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 		return false, true
 	}
 
-	var (
-		seq  = msg.Seq
-		kind = msg.Kind
-	)
-
 	// all in one packet, no need to reassemble packets
-	if seq == 0 && msg.Completed {
-		s.msgCh <- msg
+	if msg.Seq == 0 && msg.Completed {
+		switch msg.Kind {
+		case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
+			if log.Log.Enabled(log.LevelVerbose) {
+				log.Log.V("sending complete data",
+					log.Uint64("sid", msg.Sid),
+					log.Int32("kind", int32(msg.Kind)),
+					log.String("md5", hashhelper.MD5SumHex(msg.Payload)),
+				)
+			}
+
+			s.msgCh <- &Data{
+				Kind:    msg.Kind,
+				Payload: msg.Payload,
+			}
+		default:
+			s.msgCh <- msg
+		}
+
 		s.mu.RUnlock()
 
 		s.close()
 		return true, true
 	}
 
-	dataChunks, complete := s.seqQ.Offer(seq, &Data{
-		Kind:    kind,
+	orderedChunks, complete := s.seqQ.Offer(msg.Seq, &Data{
+		Kind:    msg.Kind,
 		Payload: msg.Payload,
 	})
 
 	if msg.Completed {
-		complete = s.seqQ.SetMaxSeq(seq)
+		complete = s.seqQ.SetMaxSeq(msg.Seq)
 	}
 
 	checkedMsgData := false
 	// handle ordered data chunks
-	for _, ck := range dataChunks {
+	for _, ck := range orderedChunks {
 		data := ck.(*Data)
 
 		switch data.Kind {
 		case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
+			if log.Log.Enabled(log.LevelVerbose) {
+				log.Log.V("sending ordered data",
+					log.Uint64("sid", msg.Sid),
+					log.Int32("kind", int32(data.Kind)),
+					log.String("md5", hashhelper.MD5SumHex(data.Payload)),
+				)
+			}
 			// is stream data, send directly
 			s.msgCh <- data
 		default:
 			checkedMsgData = true
 			// is message data, collect until complete
 			// message data can be the last several data chunks in a stream
-			if data.Kind != kind {
+			if data.Kind != msg.Kind {
 				// invalid message data chunk, discard
 				continue
+			}
+
+			if log.Log.Enabled(log.LevelVerbose) {
+				log.Log.V("writing message chunk",
+					log.Uint64("sid", msg.Sid),
+					log.Int32("kind", int32(data.Kind)),
+					log.String("md5", hashhelper.MD5SumHex(data.Payload)),
+				)
 			}
 
 			s.msgBuffer.Write(data.Payload)
@@ -114,7 +143,7 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 
 	if checkedMsgData {
 		s.msgCh <- &aranyagopb.Msg{
-			Kind:      kind,
+			Kind:      msg.Kind,
 			Sid:       msg.Sid,
 			Seq:       0,
 			Completed: true,
@@ -337,6 +366,6 @@ func (m *SessionManager) Remains() []uint64 {
 	return result
 }
 
-func (m *SessionManager) TimeoutRemains() []queue.TimeoutData {
+func (m *SessionManager) TimedRemains() []queue.TimeoutData {
 	return m.tq.Remains()
 }
