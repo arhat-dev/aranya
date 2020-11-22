@@ -266,7 +266,7 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 		// is runtime pod port-forward
 		data, err := pfCmd.Marshal()
 		if err != nil {
-			s.writeErr(fmt.Sprintf("failed to marshal port-forward options: %v", err))
+			s.close(fmt.Sprintf("failed to marshal port-forward options: %v", err))
 			return
 		}
 
@@ -279,16 +279,17 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 
 	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, kind, cmd)
 	if err != nil {
-		s.writeErr(fmt.Sprintf("failed to create port-forward session: %v", err))
+		s.close(fmt.Sprintf("failed to create port-forward session: %v", err))
 		return
 	}
 
-	var seq uint64
 	go func() {
+		var seq uint64
+
 		defer func() {
 			_, _, _, err2 := m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
 			if err2 != nil {
-				s.writeErr(fmt.Sprintf("failed to post port-forward read close cmd: %v", err2))
+				s.close(fmt.Sprintf("failed to post port-forward read close cmd: %v", err2))
 			}
 		}()
 
@@ -305,7 +306,7 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 			data, shouldCopy, err2 := r.Read(constant.PortForwardStreamReadTimeout, buf)
 			if err2 != nil {
 				if len(data) == 0 && err2 != iohelper.ErrDeadlineExceeded {
-					break
+					return
 				}
 			}
 
@@ -319,23 +320,23 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 			)
 
 			if err2 != nil {
-				s.writeErr(err2.Error())
+				s.close(err2.Error())
 			}
 		}
 	}()
 
 	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		if msgErr := msg.GetError(); msgErr != nil {
-			s.writeErr(msgErr.Error())
+			s.close(msgErr.Description)
 		} else {
-			s.writeErr(fmt.Sprintf("unexpected non data msg in session %d", sid))
+			s.close(fmt.Sprintf("unexpected non data msg %s in session %d", msg.Kind.String(), sid))
 		}
 
-		return false
+		return true
 	}, func(dataMsg *connectivity.Data) (exit bool) {
 		_, err2 := s.data.Write(dataMsg.Payload)
 		if err2 != nil && !errors.Is(err2, io.EOF) {
-			s.writeErr(err2.Error())
+			s.close(err2.Error())
 			return true
 		}
 
@@ -356,6 +357,7 @@ type stream struct {
 
 func (s *stream) prepared() bool {
 	// s.podUID can be empty (for host port-forward)
+	// s.protocol can be empty (default to tcp)
 	return s.data != nil && s.error != nil && s.port > 0
 }
 
