@@ -65,9 +65,9 @@ const (
 )
 
 const (
-	DefaultInteractiveStreamReadTimeout    = 20 * time.Millisecond
-	DefaultNonInteractiveStreamReadTimeout = 200 * time.Millisecond
-	DefaultPortForwardStreamReadTimeout    = 50 * time.Millisecond
+	InteractiveStreamReadTimeout    = 20 * time.Millisecond
+	NonInteractiveStreamReadTimeout = 200 * time.Millisecond
+	PortForwardStreamReadTimeout    = 50 * time.Millisecond
 )
 
 // Default channel size

@@ -456,43 +456,52 @@ func (m *Manager) doServeTerminalStream(
 		}
 
 		go func() {
-			for size := range resizeCh {
-				resizeCmd := &aranyagopb.TerminalResizeCmd{
-					Cols: uint32(size.Width),
-					Rows: uint32(size.Height),
-				}
+			for {
+				select {
+				case size, ok := <-resizeCh:
+					if !ok {
+						return
+					}
 
-				var cmd proto.Marshaler
-				switch resizeCmdKind {
-				case aranyagopb.CMD_RUNTIME:
-					data, err2 := resizeCmd.Marshal()
+					resizeCmd := &aranyagopb.TerminalResizeCmd{
+						Cols: uint32(size.Width),
+						Rows: uint32(size.Height),
+					}
+
+					var cmd proto.Marshaler
+					switch resizeCmdKind {
+					case aranyagopb.CMD_RUNTIME:
+						data, err2 := resizeCmd.Marshal()
+						if err2 != nil {
+							logger.I("failed to marshal tty resize command", log.Error(err2))
+							continue
+						}
+
+						cmd = &runtimepb.Packet{
+							Kind:    runtimepb.CMD_TTY_RESIZE,
+							Payload: data,
+						}
+					case aranyagopb.CMD_TTY_RESIZE:
+						cmd = resizeCmd
+					}
+
+					_, _, err2 := m.ConnectivityManager.PostCmd(
+						sid, resizeCmdKind, cmd,
+					)
 					if err2 != nil {
-						logger.I("failed to marshal tty resize command", log.Error(err2))
-						continue
+						logger.I("failed to post resize cmd", log.Error(err2))
 					}
-
-					cmd = &runtimepb.Packet{
-						Kind:    runtimepb.CMD_TTY_RESIZE,
-						Payload: data,
-					}
-				case aranyagopb.CMD_TTY_RESIZE:
-					cmd = resizeCmd
-				}
-
-				_, _, err2 := m.ConnectivityManager.PostCmd(
-					sid, resizeCmdKind, cmd,
-				)
-				if err2 != nil {
-					logger.I("failed to post resize cmd", log.Error(err2))
+				case <-ctx.Done():
+					return
 				}
 			}
 		}()
 	}
 
 	if stdin != nil {
-		readTimeout := constant.DefaultNonInteractiveStreamReadTimeout
+		readTimeout := constant.NonInteractiveStreamReadTimeout
 		if resizeCh != nil {
-			readTimeout = constant.DefaultInteractiveStreamReadTimeout
+			readTimeout = constant.InteractiveStreamReadTimeout
 		}
 
 		seq := uint64(0)
@@ -548,27 +557,22 @@ func (m *Manager) doServeTerminalStream(
 			err = msgErr
 		}
 
-		// unwanted message
+		// unwanted message, this session is not valid anymore
 		return true
-	}, func(dataMsg *connectivity.Data) (exit bool) {
+	}, func(data *connectivity.Data) (exit bool) {
 		// default send to stdout
-		targetOutput := stdout
-		if dataMsg.Kind == aranyagopb.MSG_DATA_STDERR && stderr != nil {
-			targetOutput = stderr
+		output := stdout
+		if data.Kind == aranyagopb.MSG_DATA_STDERR && stderr != nil {
+			output = stderr
 		}
 
-		_, err = targetOutput.Write(dataMsg.Payload)
+		_, err = output.Write(data.Payload)
 		if err != nil && err != io.EOF {
 			logger.I("failed to write output", log.Error(err))
 			return true
 		}
 		return false
-	}, func(u interface{}) bool {
-		logger.I("unknown message type", log.Any("msg", u))
-
-		// unexpected message, close read routine
-		return true
-	})
+	}, connectivity.LogUnknownMessage(logger))
 
 	return err
 }

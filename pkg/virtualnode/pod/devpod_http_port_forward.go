@@ -299,9 +299,10 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 		if bufSize > constant.MaxBufSize {
 			bufSize = constant.MaxBufSize
 		}
+
 		buf := make([]byte, bufSize)
 		for r.WaitForData(ctx.Done()) {
-			data, shouldCopy, err2 := r.Read(constant.DefaultPortForwardStreamReadTimeout, buf)
+			data, shouldCopy, err2 := r.Read(constant.PortForwardStreamReadTimeout, buf)
 			if err2 != nil {
 				if len(data) == 0 && err2 != iohelper.ErrDeadlineExceeded {
 					break
