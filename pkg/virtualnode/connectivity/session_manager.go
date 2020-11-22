@@ -18,7 +18,9 @@ package connectivity
 
 import (
 	"bytes"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
@@ -35,122 +37,144 @@ func newSession(epoch uint64, isStream bool) *session {
 		closed: false,
 		msgCh:  make(chan interface{}, 1),
 
-		msgBuffer: new(bytes.Buffer),
-		seqQ:      queue.NewSeqQueue(),
-		mu:        new(sync.Mutex),
+		// initialized when necessary
+		msgBuffer: nil,
+		seqQ:      nil,
 	}
 }
 
 type session struct {
-	epoch    uint64
-	isStream bool
-
-	closed bool
-	msgCh  chan interface{}
-
+	epoch     uint64
+	msgCh     chan interface{}
 	msgBuffer *bytes.Buffer
 	seqQ      *queue.SeqQueue
-	mu        *sync.Mutex
+
+	working  uint32
+	isStream bool
+	closed   bool
+}
+
+func (s *session) doExclusive(f func()) {
+	for !atomic.CompareAndSwapUint32(&s.working, 0, 1) {
+		runtime.Gosched()
+	}
+
+	f()
+
+	atomic.StoreUint32(&s.working, 0)
 }
 
 func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.doExclusive(func() {
+		if s.closed {
+			// session closed, no message shall be delivered
+			delivered, complete = false, true
+			return
+		}
 
-	if s.closed {
-		// session closed, no message shall be delivered
-		return false, true
-	}
+		// all in one packet, no need to reassemble packets
+		if msg.Seq == 0 && msg.Completed {
+			switch msg.Kind {
+			case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
+				if log.Log.Enabled(log.LevelVerbose) {
+					log.Log.V("sending complete data",
+						log.Uint64("sid", msg.Sid),
+						log.Int32("kind", int32(msg.Kind)),
+						log.String("md5", hashhelper.MD5SumHex(msg.Payload)),
+					)
+				}
 
-	// all in one packet, no need to reassemble packets
-	if msg.Seq == 0 && msg.Completed {
-		switch msg.Kind {
-		case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
-			if log.Log.Enabled(log.LevelVerbose) {
-				log.Log.V("sending complete data",
-					log.Uint64("sid", msg.Sid),
-					log.Int32("kind", int32(msg.Kind)),
-					log.String("md5", hashhelper.MD5SumHex(msg.Payload)),
-				)
+				s.msgCh <- &Data{
+					Kind:    msg.Kind,
+					Payload: msg.Payload,
+				}
+			default:
+				s.msgCh <- msg
 			}
 
-			s.msgCh <- &Data{
-				Kind:    msg.Kind,
-				Payload: msg.Payload,
+			s.close()
+			delivered, complete = true, true
+			return
+		}
+
+		if s.seqQ == nil {
+			s.seqQ = queue.NewSeqQueue()
+		}
+
+		var orderedChunks []interface{}
+		orderedChunks, complete = s.seqQ.Offer(msg.Seq, &Data{
+			Kind:    msg.Kind,
+			Payload: msg.Payload,
+		})
+
+		if msg.Completed {
+			complete = s.seqQ.SetMaxSeq(msg.Seq)
+		}
+
+		checkedMsgData := false
+		// handle ordered data chunks
+		for _, ck := range orderedChunks {
+			data := ck.(*Data)
+
+			switch data.Kind {
+			case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
+				if log.Log.Enabled(log.LevelVerbose) {
+					log.Log.V("sending ordered data",
+						log.Uint64("sid", msg.Sid),
+						log.Int32("kind", int32(data.Kind)),
+						log.String("md5", hashhelper.MD5SumHex(data.Payload)),
+					)
+				}
+				// is stream data, send directly
+				s.msgCh <- data
+			default:
+				checkedMsgData = true
+				// is message data, collect until complete
+				// message data can be the last several data chunks in a stream
+				if data.Kind != msg.Kind {
+					// invalid message data chunk, discard
+					continue
+				}
+
+				if log.Log.Enabled(log.LevelVerbose) {
+					log.Log.V("writing message chunk",
+						log.Uint64("sid", msg.Sid),
+						log.Int32("kind", int32(data.Kind)),
+						log.String("md5", hashhelper.MD5SumHex(data.Payload)),
+					)
+				}
+
+				if s.msgBuffer == nil {
+					s.msgBuffer = new(bytes.Buffer)
+				}
+
+				s.msgBuffer.Write(data.Payload)
 			}
-		default:
-			s.msgCh <- msg
+		}
+
+		if !complete {
+			delivered = true
+			return
+		}
+
+		// session complete, no more message shall be sent through this session
+
+		if checkedMsgData {
+			s.msgCh <- &aranyagopb.Msg{
+				Kind:      msg.Kind,
+				Sid:       msg.Sid,
+				Seq:       0,
+				Completed: true,
+				Payload:   s.msgBuffer.Bytes(),
+			}
 		}
 
 		s.close()
-		return true, true
-	}
 
-	orderedChunks, complete := s.seqQ.Offer(msg.Seq, &Data{
-		Kind:    msg.Kind,
-		Payload: msg.Payload,
+		delivered = true
 	})
 
-	if msg.Completed {
-		complete = s.seqQ.SetMaxSeq(msg.Seq)
-	}
-
-	checkedMsgData := false
-	// handle ordered data chunks
-	for _, ck := range orderedChunks {
-		data := ck.(*Data)
-
-		switch data.Kind {
-		case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
-			if log.Log.Enabled(log.LevelVerbose) {
-				log.Log.V("sending ordered data",
-					log.Uint64("sid", msg.Sid),
-					log.Int32("kind", int32(data.Kind)),
-					log.String("md5", hashhelper.MD5SumHex(data.Payload)),
-				)
-			}
-			// is stream data, send directly
-			s.msgCh <- data
-		default:
-			checkedMsgData = true
-			// is message data, collect until complete
-			// message data can be the last several data chunks in a stream
-			if data.Kind != msg.Kind {
-				// invalid message data chunk, discard
-				continue
-			}
-
-			if log.Log.Enabled(log.LevelVerbose) {
-				log.Log.V("writing message chunk",
-					log.Uint64("sid", msg.Sid),
-					log.Int32("kind", int32(data.Kind)),
-					log.String("md5", hashhelper.MD5SumHex(data.Payload)),
-				)
-			}
-
-			s.msgBuffer.Write(data.Payload)
-		}
-	}
-
-	if !complete {
-		return true, false
-	}
-
-	// session complete, no more message shall be sent through this session
-
-	if checkedMsgData {
-		s.msgCh <- &aranyagopb.Msg{
-			Kind:      msg.Kind,
-			Sid:       msg.Sid,
-			Seq:       0,
-			Completed: true,
-			Payload:   s.msgBuffer.Bytes(),
-		}
-	}
-
-	s.close()
-
-	return true, true
+	return delivered, complete
 }
 
 func (s *session) close() {
@@ -159,7 +183,13 @@ func (s *session) close() {
 	}
 
 	s.closed = true
-	s.msgBuffer.Reset()
+	if s.msgBuffer != nil {
+		s.msgBuffer.Reset()
+		s.msgBuffer = nil
+	}
+
+	s.seqQ = nil
+
 	if s.msgCh != nil {
 		close(s.msgCh)
 		s.msgCh = nil
@@ -303,9 +333,7 @@ func (m *SessionManager) Delete(sid uint64) {
 	defer m.mu.Unlock()
 
 	if session, ok := m.m[sid]; ok {
-		session.mu.Lock()
-		session.close()
-		session.mu.Unlock()
+		session.doExclusive(session.close)
 
 		m.tq.Remove(sid)
 		delete(m.m, sid)
@@ -324,9 +352,7 @@ func (m *SessionManager) Cleanup() {
 			continue
 		}
 
-		session.mu.Lock()
-		session.close()
-		session.mu.Unlock()
+		session.doExclusive(session.close)
 
 		m.tq.Remove(sid)
 		allSid[i] = sid
