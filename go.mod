@@ -3,11 +3,11 @@ module arhat.dev/aranya
 go 1.15
 
 require (
-	arhat.dev/abbot-proto v0.1.0
-	arhat.dev/aranya-proto v0.2.5
-	arhat.dev/pkg v0.4.4
+	arhat.dev/abbot-proto v0.1.1
+	arhat.dev/aranya-proto v0.2.6
+	arhat.dev/pkg v0.4.5
 	cloud.google.com/go/pubsub v1.3.1
-	ext.arhat.dev/runtimeutil v0.2.4
+	ext.arhat.dev/runtimeutil v0.2.5
 	github.com/Azure/azure-amqp-common-go/v3 v3.0.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.0
 	github.com/Azure/azure-sdk-for-go v45.1.0+incompatible // indirect
@@ -43,9 +43,9 @@ require (
 	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.6.1
 	go.uber.org/multierr v1.6.0
-	golang.org/x/crypto v0.0.0-20201112155050-0c6587e931a9
+	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
-	golang.org/x/tools v0.0.0-20201114224030-61ea331ec02b // indirect
+	golang.org/x/tools v0.0.0-20201125231158-b5590deeca9b // indirect
 	google.golang.org/api v0.32.0
 	google.golang.org/genproto v0.0.0-20201026171402-d4b8fe4fd877 // indirect
 	google.golang.org/grpc v1.33.2
@@ -111,15 +111,15 @@ replace (
 
 // go experimental
 replace (
-	golang.org/x/crypto => github.com/golang/crypto v0.0.0-20201112155050-0c6587e931a9
+	golang.org/x/crypto => github.com/golang/crypto v0.0.0-20201124201722-c8d3bf9c5392
 	golang.org/x/exp => github.com/golang/exp v0.0.0-20201008143054-e3b2a7f2fdc7
 	golang.org/x/lint => github.com/golang/lint v0.0.0-20200302205851-738671d3881b
 	golang.org/x/net => github.com/golang/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/oauth2 => github.com/golang/oauth2 v0.0.0-20201109201403-9fd604954f58
 	golang.org/x/sync => github.com/golang/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys => github.com/golang/sys v0.0.0-20201113233024-12cec1faf1ba
-	golang.org/x/text => github.com/golang/text v0.3.2
-	golang.org/x/tools => github.com/golang/tools v0.0.0-20201114224030-61ea331ec02b
+	golang.org/x/sys => github.com/golang/sys v0.0.0-20201126233918-771906719818
+	golang.org/x/text => github.com/golang/text v0.3.4
+	golang.org/x/tools => github.com/golang/tools v0.0.0-20201125231158-b5590deeca9b
 	golang.org/x/xerrors => github.com/golang/xerrors v0.0.0-20200804184101-5ec99f83aff1
 )
 

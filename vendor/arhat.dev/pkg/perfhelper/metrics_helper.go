@@ -25,10 +25,10 @@ import (
 	"time"
 
 	prom "github.com/prometheus/client_golang/prometheus"
-	otapiglobal "go.opentelemetry.io/otel/api/global"
-	otapimetric "go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	otprom "go.opentelemetry.io/otel/exporters/metric/prometheus"
 	otexporterotlp "go.opentelemetry.io/otel/exporters/otlp"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	otsdkmetricspull "go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -36,13 +36,13 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-func (c *MetricsConfig) CreateIfEnabled(setGlobal bool) (otapimetric.MeterProvider, http.Handler, error) {
+func (c *MetricsConfig) CreateIfEnabled(setGlobal bool) (otelmetric.MeterProvider, http.Handler, error) {
 	if !c.Enabled {
 		return nil, nil, nil
 	}
 
 	var (
-		metricsProvider otapimetric.MeterProvider
+		metricsProvider otelmetric.MeterProvider
 		httpHandler     http.Handler
 	)
 
@@ -96,7 +96,7 @@ func (c *MetricsConfig) CreateIfEnabled(setGlobal bool) (otapimetric.MeterProvid
 	}
 
 	if setGlobal {
-		otapiglobal.SetMeterProvider(metricsProvider)
+		otel.SetMeterProvider(metricsProvider)
 	}
 
 	return metricsProvider, httpHandler, nil

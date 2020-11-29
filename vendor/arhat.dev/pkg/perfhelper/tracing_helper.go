@@ -20,30 +20,31 @@ limitations under the License.
 package perfhelper
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
 	"time"
 
-	otapiglobal "go.opentelemetry.io/otel/api/global"
-	otapitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	otexporterotlp "go.opentelemetry.io/otel/exporters/otlp"
 	otexporterjaeger "go.opentelemetry.io/otel/exporters/trace/jaeger"
 	otexporterzipkin "go.opentelemetry.io/otel/exporters/trace/zipkin"
 	otsdkresource "go.opentelemetry.io/otel/sdk/resource"
 	otsdktrace "go.opentelemetry.io/otel/sdk/trace"
 	otsemconv "go.opentelemetry.io/otel/semconv"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/credentials"
 )
 
-func (c *TracingConfig) CreateIfEnabled(setGlobal bool, client *http.Client) (otapitrace.TracerProvider, error) {
+func (c *TracingConfig) CreateIfEnabled(setGlobal bool, client *http.Client) (oteltrace.TracerProvider, error) {
 	if !c.Enabled {
 		return nil, nil
 	}
 
 	var (
-		traceProvider otapitrace.TracerProvider
+		traceProvider oteltrace.TracerProvider
 	)
 
 	tlsConfig, err := c.TLS.GetTLSConfig(true)
@@ -63,29 +64,33 @@ func (c *TracingConfig) CreateIfEnabled(setGlobal bool, client *http.Client) (ot
 			opts = append(opts, otexporterotlp.WithInsecure())
 		}
 
-		var exporter *otexporterotlp.Exporter
-		exporter, err = otexporterotlp.NewExporter(opts...)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create otlp exporter: %w", err)
+		exporter, err2 := otexporterotlp.NewExporter(opts...)
+		if err2 != nil {
+			return nil, fmt.Errorf("failed to create otlp exporter: %w", err2)
 		}
 
 		bsp := otsdktrace.NewBatchSpanProcessor(exporter)
 
-		otsdktrace.WithResource(otsdkresource.New(otsemconv.ServiceNameKey.String(c.ServiceName)))
+		svcNameRes, err2 := otsdkresource.New(context.TODO(),
+			otsdkresource.WithAttributes(otsemconv.ServiceNameKey.String(c.ServiceName)),
+		)
+		if err2 != nil {
+			return nil, fmt.Errorf("failed to create service name resource: %w", err2)
+		}
+
 		traceProvider = otsdktrace.NewTracerProvider(
+			otsdktrace.WithResource(svcNameRes),
 			otsdktrace.WithConfig(otsdktrace.Config{DefaultSampler: otsdktrace.TraceIDRatioBased(c.SampleRate)}),
 			otsdktrace.WithSyncer(exporter),
 			otsdktrace.WithSpanProcessor(bsp),
 		)
 	case "zipkin":
-		var exporter *otexporterzipkin.Exporter
-
-		exporter, err = otexporterzipkin.NewRawExporter(c.Endpoint, c.ServiceName,
+		exporter, err2 := otexporterzipkin.NewRawExporter(c.Endpoint, c.ServiceName,
 			otexporterzipkin.WithClient(c.newHTTPClient(client, tlsConfig)),
 			otexporterzipkin.WithLogger(nil),
 		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create zipkin exporter: %w", err)
+		if err2 != nil {
+			return nil, fmt.Errorf("failed to create zipkin exporter: %w", err2)
 		}
 
 		traceProvider = otsdktrace.NewTracerProvider(
@@ -135,7 +140,7 @@ func (c *TracingConfig) CreateIfEnabled(setGlobal bool, client *http.Client) (ot
 	}
 
 	if setGlobal {
-		otapiglobal.SetTracerProvider(traceProvider)
+		otel.SetTracerProvider(traceProvider)
 	}
 
 	return traceProvider, nil

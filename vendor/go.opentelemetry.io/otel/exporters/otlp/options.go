@@ -12,20 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp
+package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
 
 import (
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 const (
+	// DefaultCollectorPort is the port the Exporter will attempt connect to
+	// if no collector port is provided.
 	DefaultCollectorPort uint16 = 55680
+	// DefaultCollectorHost is the host address the Exporter will attempt
+	// connect to if no collector address is provided.
 	DefaultCollectorHost string = "localhost"
-	DefaultNumWorkers    uint   = 1
-
+	// DefaultGRPCServiceConfig is the gRPC service config used if none is
+	// provided by the user.
+	//
 	// For more info on gRPC service configs:
 	// https://github.com/grpc/proposal/blob/master/A6-client-retries.md
 	//
@@ -61,6 +68,7 @@ const (
 }`
 )
 
+// ExporterOption are setting options passed to an Exporter on creation.
 type ExporterOption func(*config)
 
 type config struct {
@@ -72,17 +80,7 @@ type config struct {
 	grpcDialOptions    []grpc.DialOption
 	headers            map[string]string
 	clientCredentials  credentials.TransportCredentials
-	numWorkers         uint
-}
-
-// WorkerCount sets the number of Goroutines to use when processing telemetry.
-func WorkerCount(n uint) ExporterOption {
-	if n == 0 {
-		n = DefaultNumWorkers
-	}
-	return func(cfg *config) {
-		cfg.numWorkers = n
-	}
+	exportKindSelector metricsdk.ExportKindSelector
 }
 
 // WithInsecure disables client transport security for the exporter's gRPC connection
@@ -153,5 +151,13 @@ func WithGRPCServiceConfig(serviceConfig string) ExporterOption {
 func WithGRPCDialOption(opts ...grpc.DialOption) ExporterOption {
 	return func(cfg *config) {
 		cfg.grpcDialOptions = opts
+	}
+}
+
+// WithMetricExportKindSelector defines the ExportKindSelector used for selecting
+// AggregationTemporality (i.e., Cumulative vs. Delta aggregation).
+func WithMetricExportKindSelector(selector metricsdk.ExportKindSelector) ExporterOption {
+	return func(cfg *config) {
+		cfg.exportKindSelector = selector
 	}
 }

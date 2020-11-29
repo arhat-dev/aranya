@@ -18,10 +18,10 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -129,9 +129,9 @@ func status(status codes.Code, message string) *tracepb.Status {
 	var c tracepb.Status_StatusCode
 	switch status {
 	case codes.Error:
-		c = tracepb.Status_UnknownError
+		c = tracepb.Status_STATUS_CODE_ERROR
 	default:
-		c = tracepb.Status_Ok
+		c = tracepb.Status_STATUS_CODE_OK
 	}
 	return &tracepb.Status{
 		Code:    c,
@@ -140,7 +140,7 @@ func status(status codes.Code, message string) *tracepb.Status {
 }
 
 // links transforms span Links to OTLP span links.
-func links(links []apitrace.Link) []*tracepb.Span_Link {
+func links(links []trace.Link) []*tracepb.Span_Link {
 	if len(links) == 0 {
 		return nil
 	}
@@ -193,18 +193,18 @@ func spanEvents(es []export.Event) []*tracepb.Span_Event {
 }
 
 // spanKind transforms a SpanKind to an OTLP span kind.
-func spanKind(kind apitrace.SpanKind) tracepb.Span_SpanKind {
+func spanKind(kind trace.SpanKind) tracepb.Span_SpanKind {
 	switch kind {
-	case apitrace.SpanKindInternal:
-		return tracepb.Span_INTERNAL
-	case apitrace.SpanKindClient:
-		return tracepb.Span_CLIENT
-	case apitrace.SpanKindServer:
-		return tracepb.Span_SERVER
-	case apitrace.SpanKindProducer:
-		return tracepb.Span_PRODUCER
-	case apitrace.SpanKindConsumer:
-		return tracepb.Span_CONSUMER
+	case trace.SpanKindInternal:
+		return tracepb.Span_SPAN_KIND_INTERNAL
+	case trace.SpanKindClient:
+		return tracepb.Span_SPAN_KIND_CLIENT
+	case trace.SpanKindServer:
+		return tracepb.Span_SPAN_KIND_SERVER
+	case trace.SpanKindProducer:
+		return tracepb.Span_SPAN_KIND_PRODUCER
+	case trace.SpanKindConsumer:
+		return tracepb.Span_SPAN_KIND_CONSUMER
 	default:
 		return tracepb.Span_SPAN_KIND_UNSPECIFIED
 	}

@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// code in this package is mostly copied from contrib.go.opencensus.io/exporter/ocagent/connection.go
-package otlp
+package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
+
+// This code was based on
+// contrib.go.opencensus.io/exporter/ocagent/connection.go
 
 import (
 	"context"
@@ -27,14 +29,16 @@ import (
 
 	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
-
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
+	"go.opentelemetry.io/otel/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
+// Exporter is an OpenTelemetry exporter. It exports both traces and metrics
+// from OpenTelemetry instrumented to code using OpenTelemetry protocol
+// buffers to a configurable receiver.
 type Exporter struct {
 	// mu protects the non-atomic and non-channel variables
 	mu sync.RWMutex
@@ -47,7 +51,8 @@ type Exporter struct {
 	lastConnectErrPtr unsafe.Pointer
 
 	startOnce      sync.Once
-	stopCh         chan bool
+	stopOnce       sync.Once
+	stopCh         chan struct{}
 	disconnectedCh chan bool
 
 	backgroundConnectionDoneCh chan bool
@@ -63,8 +68,12 @@ var _ metricsdk.Exporter = (*Exporter)(nil)
 // any ExporterOptions provided.
 func newConfig(opts ...ExporterOption) config {
 	cfg := config{
-		numWorkers:        DefaultNumWorkers,
 		grpcServiceConfig: DefaultGRPCServiceConfig,
+
+		// Note: the default ExportKindSelector is specified
+		// as Cumulative:
+		// https://github.com/open-telemetry/opentelemetry-specification/issues/731
+		exportKindSelector: metricsdk.CumulativeExportKindSelector(),
 	}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -88,9 +97,6 @@ func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 	if len(e.c.headers) > 0 {
 		e.metadata = metadata.New(e.c.headers)
 	}
-
-	// TODO (rghetia): add resources
-
 	return e
 }
 
@@ -113,7 +119,7 @@ func (e *Exporter) Start() error {
 		e.mu.Lock()
 		e.started = true
 		e.disconnectedCh = make(chan bool, 1)
-		e.stopCh = make(chan bool)
+		e.stopCh = make(chan struct{})
 		e.backgroundConnectionDoneCh = make(chan bool)
 		e.mu.Unlock()
 
@@ -200,7 +206,7 @@ func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 }
 
 // closeStopCh is used to wrap the exporters stopCh channel closing for testing.
-var closeStopCh = func(stopCh chan bool) {
+var closeStopCh = func(stopCh chan struct{}) {
 	close(stopCh)
 }
 
@@ -217,23 +223,26 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	}
 
 	var err error
-	if cc != nil {
-		// Clean things up before checking this error.
-		err = cc.Close()
-	}
 
-	// At this point we can change the state variable started
-	e.mu.Lock()
-	e.started = false
-	e.mu.Unlock()
-	closeStopCh(e.stopCh)
+	e.stopOnce.Do(func() {
+		if cc != nil {
+			// Clean things up before checking this error.
+			err = cc.Close()
+		}
 
-	// Ensure that the backgroundConnector returns
-	select {
-	case <-e.backgroundConnectionDoneCh:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+		// At this point we can change the state variable started
+		e.mu.Lock()
+		e.started = false
+		e.mu.Unlock()
+		closeStopCh(e.stopCh)
+
+		// Ensure that the backgroundConnector returns
+		select {
+		case <-e.backgroundConnectionDoneCh:
+		case <-ctx.Done():
+			err = ctx.Err()
+		}
+	})
 
 	return err
 }
@@ -253,7 +262,10 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 		}
 	}(ctx, cancel)
 
-	rms, err := transform.CheckpointSet(ctx, e, cps, e.c.numWorkers)
+	// Hardcode the number of worker goroutines to 1. We later will
+	// need to see if there's a way to adjust that number for longer
+	// running operations.
+	rms, err := transform.CheckpointSet(ctx, e, cps, 1)
 	if err != nil {
 		return err
 	}
@@ -280,10 +292,13 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 	return nil
 }
 
-func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) metricsdk.ExportKind {
-	return metricsdk.PassThroughExporter
+// ExportKindFor reports back to the OpenTelemetry SDK sending this Exporter
+// metric telemetry that it needs to be provided in a cumulative format.
+func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) metricsdk.ExportKind {
+	return e.c.exportKindSelector.ExportKindFor(desc, kind)
 }
 
+// ExportSpans exports a batch of SpanData.
 func (e *Exporter) ExportSpans(ctx context.Context, sds []*tracesdk.SpanData) error {
 	return e.uploadTraces(ctx, sds)
 }

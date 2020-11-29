@@ -18,8 +18,8 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/metric/registry"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
@@ -60,7 +60,7 @@ func New(checkpointer export.Checkpointer, options ...Option) *Controller {
 	}
 	accum := sdk.NewAccumulator(
 		checkpointer,
-		sdk.WithResource(config.Resource),
+		config.Resource,
 	)
 	return &Controller{
 		accumulator:  accum,

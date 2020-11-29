@@ -12,5 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package otlp contains an OpenTelemetry tracing exporter for OpenTelemetry Collector.
+// Package otlp contains an exporter for the OpenTelemetry protocol buffers.
+//
+// This package is currently in a pre-GA phase. Backwards incompatible changes
+// may be introduced in subsequent minor version releases as we work to track
+// the evolving OpenTelemetry specification and user feedback.
 package otlp // import "go.opentelemetry.io/otel/exporters/otlp"

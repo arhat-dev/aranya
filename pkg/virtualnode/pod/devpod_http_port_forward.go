@@ -30,6 +30,7 @@ import (
 	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya-proto/aranyagopb/runtimepb"
 	"arhat.dev/pkg/iohelper"
+	"arhat.dev/pkg/log"
 	"github.com/gogo/protobuf/proto"
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/apimachinery/pkg/util/httpstream/spdy"
@@ -190,6 +191,8 @@ func (m *Manager) handleHTTPPortForward(
 			s, hasStreamPair := streamPairs[reqID]
 			if !hasStreamPair {
 				s = &stream{
+					reqID: reqID,
+
 					creationFailAt: time.Now().Add(streamCreationTimeout),
 					podUID:         podUID,
 					protocol:       "tcp",
@@ -232,11 +235,13 @@ func (m *Manager) handleNewHTTPStream(ctx context.Context, wg *sync.WaitGroup, s
 		return nil
 	}
 
+	logger := m.Log.WithFields(log.String("id", s.reqID))
 	wg.Add(1)
 	go func() {
 		defer func() {
 			wg.Done()
 
+			logger.D("stream finished")
 			s.close("")
 		}()
 
@@ -345,6 +350,8 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 }
 
 type stream struct {
+	reqID string
+
 	creationFailAt time.Time
 
 	podUID   string

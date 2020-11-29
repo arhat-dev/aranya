@@ -38,6 +38,8 @@ const (
 
 	// max CoAP message (will split into chunks)
 	MaxCoAPDataSize = 64 * 1024
+
+	MaxNatsDataSize = 1024 * 1024
 )
 
 const (
@@ -68,4 +70,8 @@ func AMQPTopics(ns string) (cmdTopic, msgTopic, statusTopic string) {
 		return ns + "." + s
 	}
 	return join("cmd"), join("msg"), join("status")
+}
+
+func NatsTopics(ns string) (cmdTopic, msgTopic, statusTopic string) {
+	return AMQPTopics(ns)
 }
