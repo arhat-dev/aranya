@@ -50,7 +50,7 @@ require (
 	google.golang.org/genproto v0.0.0-20201026171402-d4b8fe4fd877 // indirect
 	google.golang.org/grpc v1.33.2
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
-	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	k8s.io/api v0.19.4
 	k8s.io/apimachinery v0.19.4
 	k8s.io/apiserver v0.19.4
@@ -96,7 +96,8 @@ replace (
 	google.golang.org/api => google.golang.org/api v0.21.0
 	google.golang.org/appengine => google.golang.org/appengine v1.6.6
 	google.golang.org/grpc => github.com/grpc/grpc-go v1.29.1
-	gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 => gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	honnef.co/go/tools => github.com/dominikh/go-tools v0.0.1-2020.1.5
 	vbom.ml/util => github.com/fvbommel/util v0.0.3
 )

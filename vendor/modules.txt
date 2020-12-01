@@ -581,10 +581,10 @@ google.golang.org/protobuf/types/pluginpb
 ## explicit
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
-# gopkg.in/yaml.v2 v2.3.0 => gopkg.in/yaml.v2 v2.3.0
-## explicit
+# gopkg.in/yaml.v2 v2.3.0 => gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2
-# gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+# gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 => gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+## explicit
 gopkg.in/yaml.v3
 # k8s.io/api v0.19.4 => github.com/kubernetes/api v0.19.4
 ## explicit
@@ -1091,7 +1091,8 @@ sigs.k8s.io/yaml
 # google.golang.org/api => google.golang.org/api v0.21.0
 # google.golang.org/appengine => google.golang.org/appengine v1.6.6
 # google.golang.org/grpc => github.com/grpc/grpc-go v1.29.1
-# gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.3.0
+# gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.4.0
+# gopkg.in/yaml.v3 => gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 # honnef.co/go/tools => github.com/dominikh/go-tools v0.0.1-2020.1.5
 # vbom.ml/util => github.com/fvbommel/util v0.0.3
 # github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.8.0
