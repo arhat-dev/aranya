@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"arhat.dev/pkg/encodehelper"
 	"arhat.dev/pkg/envhelper"
@@ -107,23 +108,87 @@ func run(appCtx context.Context, config *conf.Config) error {
 		return fmt.Errorf("failed to create kube client from kubeconfig: %w", err)
 	}
 
-	_, mtHandler, err := config.Aranya.Metrics.CreateIfEnabled(true)
+	metricsConfig := config.Aranya.Metrics
+	pprofConfig := config.Aranya.PProf
+
+	_, mtHandler, err := metricsConfig.CreateIfEnabled(true)
 	if err != nil {
 		return fmt.Errorf("failed to create metrics provider: %w", err)
 	}
 
+	pprofHandlers := pprofConfig.CreateHTTPHandlersIfEnabled(true)
+
+	// reuse listen address if pprof and metrics using the same address
+	reuse := false
+	func() {
+		if !metricsConfig.Enabled || !pprofConfig.Enabled {
+			// not enabled
+			return
+		}
+
+		if mtHandler == nil {
+			// only prometheus format requires tcp listen
+			return
+		}
+
+		if metricsConfig.Endpoint != pprofConfig.Listen {
+			// has same listen address
+			return
+		}
+
+		if metricsConfig.HTTPPath == pprofConfig.HTTPPath {
+			// same path, should not reuse
+			return
+		}
+
+		// TODO: compare tls config
+		reuse = true
+	}()
+
 	if mtHandler != nil {
 		mux := http.NewServeMux()
-		mux.Handle(config.Aranya.Metrics.HTTPPath, mtHandler)
+		mux.Handle(metricsConfig.HTTPPath, mtHandler)
+		if reuse {
+			basePath := strings.TrimRight(pprofConfig.HTTPPath, "/")
+			for pprofTarget, handler := range pprofHandlers {
+				mux.Handle(basePath+"/"+pprofTarget, handler)
+			}
+		}
 
-		tlsConfig, err2 := config.Aranya.Metrics.TLS.GetTLSConfig(true)
+		tlsConfig, err2 := metricsConfig.TLS.GetTLSConfig(true)
 		if err2 != nil {
 			return fmt.Errorf("failed to get tls config for metrics listener: %w", err2)
 		}
 
 		srv := &http.Server{
 			Handler:   mux,
-			Addr:      config.Aranya.Metrics.Endpoint,
+			Addr:      metricsConfig.Endpoint,
+			TLSConfig: tlsConfig,
+		}
+
+		go func() {
+			err2 = srv.ListenAndServe()
+			if err2 != nil && !errors.Is(err2, http.ErrServerClosed) {
+				panic(err2)
+			}
+		}()
+	}
+
+	if !reuse {
+		mux := http.NewServeMux()
+		basePath := strings.TrimRight(pprofConfig.HTTPPath, "/")
+		for pprofTarget, handler := range pprofHandlers {
+			mux.Handle(basePath+"/"+pprofTarget, handler)
+		}
+
+		tlsConfig, err2 := pprofConfig.TLS.GetTLSConfig(true)
+		if err2 != nil {
+			return fmt.Errorf("failed to get tls config for pprof listener: %w", err2)
+		}
+
+		srv := &http.Server{
+			Handler:   mux,
+			Addr:      pprofConfig.Listen,
 			TLSConfig: tlsConfig,
 		}
 
