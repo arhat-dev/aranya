@@ -18,6 +18,7 @@ package connectivity
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"arhat.dev/aranya-proto/aranyagopb"
@@ -44,13 +45,19 @@ type GRPCManager struct {
 
 func NewGRPCManager(parentCtx context.Context, name string, mgrConfig *Options) (*GRPCManager, error) {
 	mgr := &GRPCManager{
-		baseManager: newBaseManager(parentCtx, name, mgrConfig),
+		baseManager: nil,
 
 		clientSessions: make(map[string]rpcpb.EdgeDevice_SyncServer),
 
 		listener: mgrConfig.GRPCOpts.Listener,
 		server:   mgrConfig.GRPCOpts.Server,
 	}
+	var err error
+	mgr.baseManager, err = newBaseManager(parentCtx, name, mgrConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create base manager: %w", err)
+	}
+
 	rpcpb.RegisterEdgeDeviceServer(mgrConfig.GRPCOpts.Server, mgr)
 
 	mgr.sendCmd = func(cmd *aranyagopb.Cmd) error {

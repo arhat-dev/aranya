@@ -202,8 +202,11 @@ spec:
                       type: string
                     clientID:
                       type: string
-                    keepalive:
-                      format: int32
+                    keepaliveInterval:
+                      type: string
+                    maxPayloadSize:
+                      description: MaxPayloadSize to limit the size of published packets
+                      minimum: 32
                       type: integer
                     tlsSecretRef:
                       description: Secret for tls cert-key pair

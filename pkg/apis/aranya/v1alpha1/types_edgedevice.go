@@ -262,10 +262,12 @@ type (
 		// +optional
 		InterfaceName string `json:"interfaceName"`
 
+		// +kubebuilder:validation:Minimum=0
 		// +optional
 		MTU int `json:"mtu"`
 
 		// ListenPort for receiving traffic from other mesh members
+		// +kubebuilder:validation:Minimum=0
 		// +optional
 		ListenPort int `json:"port"`
 

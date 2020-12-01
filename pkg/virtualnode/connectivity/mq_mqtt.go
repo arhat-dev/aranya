@@ -55,14 +55,19 @@ func newMQTTClient(parent *MessageQueueManager) (*mqttClient, error) {
 		return nil, fmt.Errorf("unsupported transport method")
 	}
 
-	keepalive := opts.Config.Keepalive
-	if keepalive == 0 {
-		// default to 60s
+	keepalive := opts.Config.KeepaliveInterval.Seconds()
+	if keepalive <= 0 || keepalive > 0xffff {
+		// default to 60 seconds
 		keepalive = 60
 	}
 
+	if keepalive < 1 {
+		// minimum keepalive interval in mqtt is 1s
+		keepalive = 1
+	}
+
 	options = append(options, libmqtt.WithConnPacket(libmqtt.ConnPacket{
-		CleanSession: true,
+		CleanSession: false, // resume session to handle data streaming
 		Username:     string(opts.Username),
 		Password:     string(opts.Password),
 		ClientID:     opts.Config.ClientID,

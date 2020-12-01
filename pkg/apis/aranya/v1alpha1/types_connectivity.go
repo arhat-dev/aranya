@@ -21,43 +21,55 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type MQTTSpec struct {
-	// TopicNamespace to share with arhat agent
-	TopicNamespace string `json:"topicNamespace,omitempty"`
+// MQTT
+type (
+	MQTTSpec struct {
+		// TopicNamespace to share with arhat agent
+		TopicNamespace string `json:"topicNamespace,omitempty"`
 
-	// Broker address in the form of host:port
-	Broker string `json:"broker,omitempty"`
+		// MaxPayloadSize to limit the size of published packets
+		// +kubebuilder:validation:Minimum=32
+		// +optional
+		MaxPayloadSize int `json:"maxPayloadSize,omitempty"`
 
-	// Version of MQTT protocol can be one of [3.1.1]
-	// +kubebuilder:validation:Enum="3.1.1"
-	// +optional
-	Version string `json:"version,omitempty"`
+		// Broker address in the form of host:port
+		Broker string `json:"broker,omitempty"`
 
-	// Transport protocol underlying the MQTT protocol, one of [tcp, websocket]
-	// +kubebuilder:validation:Enum=tcp;websocket
-	// +optional
-	Transport string `json:"transport,omitempty"`
+		// Version of MQTT protocol can be one of [3.1.1]
+		// +kubebuilder:validation:Enum="3.1.1"
+		// +optional
+		Version string `json:"version,omitempty"`
 
-	// +optional
-	ClientID string `json:"clientID,omitempty"`
+		// Transport protocol underlying the MQTT protocol, one of [tcp, websocket]
+		// +kubebuilder:validation:Enum=tcp;websocket
+		// +optional
+		Transport string `json:"transport,omitempty"`
 
-	// +optional
-	Keepalive int32 `json:"keepalive,omitempty"`
+		// +optional
+		ClientID string `json:"clientID,omitempty"`
 
-	// Secret for tls cert-key pair
-	// +optional
-	TLSSecretRef *corev1.LocalObjectReference `json:"tlsSecretRef,omitempty"`
+		// +optional
+		KeepaliveInterval metav1.Duration `json:"keepaliveInterval,omitempty"`
 
-	// +optional
-	UserPassRef *corev1.LocalObjectReference `json:"userPassRef,omitempty"`
-}
+		// Secret for tls cert-key pair
+		// +optional
+		TLSSecretRef *corev1.LocalObjectReference `json:"tlsSecretRef,omitempty"`
 
-type GRPCSpec struct {
-	// Secret for server side tls cert-key pair
-	// +optional
-	TLSSecretRef *corev1.LocalObjectReference `json:"tlsSecretRef,omitempty"`
-}
+		// +optional
+		UserPassRef *corev1.LocalObjectReference `json:"userPassRef,omitempty"`
+	}
+)
 
+// gRPC
+type (
+	GRPCSpec struct {
+		// Secret for server side tls cert-key pair
+		// +optional
+		TLSSecretRef *corev1.LocalObjectReference `json:"tlsSecretRef,omitempty"`
+	}
+)
+
+// GCP IoT Core
 type (
 	GCPIoTCoreSpec struct {
 		ProjectID string `json:"projectID,omitempty"`
@@ -89,6 +101,7 @@ type (
 	}
 )
 
+// Azure IoT Hub
 type (
 	AzureIoTHubSpec struct {
 		// DeviceID of the iot hub device
@@ -113,23 +126,26 @@ type (
 	}
 )
 
-type AMQPSpec struct {
-	// Version of AMQP
-	Version string `json:"version,omitempty"`
-	// Exchange in AMQP, if exists, MUST be a topic exchange
-	Exchange string `json:"exchange,omitempty"`
-	// TopicNamespace to share with arhat agent
-	TopicNamespace string `json:"topicNamespace,omitempty"`
-	// Broker address in the form of host:port
-	Broker string `json:"broker,omitempty"`
-	// +optional
-	VHost string `json:"vhost,omitempty"`
-	// +optional
-	UserPassRef *corev1.LocalObjectReference `json:"userPassRef,omitempty"`
-	// Secret for tls cert-key pair
-	// +optional
-	TLSSecretRef *corev1.LocalObjectReference `json:"tlsSecretRef,omitempty"`
-}
+// amqp 0.9
+type (
+	AMQPSpec struct {
+		// Version of AMQP
+		Version string `json:"version,omitempty"`
+		// Exchange in AMQP, if exists, MUST be a topic exchange
+		Exchange string `json:"exchange,omitempty"`
+		// TopicNamespace to share with arhat agent
+		TopicNamespace string `json:"topicNamespace,omitempty"`
+		// Broker address in the form of host:port
+		Broker string `json:"broker,omitempty"`
+		// +optional
+		VHost string `json:"vhost,omitempty"`
+		// +optional
+		UserPassRef *corev1.LocalObjectReference `json:"userPassRef,omitempty"`
+		// Secret for tls cert-key pair
+		// +optional
+		TLSSecretRef *corev1.LocalObjectReference `json:"tlsSecretRef,omitempty"`
+	}
+)
 
 type LocalSecretKeyReference struct {
 	// Name of the referent

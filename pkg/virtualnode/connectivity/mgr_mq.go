@@ -32,8 +32,13 @@ var (
 func NewMessageQueueManager(parentCtx context.Context, name string, mgrConfig *Options) (*MessageQueueManager, error) {
 	var (
 		err error
-		mgr = &MessageQueueManager{baseManager: newBaseManager(parentCtx, name, mgrConfig)}
+		mgr = &MessageQueueManager{baseManager: nil}
 	)
+
+	mgr.baseManager, err = newBaseManager(parentCtx, name, mgrConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create base manager: %w", err)
+	}
 
 	switch {
 	case mgrConfig.MQTTOpts != nil:

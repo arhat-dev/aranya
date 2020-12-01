@@ -169,7 +169,7 @@ type baseManager struct {
 	mu      *sync.RWMutex
 }
 
-func newBaseManager(parentCtx context.Context, name string, config *Options) *baseManager {
+func newBaseManager(parentCtx context.Context, name string, config *Options) (*baseManager, error) {
 	ctx, exit := context.WithCancel(parentCtx)
 	disconnected := make(chan struct{})
 	close(disconnected)
@@ -177,21 +177,35 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) *ba
 	sessions := NewSessionManager()
 	err := sessions.Start(ctx.Done())
 	if err != nil {
-		panic(err)
+		exit()
+		return nil, fmt.Errorf("failed to start session manager: %w", err)
 	}
 
 	var maxDataSize int
 	switch {
-	case config.MQTTOpts != nil, config.AMQPOpts != nil:
-		maxDataSize = aranyagoconst.MaxMQTTDataSize
+	case config.MQTTOpts != nil:
+		maxDataSize = int(config.MQTTOpts.Config.MaxPayloadSize)
+		if maxDataSize <= 0 {
+			maxDataSize = aranyagoconst.MaxMQTTDataSize
+		}
+	case config.AMQPOpts != nil:
+		// 128 MB
+		maxDataSize = 128 * 1024 * 1024
 	case config.AzureIoTHubOpts != nil:
 		maxDataSize = aranyagoconst.MaxAzureIoTHubC2DDataSize
 	case config.GCPIoTCoreOpts != nil:
 		maxDataSize = aranyagoconst.MaxGCPIoTCoreC2DDataSize
 	case config.GRPCOpts != nil:
-		fallthrough
-	default:
 		maxDataSize = aranyagoconst.MaxGRPCDataSize
+	default:
+		exit()
+		return nil, fmt.Errorf("unknown connectivity config")
+	}
+
+	maxDataSize -= aranyagopb.EmptyCmdSize
+	if maxDataSize <= 0 {
+		exit()
+		return nil, fmt.Errorf("max data size too small, must be greater than %d", aranyagopb.EmptyCmdSize)
 	}
 
 	return &baseManager{
@@ -200,7 +214,7 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) *ba
 		config:   config,
 		sessions: sessions,
 
-		maxDataSize:      maxDataSize - aranyagopb.EmptyCmdSize,
+		maxDataSize:      maxDataSize,
 		log:              log.Log.WithName(fmt.Sprintf("conn.%s", name)),
 		sendCmd:          nil,
 		globalMsgChan:    make(chan *aranyagopb.Msg, 1),
@@ -213,7 +227,7 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) *ba
 
 		stopped: false,
 		mu:      new(sync.RWMutex),
-	}
+	}, nil
 }
 
 func (m *baseManager) MaxPayloadSize() int {
