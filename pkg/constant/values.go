@@ -21,6 +21,6 @@ const (
 )
 
 const (
-	// max 128KB buf size for data transmission
-	MaxBufSize = 128 * 1024
+	// max 1MB buf size for data streaming
+	MaxBufSize = 1 * 1024 * 1024
 )
