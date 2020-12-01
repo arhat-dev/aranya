@@ -184,7 +184,7 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) (*b
 	var maxDataSize int
 	switch {
 	case config.MQTTOpts != nil:
-		maxDataSize = int(config.MQTTOpts.Config.MaxPayloadSize)
+		maxDataSize = config.MQTTOpts.Config.MaxPayloadSize
 		if maxDataSize <= 0 {
 			maxDataSize = aranyagoconst.MaxMQTTDataSize
 		}
@@ -471,12 +471,15 @@ func (m *baseManager) PostCmd(
 	kind aranyagopb.CmdType,
 	cmd proto.Marshaler,
 ) (msgCh <-chan interface{}, realSID uint64, err error) {
-	data, err := cmd.Marshal()
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to marshal cmd: %w", err)
+	var payload []byte
+	if cmd != nil {
+		payload, err = cmd.Marshal()
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to marshal cmd: %w", err)
+		}
 	}
 
-	msgCh, realSID, _, err = m.PostData(sid, kind, 0, true, data)
+	msgCh, realSID, _, err = m.PostData(sid, kind, 0, true, payload)
 	return
 }
 

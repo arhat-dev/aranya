@@ -25,13 +25,12 @@ var (
 )
 
 func init() {
-	emptyBody, _ := (&Empty{}).Marshal()
 	emptyMsg := &Msg{
 		Kind:      math.MaxInt32,
 		Sid:       math.MaxUint64,
 		Seq:       math.MaxUint64,
 		Completed: true,
-		Payload:   emptyBody,
+		Payload:   nil,
 	}
 
 	EmptyMsgSize = emptyMsg.Size()

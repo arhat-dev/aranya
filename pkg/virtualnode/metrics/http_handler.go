@@ -26,7 +26,6 @@ import (
 	"strings"
 	"sync"
 
-	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	"github.com/gorilla/mux"
@@ -159,7 +158,7 @@ func (m *Manager) HandleNodeMetrics(w http.ResponseWriter, r *http.Request) {
 
 // HandleContainerMetrics handle requests to collect metrics exported by cAdvisor
 func (m *Manager) HandleContainerMetrics(w http.ResponseWriter, r *http.Request) {
-	m.serveMetrics(m.containerMetricsCache, w, r)
+	m.serveMetrics(m.runtimeMetricsCache, w, r)
 }
 
 func (m *Manager) serveMetrics(cache *cache.MetricsCache, resp http.ResponseWriter, r *http.Request) {
@@ -177,14 +176,14 @@ func (m *Manager) serveMetrics(cache *cache.MetricsCache, resp http.ResponseWrit
 			return
 		}
 
-		m.retrieveDeviceMetrics(&aranyagopb.MetricsCollectCmd{Target: aranyagopb.METRICS_TARGET_NODE})
-	case m.containerMetricsCache:
-		if !m.options.ContainerMetrics.Enabled || !m.containerMetricsSupported() {
+		m.retrieveDeviceMetrics(false)
+	case m.runtimeMetricsCache:
+		if !m.options.RuntimeMetrics.Enabled || !m.containerMetricsSupported() {
 			http.Error(resp, "container metrics not supported", http.StatusNotImplemented)
 			return
 		}
 
-		m.retrieveDeviceMetrics(&aranyagopb.MetricsCollectCmd{Target: aranyagopb.METRICS_TARGET_CONTAINER})
+		m.retrieveDeviceMetrics(true)
 	}
 
 	contentType := expfmt.Negotiate(r.Header)

@@ -763,8 +763,8 @@ func (c *Controller) prepareMetricsOptions(
 ) (_ *metrics.Options, err error) {
 	_ = edgeDevice
 	opts := &metrics.Options{
-		NodeMetrics:      vnConfig.Node.Metrics,
-		ContainerMetrics: &vnConfig.Pod.Metrics,
+		NodeMetrics:    vnConfig.Node.Metrics,
+		RuntimeMetrics: &vnConfig.Pod.Metrics,
 	}
 
 	return opts, nil

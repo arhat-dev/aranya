@@ -1,5 +1,3 @@
-// +build !go1.15
-
 /*
 Copyright 2020 The arhat.dev Authors.
 
@@ -20,17 +18,15 @@ package iohelper
 
 import (
 	"errors"
-	"strings"
+	_ "unsafe" // for go:linkname
 )
 
-var (
-	ErrDeadlineExceeded = errors.New("i/o timeout")
-)
+// ErrDeadlineExceeded is the export of internal/poll.ErrDeadlineExceeded
+// which is the same as os.ErrDeadlineExceeded on go1.15 and forward
+//
+//go:linkname ErrDeadlineExceeded internal/poll.ErrDeadlineExceeded
+var ErrDeadlineExceeded error
 
-func isDeadlineExceeded(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	return strings.HasSuffix(err.Error(), "i/o timeout")
+func IsDeadlineExceeded(err error) bool {
+	return errors.Is(err, ErrDeadlineExceeded)
 }

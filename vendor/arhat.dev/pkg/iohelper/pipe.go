@@ -21,16 +21,11 @@ import (
 	"os"
 )
 
-// Pipe returns io.Pipe if os.Pipe errored
+// Pipe returns io.Pipe if os.Pipe returned error
 func Pipe() (io.ReadCloser, io.WriteCloser) {
-	var (
-		r io.ReadCloser
-		w io.WriteCloser
-	)
-
 	r, w, err := os.Pipe()
 	if err != nil {
-		r, w = io.Pipe()
+		return io.Pipe()
 	}
 
 	return r, w

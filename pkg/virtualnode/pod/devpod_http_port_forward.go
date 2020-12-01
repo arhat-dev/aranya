@@ -253,9 +253,9 @@ func (m *Manager) handleNewHTTPStream(ctx context.Context, wg *sync.WaitGroup, s
 
 func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 	pfCmd := &aranyagopb.PortForwardCmd{
-		PodUid:   s.podUID,
-		Port:     s.port,
-		Protocol: s.protocol,
+		PodUid:  s.podUID,
+		Network: s.protocol,
+		Port:    s.port,
 	}
 
 	var (

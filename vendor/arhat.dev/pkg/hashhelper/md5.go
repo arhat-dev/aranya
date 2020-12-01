@@ -1,3 +1,5 @@
+// +build !nohashhelper_md5
+
 /*
 Copyright 2020 The arhat.dev Authors.
 
@@ -14,25 +16,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package aranyagopb
+package hashhelper
 
 import (
-	"math"
+	"crypto/md5"
 )
 
-var (
-	EmptyCmdSize int
-)
-
-func init() {
-	emptyCmd := &Cmd{
-		Kind:      math.MaxInt32,
-		Sid:       math.MaxUint64,
-		Seq:       math.MaxUint64,
-		Completed: true,
-		Payload:   nil,
-	}
-
-	EmptyCmdSize = emptyCmd.Size()
-	_ = EmptyCmdSize
+func MD5Sum(data []byte) []byte {
+	h := md5.New()
+	_, _ = h.Write(data)
+	return h.Sum(nil)
 }

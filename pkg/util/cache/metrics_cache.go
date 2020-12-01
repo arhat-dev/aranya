@@ -25,6 +25,16 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
+var zstdDecoder *zstd.Decoder
+
+func init() {
+	var err error
+	zstdDecoder, err = zstd.NewReader(nil)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func NewMetricsCache() *MetricsCache {
 	return new(MetricsCache)
 }
@@ -62,13 +72,12 @@ func (c *MetricsCache) Get() []*dto.MetricFamily {
 }
 
 func parseMetricsBytes(metricsBytes []byte) ([]*dto.MetricFamily, error) {
-	r, err := zstd.NewReader(bytes.NewReader(metricsBytes))
+	data, err := zstdDecoder.DecodeAll(metricsBytes, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { r.Close() }()
 
-	decoder := expfmt.NewDecoder(r, expfmt.FmtProtoDelim)
+	decoder := expfmt.NewDecoder(bytes.NewReader(data), expfmt.FmtProtoDelim)
 
 	var mfs []*dto.MetricFamily
 	for {

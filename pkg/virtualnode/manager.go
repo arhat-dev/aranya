@@ -17,15 +17,15 @@ limitations under the License.
 package virtualnode
 
 import (
+	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/pkg/hashhelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -252,9 +252,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 				return true
 			}
 
-			sum := sha256.New()
-			_, _ = sum.Write(vn.opt.SSHPrivateKey)
-			if credStatus.SshPrivateKeySha256Hex != hex.EncodeToString(sum.Sum(nil)) {
+			if !bytes.Equal(credStatus.SshPrivateKeySha256, hashhelper.Sha256Sum(vn.opt.SSHPrivateKey)) {
 				err = fmt.Errorf("ssh identity corrupted")
 				return true
 			}
