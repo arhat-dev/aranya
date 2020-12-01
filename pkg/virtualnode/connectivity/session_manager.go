@@ -176,11 +176,18 @@ func (s *session) close() {
 	}
 }
 
-func NewSessionManager() *SessionManager {
+func NewSessionManager(
+	addTimedSession TimedSessionAddFunc,
+	delTimedSession TimedSessionDelFunc,
+	getTimedSessions TimedSessionGetFunc,
+) *SessionManager {
 	now := uint64(time.Now().UTC().UnixNano())
 	return &SessionManager{
 		sessions: make(map[uint64]*session),
-		tq:       queue.NewTimeoutQueue(),
+
+		addTimedSession:  addTimedSession,
+		delTimedSession:  delTimedSession,
+		getTimedSessions: getTimedSessions,
 
 		sid:   now,
 		epoch: now,
@@ -191,7 +198,10 @@ func NewSessionManager() *SessionManager {
 
 type SessionManager struct {
 	sessions map[uint64]*session
-	tq       *queue.TimeoutQueue
+
+	addTimedSession  TimedSessionAddFunc
+	delTimedSession  TimedSessionDelFunc
+	getTimedSessions TimedSessionGetFunc
 
 	sid   uint64
 	epoch uint64
@@ -211,50 +221,13 @@ func (m *SessionManager) nextSid() uint64 {
 }
 
 func (m *SessionManager) Start(stopCh <-chan struct{}) error {
-	m.tq.Start(stopCh)
-
-	go func() {
-		timeoutCh := m.tq.TakeCh()
-
-		for {
-			select {
-			case session, more := <-timeoutCh:
-				if !more {
-					return
-				}
-
-				if sid, ok := session.Key.(uint64); ok {
-					data, _ := (&aranyagopb.ErrorMsg{
-						Kind:        aranyagopb.ERR_TIMEOUT,
-						Description: "timeout",
-						Code:        0,
-					}).Marshal()
-
-					m.Dispatch(&aranyagopb.Msg{
-						Kind:      aranyagopb.MSG_ERROR,
-						Sid:       sid,
-						Seq:       0,
-						Completed: true,
-						Payload:   data,
-					})
-					m.Delete(sid)
-				}
-			case <-stopCh:
-				for len(timeoutCh) > 0 {
-					<-timeoutCh
-				}
-				return
-			}
-		}
-	}()
-
 	return nil
 }
 
 // Add or reuse a session
 func (m *SessionManager) Add(
 	sid uint64,
-	timeout time.Duration,
+	isStream bool,
 ) (
 	realSid uint64,
 	ch chan interface{},
@@ -269,14 +242,29 @@ func (m *SessionManager) Add(
 		ch = oldSession.msgCh
 	} else {
 		// create new channel if invalid
-		// if timeout is 0, it's a stream session
-		session := newSession(m.epoch, timeout == 0)
+		session := newSession(m.epoch, isStream)
 
 		ch = session.msgCh
 		realSid = m.nextSid()
 
-		if timeout > 0 {
-			_ = m.tq.OfferWithDelay(realSid, session, timeout)
+		if !isStream {
+			m.addTimedSession(realSid, func() {
+				data, _ := (&aranyagopb.ErrorMsg{
+					Kind:        aranyagopb.ERR_TIMEOUT,
+					Description: "timeout",
+					Code:        0,
+				}).Marshal()
+
+				m.Dispatch(&aranyagopb.Msg{
+					Kind:      aranyagopb.MSG_ERROR,
+					Sid:       sid,
+					Seq:       0,
+					Completed: true,
+					Payload:   data,
+				})
+
+				m.Delete(sid)
+			})
 		}
 
 		m.sessions[realSid] = session
@@ -322,7 +310,7 @@ func (m *SessionManager) Delete(sid uint64) {
 	if session, ok := m.sessions[sid]; ok {
 		session.doExclusive(session.close)
 
-		m.tq.Remove(sid)
+		m.delTimedSession(sid)
 		delete(m.sessions, sid)
 	}
 }
@@ -341,7 +329,7 @@ func (m *SessionManager) Cleanup() {
 
 		session.doExclusive(session.close)
 
-		m.tq.Remove(sid)
+		m.delTimedSession(sid)
 		allSid[i] = sid
 		i++
 	}
@@ -382,6 +370,12 @@ func (m *SessionManager) Remains() []uint64 {
 	return result
 }
 
-func (m *SessionManager) TimedRemains() []queue.TimeoutData {
-	return m.tq.Remains()
+func (m *SessionManager) TimedRemains() []uint64 {
+	ret := m.getTimedSessions()
+
+	sort.Slice(ret, func(i, j int) bool {
+		return ret[i] < ret[j]
+	})
+
+	return ret
 }

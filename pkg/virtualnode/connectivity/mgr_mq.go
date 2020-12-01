@@ -29,34 +29,40 @@ var (
 	ErrUnsupportedManager = errors.New("unsupported manager")
 )
 
-func NewMessageQueueManager(parentCtx context.Context, name string, mgrConfig *Options) (*MessageQueueManager, error) {
+func NewMessageQueueManager(
+	parentCtx context.Context,
+	name string,
+	opts *Options,
+) (
+	*MessageQueueManager, error,
+) {
 	var (
 		err error
 		mgr = &MessageQueueManager{baseManager: nil}
 	)
 
-	mgr.baseManager, err = newBaseManager(parentCtx, name, mgrConfig)
+	mgr.baseManager, err = newBaseManager(parentCtx, name, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create base manager: %w", err)
 	}
 
 	switch {
-	case mgrConfig.MQTTOpts != nil:
+	case opts.MQTTOpts != nil:
 		mgr.client, err = newMQTTClient(mgr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create mqtt client: %w", err)
 		}
-	case mgrConfig.AMQPOpts != nil:
+	case opts.AMQPOpts != nil:
 		mgr.client, err = newAMQPClient(mgr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create amqp client: %w", err)
 		}
-	case mgrConfig.AzureIoTHubOpts != nil:
+	case opts.AzureIoTHubOpts != nil:
 		mgr.client, err = newAzureIoTHubClient(mgr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create iot hub client: %w", err)
 		}
-	case mgrConfig.GCPIoTCoreOpts != nil:
+	case opts.GCPIoTCoreOpts != nil:
 		mgr.client, err = newGCPIoTCoreClient(mgr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create gcp pubsub client: %w", err)

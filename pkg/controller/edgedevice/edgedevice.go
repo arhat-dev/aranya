@@ -25,6 +25,7 @@ import (
 	"net"
 	"reflect"
 	"strings"
+	"sync"
 
 	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/kubehelper"
@@ -58,7 +59,20 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode/storage"
 )
 
+type sessionTimeoutKey struct {
+	name string
+	sid  uint64
+}
+
+type sessionTimeoutValue struct {
+	handleSessionTimeout connectivity.SessionTimeoutHandleFunc
+}
+
 type edgeDeviceController struct {
+	timedSessions *sync.Map
+	// shared timeout queue for session timeout
+	timedSessionsTQ *queue.TimeoutQueue
+
 	edgeDeviceClient   clientaranyav1a1.EdgeDeviceInterface
 	edgeDeviceInformer kubecache.SharedIndexInformer
 }
@@ -68,6 +82,30 @@ func (c *edgeDeviceController) init(
 	config *conf.Config,
 	aranyaClient aranyaclient.Interface,
 ) error {
+	c.timedSessions = new(sync.Map)
+
+	c.timedSessionsTQ = queue.NewTimeoutQueue()
+	c.timedSessionsTQ.Start(ctrl.Context().Done())
+
+	timeoutCh := c.timedSessionsTQ.TakeCh()
+	go func() {
+		for {
+			select {
+			case session, more := <-timeoutCh:
+				if !more {
+					return
+				}
+
+				session.Data.(sessionTimeoutValue).handleSessionTimeout()
+
+				c.timedSessions.Delete(session.Key.(sessionTimeoutKey))
+			case <-ctrl.Context().Done():
+				// controller exited, no timeout event will be handled
+				return
+			}
+		}
+	}()
+
 	edgeDeviceInformerFactory := aranyainformers.NewSharedInformerFactoryWithOptions(
 		aranyaClient, 0, aranyainformers.WithNamespace(constant.WatchNS()))
 
@@ -457,12 +495,46 @@ func (c *Controller) prepareConnectivityOptions(
 	vnConfig *conf.VirtualnodeConfig,
 ) (config *connectivity.Options, err error) {
 	config = &connectivity.Options{
-		UnarySessionTimeout: vnConfig.Connectivity.Timers.UnarySessionTimeout,
-		GRPCOpts:            nil,
-		MQTTOpts:            nil,
-		AMQPOpts:            nil,
-		AzureIoTHubOpts:     nil,
-		GCPIoTCoreOpts:      nil,
+		AddTimedSession: func(sid uint64, onSessionTimeout connectivity.SessionTimeoutHandleFunc) {
+			key := sessionTimeoutKey{
+				name: edgeDevice.Name,
+				sid:  sid,
+			}
+			_ = c.timedSessionsTQ.OfferWithDelay(
+				key,
+				sessionTimeoutValue{
+					handleSessionTimeout: onSessionTimeout,
+				},
+				vnConfig.Connectivity.Timers.UnarySessionTimeout,
+			)
+
+			c.timedSessions.Store(key, nil)
+		},
+		DelTimedSession: func(sid uint64) {
+			c.timedSessionsTQ.Remove(sid)
+			c.timedSessions.Delete(sessionTimeoutKey{
+				name: edgeDevice.Name,
+				sid:  sid,
+			})
+		},
+		GetTimedSessions: func() (timedSessionIDs []uint64) {
+			c.timedSessions.Range(func(key, value interface{}) bool {
+				k := key.(sessionTimeoutKey)
+				if k.name == edgeDevice.Name {
+					timedSessionIDs = append(timedSessionIDs, k.sid)
+				}
+
+				return true
+			})
+
+			return
+		},
+
+		GRPCOpts:        nil,
+		MQTTOpts:        nil,
+		AMQPOpts:        nil,
+		AzureIoTHubOpts: nil,
+		GCPIoTCoreOpts:  nil,
 	}
 
 	switch edgeDevice.Spec.Connectivity.Method {

@@ -24,7 +24,6 @@ import (
 	"net"
 	"runtime"
 	"sync/atomic"
-	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya-proto/aranyagopb/aranyagoconst"
@@ -70,8 +69,17 @@ type (
 	}
 )
 
+type (
+	SessionTimeoutHandleFunc func()
+	TimedSessionAddFunc      func(sid uint64, onSessionTimeout SessionTimeoutHandleFunc)
+	TimedSessionDelFunc      func(sid uint64)
+	TimedSessionGetFunc      func() (timedSessionIDs []uint64)
+)
+
 type Options struct {
-	UnarySessionTimeout time.Duration
+	AddTimedSession  TimedSessionAddFunc
+	DelTimedSession  TimedSessionDelFunc
+	GetTimedSessions TimedSessionGetFunc
 
 	GRPCOpts        *GRPCOpts
 	MQTTOpts        *MQTTOpts
@@ -116,7 +124,6 @@ type Manager interface {
 	GlobalMessages() <-chan *aranyagopb.Msg
 
 	// PostData
-	// nolint:lll
 	PostData(
 		sid uint64,
 		kind aranyagopb.CmdType,
@@ -154,9 +161,16 @@ type baseManager struct {
 	config   *Options
 	sessions *SessionManager
 
-	maxDataSize      int
-	log              log.Interface
-	sendCmd          func(*aranyagopb.Cmd) error
+	maxDataSize int
+	log         log.Interface
+
+	// sendCmd registered by the actual implementation
+	// it MUST block when connectivity lost
+	// it MUST only return error when it is being terminated
+	//
+	// so the implementation MUST reconnect to server automatically
+	sendCmd func(*aranyagopb.Cmd) error
+
 	globalMsgChan    chan *aranyagopb.Msg
 	connectedDevices sets.String
 
@@ -176,7 +190,7 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) (*b
 	disconnected := make(chan struct{})
 	close(disconnected)
 
-	sessions := NewSessionManager()
+	sessions := NewSessionManager(config.AddTimedSession, config.DelTimedSession, config.GetTimedSessions)
 	err := sessions.Start(ctx.Done())
 	if err != nil {
 		exit()
@@ -419,7 +433,7 @@ func (m *baseManager) PostData(
 
 	var (
 		recordSession = true
-		timeout       = m.config.UnarySessionTimeout
+		timed         = true
 	)
 
 	// session id should not be empty if it's a input or resize command
@@ -432,7 +446,7 @@ func (m *baseManager) PostData(
 	case aranyagopb.CMD_EXEC, aranyagopb.CMD_ATTACH,
 		aranyagopb.CMD_LOGS, aranyagopb.CMD_PORT_FORWARD:
 		// do not timeout stream sessions
-		timeout = 0
+		timed = false
 	case aranyagopb.CMD_TTY_RESIZE, aranyagopb.CMD_DATA_UPSTREAM:
 		// only allowed in existing sessions
 		if sid == 0 {
@@ -448,7 +462,7 @@ func (m *baseManager) PostData(
 	}
 
 	if recordSession {
-		realSid, msgCh = m.sessions.Add(sid, timeout)
+		realSid, msgCh = m.sessions.Add(sid, timed)
 		defer func() {
 			if err != nil {
 				m.sessions.Delete(realSid)
