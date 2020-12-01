@@ -19,7 +19,6 @@ package pod
 import (
 	"context"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -296,6 +295,13 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 			if err2 != nil {
 				s.close(fmt.Sprintf("failed to post port-forward read close cmd: %v", err2))
 			}
+
+			s.close("stream finished")
+
+			// close session with best effort
+			_, _, _ = m.ConnectivityManager.PostCmd(sid, aranyagopb.CMD_SESSION_CLOSE, &aranyagopb.SessionCloseCmd{
+				Sid: sid,
+			})
 		}()
 
 		r := iohelper.NewTimeoutReader(s.data)
@@ -311,6 +317,7 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 			data, shouldCopy, err2 := r.Read(constant.PortForwardStreamReadTimeout, buf)
 			if err2 != nil {
 				if len(data) == 0 && err2 != iohelper.ErrDeadlineExceeded {
+					s.close(fmt.Sprintf("failed to read data stream: %v", err2))
 					return
 				}
 			}
@@ -320,28 +327,31 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 				_ = copy(data, buf[:len(data)])
 			}
 
+			// do not check returned last seq since we have limited the buffer size
 			_, _, _, err2 = m.ConnectivityManager.PostData(
 				sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
 			)
 
 			if err2 != nil {
-				s.close(err2.Error())
+				// TODO: shall we redo data post until successful?
+				s.close(fmt.Sprintf("failed to post data read from stream: %v", err2))
+				return
 			}
 		}
 	}()
 
 	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		if msgErr := msg.GetError(); msgErr != nil {
-			s.close(msgErr.Description)
+			s.close(fmt.Sprintf("error happened in remote node: %s", msgErr.Error()))
 		} else {
-			s.close(fmt.Sprintf("unexpected non data msg %s in session %d", msg.Kind.String(), sid))
+			s.close(fmt.Sprintf("unexpected non data msg %d in session %d", msg.Kind, sid))
 		}
 
 		return true
 	}, func(dataMsg *connectivity.Data) (exit bool) {
 		_, err2 := s.data.Write(dataMsg.Payload)
-		if err2 != nil && !errors.Is(err2, io.EOF) {
-			s.close(err2.Error())
+		if err2 != nil {
+			s.close(fmt.Sprintf("failed to write data stream: %v", err))
 			return true
 		}
 
@@ -370,7 +380,7 @@ func (s *stream) prepared() bool {
 
 func (s *stream) close(reason string) {
 	if reason != "" {
-		s.writeErr(reason)
+		s.writeErr(fmt.Sprintf("[%s]: %s", s.reqID, reason))
 	}
 
 	if s.data != nil {
