@@ -64,12 +64,41 @@ config:
       file: stderr
 
     metrics:
-      enabled: true
+      enabled: false
+      # one of [prometheus, otlp]
+      format: prometheus
       # metrics http server listen address and port (prometheus)
       # set to :0 to listen on a dynamic port if you would like to deploy multiple
       # instances on the same node, aranya will handle the service port
-      listen: :0
+      endpoint: :0
+      # used by prometheus
       httpPath: /metrics
+      tls:
+        enabled: false
+
+    tracing:
+      enabled: false
+      # one of [otlp, zipkin, jaeger]
+      format: jaeger
+      # used by jaeger, can be one of [agent, collector]
+      endpointType: agent
+      endpoint: ""
+      sampleRate: 100
+      serviceName: ""
+      tls:
+        enabled: false
+
+    pprof:
+      enabled: false
+      listen: :0
+      httpPath: /debug/pprof
+
+      cpuProfileFrequencyHz: 1000
+      mutexProfileFraction: 100
+      blockProfileFraction: 100
+
+      tls:
+        enabled: false
 
     leaderElection:
       # default to the pod name
@@ -262,14 +291,14 @@ config:
 
     storage:
       # enable storage support for edge devices
-      enabled: true
+      enabled: false
       # rootDir is the directory to host edge device pod volumes
       rootDir: /var/lib/aranya
       kubeletPluginsDir: /var/lib/kubelet/plugins
       kubeletRegistrationDir: /var/lib/kubelet/plugins_registry
       # sftp server
       sftp:
-        enabled: true
+        enabled: false
         hostKeyFile: /etc/ssh/ssh_host_ed25519_key
 
     network:
@@ -278,7 +307,7 @@ config:
       # this will instruct aranya to interact with abbot pods found by looking up
       # abbot service, and aranya will create a managed service to allow external
       # traffic
-      enabled: true
+      enabled: false
       mesh:
         # set ip cidrs for mesh devices, if not set, will disable according ip network
         ipv4CIDR: 100.64.0.0/10

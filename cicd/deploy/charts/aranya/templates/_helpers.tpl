@@ -63,5 +63,9 @@ Create the name of the service account to use
 {{- end }}
 
 {{- define "aranya.metricsPort" -}}
-{{- index (split ":" (default ":0" .Values.config.aranya.metrics.listen)) "_1" -}}
+{{- index (split ":" (default ":0" .Values.config.aranya.metrics.endpoint)) "_1" -}}
+{{- end }}
+
+{{- define "aranya.pprofPort" -}}
+{{- index (split ":" (default ":0" .Values.config.aranya.pprof.listen)) "_1" -}}
 {{- end }}

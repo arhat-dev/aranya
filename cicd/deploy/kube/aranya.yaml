@@ -204,8 +204,11 @@ spec:
                       type: string
                     clientID:
                       type: string
-                    keepalive:
-                      format: int32
+                    keepaliveInterval:
+                      type: string
+                    maxPayloadSize:
+                      description: MaxPayloadSize to limit the size of published packets
+                      minimum: 32
                       type: integer
                     tlsSecretRef:
                       description: Secret for tls cert-key pair
@@ -326,6 +329,34 @@ spec:
               properties:
                 enabled:
                   type: boolean
+                mesh:
+                  properties:
+                    extraAllowedCIDRs:
+                      description: ExtraAllowedCIDRs in addition to pod CIDR(s)
+                      items:
+                        type: string
+                      type: array
+                    firewallMark:
+                      type: integer
+                    interfaceName:
+                      type: string
+                    ipv4Addr:
+                      description: IPv4 address of the mesh interface endpoint (usually
+                        the vpn endpoint address)
+                      type: string
+                    ipv6Addr:
+                      description: IPv6 address of the mesh interface endpoint (usually
+                        the vpn endpoint address)
+                      type: string
+                    mtu:
+                      type: integer
+                    port:
+                      description: ListenPort for receiving traffic from other mesh
+                        members
+                      type: integer
+                    routingTable:
+                      type: integer
+                  type: object
               type: object
             node:
               description: Node related settings for kubernetes node resource
@@ -737,6 +768,17 @@ spec:
           properties:
             hostNode:
               type: string
+            network:
+              properties:
+                meshIPv4Addr:
+                  type: string
+                meshIPv6Addr:
+                  type: string
+                podCIDRv4:
+                  type: string
+                podCIDRv6:
+                  type: string
+              type: object
           type: object
       type: object
   version: v1alpha1
@@ -759,33 +801,11 @@ metadata:
   name: aranya
   namespace: default
   labels:
-    helm.sh/chart: aranya-0.1.0
+    helm.sh/chart: aranya-0.1.1
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
----
-# Source: aranya/templates/abbot/configmap.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: aranya-abbot
-  namespace: default
-  labels:
-    helm.sh/chart: aranya-0.1.0
-    app.kubernetes.io/name: aranya
-    app.kubernetes.io/instance: aranya
-    app.kubernetes.io/component: abbot
-    app.kubernetes.io/version: "latest"
-    app.kubernetes.io/managed-by: Helm
-data:
-  config.yaml: |
-    abbot:
-      log:
-      - level: verbose
-        format: verbose
-        file: stderr
-      listen: tcp://0.0.0.0:8080
 ---
 # Source: aranya/templates/configmap.yaml
 apiVersion: v1
@@ -794,7 +814,7 @@ metadata:
   name: aranya
   namespace: default
   labels:
-    helm.sh/chart: aranya-0.1.0
+    helm.sh/chart: aranya-0.1.1
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"
@@ -829,9 +849,30 @@ data:
         virtualPodRoles: {}
       maxVirtualnodeCreatingInParallel: 0
       metrics:
-        enabled: true
+        enabled: false
+        endpoint: :0
+        format: prometheus
         httpPath: /metrics
+        tls:
+          enabled: false
+      pprof:
+        blockProfileFraction: 100
+        cpuProfileFrequencyHz: 1000
+        enabled: false
+        httpPath: /debug/pprof
         listen: :0
+        mutexProfileFraction: 100
+        tls:
+          enabled: false
+      tracing:
+        enabled: false
+        endpoint: ""
+        endpointType: agent
+        format: jaeger
+        sampleRate: 100
+        serviceName: ""
+        tls:
+          enabled: false
     virtualnode:
       connectivity:
         backoff:
@@ -856,7 +897,7 @@ data:
             mtu: 1400
             name: ""
             privateKey: ""
-        enabled: true
+        enabled: false
         mesh:
           ipv4CIDR: 100.64.0.0/10
           ipv6CIDR: ""
@@ -938,12 +979,12 @@ data:
           streamCreationTimeout: 30s
           streamIdleTimeout: 30m
       storage:
-        enabled: true
+        enabled: false
         kubeletPluginsDir: /var/lib/kubelet/plugins
         kubeletRegistrationDir: /var/lib/kubelet/plugins_registry
         rootDir: /var/lib/aranya
         sftp:
-          enabled: true
+          enabled: false
           hostKeyFile: /etc/ssh/ssh_host_ed25519_key
 ---
 # Source: aranya/templates/rbac.yaml
@@ -990,16 +1031,6 @@ rules:
   - kubernetes.io/kubelet-serving
   verbs:
   - approve
-- apiGroups:
-  - storage.k8s.io
-  resources:
-  - csinodes
-  - csidrivers
-  - volumeattachments
-  verbs:
-  - get
-  - list
-  - watch
 ---
 # Source: aranya/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1094,13 +1125,6 @@ rules:
   - watch
 - apiGroups: [""]
   resources:
-  - persistentvolumeclaims
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups: [""]
-  resources:
   # to record pod events
   - events
   verbs:
@@ -1173,32 +1197,6 @@ subjects:
   name: aranya
   namespace: default
 ---
-# Source: aranya/templates/abbot/service.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: 'aranya-abbot'
-  namespace: default
-  labels:
-    helm.sh/chart: aranya-0.1.0
-    app.kubernetes.io/name: aranya
-    app.kubernetes.io/instance: aranya
-    app.kubernetes.io/component: abbot
-    app.kubernetes.io/version: "latest"
-    app.kubernetes.io/managed-by: Helm
-spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - port: 8080
-      targetPort: abbot
-      protocol: TCP
-      name: abbot
-  selector:
-    app.kubernetes.io/name: aranya
-    app.kubernetes.io/instance: aranya
-    app.kubernetes.io/component: abbot
----
 # Source: aranya/templates/service.yaml
 apiVersion: v1
 kind: Service
@@ -1207,7 +1205,7 @@ metadata:
   namespace: default
   labels:
     app.kubernetes.io/component: metrics
-    helm.sh/chart: aranya-0.1.0
+    helm.sh/chart: aranya-0.1.1
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"
@@ -1216,82 +1214,11 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-    - port: 9876
-      targetPort: metrics
-      protocol: TCP
-      name: metrics
+    - port: 65534
+      name: dummy
   selector:
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
----
-# Source: aranya/templates/abbot/deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: aranya-abbot
-  namespace: default
-  labels:
-    helm.sh/chart: aranya-0.1.0
-    app.kubernetes.io/name: aranya
-    app.kubernetes.io/instance: aranya
-    app.kubernetes.io/component: abbot
-    app.kubernetes.io/version: "latest"
-    app.kubernetes.io/managed-by: Helm
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: aranya
-      app.kubernetes.io/instance: aranya
-      app.kubernetes.io/component: abbot
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: aranya
-        app.kubernetes.io/instance: aranya
-        app.kubernetes.io/component: abbot
-    spec:
-      volumes:
-        - name: config
-          configMap:
-            name: aranya-abbot
-      securityContext:
-        {}
-      containers:
-        - name: abbot
-          securityContext:
-            {}
-          image: "docker.io/arhatdev/abbot:latest"
-          imagePullPolicy: Always
-          command:
-            - /abbot
-            - -c
-            - /etc/abbot/config.yaml
-          env:
-            - name: GODEBUG
-              value: madvdontneed=1
-          ports:
-            - name: abbot
-              containerPort: 8080
-              protocol: TCP
-          livenessProbe:
-            tcpSocket:
-              port: 8080
-          readinessProbe:
-            tcpSocket:
-              port: 8080
-          volumeMounts:
-            - name: config
-              mountPath: /etc/abbot/config.yaml
-              subPath: config.yaml
-          resources:
-            {}
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              topologyKey: kubernetes.io/hostname
-            weight: 100
 ---
 # Source: aranya/templates/deployment.yaml
 apiVersion: apps/v1
@@ -1300,7 +1227,7 @@ metadata:
   name: aranya
   namespace: default
   labels:
-    helm.sh/chart: aranya-0.1.0
+    helm.sh/chart: aranya-0.1.1
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"
@@ -1324,25 +1251,13 @@ spec:
         - name: config
           configMap:
             name: aranya
-        - name: kubelet-plugins-dir
-          hostPath:
-            path: /var/lib/kubelet/plugins
-            type: Directory
-        - name: kubelet-registration-dir
-          hostPath:
-            path: /var/lib/kubelet/plugins_registry
-            type: DirectoryOrCreate # to make it compatible with old kubernetes
-        - name: pods-dir
-          hostPath:
-            path: /var/lib/aranya
-            type: DirectoryOrCreate
       serviceAccountName: aranya
       securityContext:
         {}
       containers:
         - name: aranya
           securityContext:
-            privileged: true
+            {}
           image: "docker.io/arhatdev/aranya:latest"
           imagePullPolicy: Always
           command:
@@ -1368,15 +1283,6 @@ spec:
             - name: config
               mountPath: /etc/aranya/config.yaml
               subPath: config.yaml
-            - name: kubelet-plugins-dir
-              mountPath: /var/lib/kubelet/plugins
-            - name: kubelet-registration-dir
-              mountPath: /var/lib/kubelet/plugins_registry
-            # mount path of the pods dir MUST be the same with its host path value
-            # because we will not share the mount path with the CSI plugin
-            - name: pods-dir
-              mountPath: /var/lib/aranya
-              mountPropagation: Bidirectional
           resources:
             {}
       affinity:
