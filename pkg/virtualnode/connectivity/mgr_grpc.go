@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 
 	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya-proto/aranyagopb/rpcpb"
@@ -37,7 +38,7 @@ var _ Manager = &GRPCManager{}
 type GRPCManager struct {
 	*baseManager
 
-	clientSessions map[string]rpcpb.EdgeDevice_SyncServer
+	clientSessions *sync.Map
 
 	server   *grpc.Server
 	listener net.Listener
@@ -47,11 +48,12 @@ func NewGRPCManager(parentCtx context.Context, name string, mgrConfig *Options) 
 	mgr := &GRPCManager{
 		baseManager: nil,
 
-		clientSessions: make(map[string]rpcpb.EdgeDevice_SyncServer),
+		clientSessions: new(sync.Map),
 
 		listener: mgrConfig.GRPCOpts.Listener,
 		server:   mgrConfig.GRPCOpts.Server,
 	}
+
 	var err error
 	mgr.baseManager, err = newBaseManager(parentCtx, name, mgrConfig)
 	if err != nil {
@@ -61,13 +63,11 @@ func NewGRPCManager(parentCtx context.Context, name string, mgrConfig *Options) 
 	rpcpb.RegisterEdgeDeviceServer(mgrConfig.GRPCOpts.Server, mgr)
 
 	mgr.sendCmd = func(cmd *aranyagopb.Cmd) error {
-		mgr.mu.RLock()
-		defer mgr.mu.RUnlock()
-
 		var err error
-		for _, s := range mgr.clientSessions {
-			err = multierr.Combine(err, s.Send(cmd))
-		}
+		mgr.clientSessions.Range(func(key, value interface{}) bool {
+			err = multierr.Append(err, value.(rpcpb.EdgeDevice_SyncServer).Send(cmd))
+			return true
+		})
 
 		return err
 	}
@@ -89,20 +89,22 @@ func (m *GRPCManager) Close() {
 func (m *GRPCManager) Reject(reason aranyagopb.RejectionReason, message string) {
 	m.onReject(func() {
 		// best effort
-		for _, syncSrv := range m.clientSessions {
+		m.clientSessions.Range(func(key, value interface{}) bool {
 			data, _ := (&aranyagopb.RejectCmd{
 				Reason:  reason,
 				Message: message,
 			}).Marshal()
 
-			_ = syncSrv.Send(&aranyagopb.Cmd{
+			_ = value.(rpcpb.EdgeDevice_SyncServer).Send(&aranyagopb.Cmd{
 				Kind:      aranyagopb.CMD_REJECT,
 				Sid:       0,
 				Seq:       0,
 				Completed: true,
 				Payload:   data,
 			})
-		}
+
+			return true
+		})
 	})
 }
 
@@ -139,15 +141,17 @@ func (m *GRPCManager) Sync(server rpcpb.EdgeDevice_SyncServer) error {
 		closeConn()
 
 		if alreadyOnline {
-			delete(m.clientSessions, onlineID)
+			m.clientSessions.Delete(onlineID)
 		}
 
 		return onlineID, false
 	})
 
+	rejected := m.Rejected()
+
 	for {
 		select {
-		case <-m.rejected:
+		case <-rejected:
 			// device rejected, return to close this stream
 			return nil
 		case <-connCtx.Done():
@@ -169,20 +173,20 @@ func (m *GRPCManager) Sync(server rpcpb.EdgeDevice_SyncServer) error {
 					if alreadyOnline {
 						// online message MUST not be received more than once
 						m.Reject(aranyagopb.REJECTION_ALREADY_CONNECTED, "client has sent online message once")
+						continue
 					}
 
+					// check online id
 					onlineID = s.DeviceId
-					if _, ok := m.clientSessions[onlineID]; ok {
+					_, loaded := m.clientSessions.LoadOrStore(onlineID, server)
+					if loaded {
 						m.Reject(aranyagopb.REJECTION_ALREADY_CONNECTED, "client already connected with same online-id")
+						continue
 					}
 
 					alreadyOnline = true
-
-					m.mu.Lock()
-					m.clientSessions[onlineID] = server
-					m.mu.Unlock()
 				case aranyagopb.STATE_OFFLINE:
-					// received offline message
+					// received offline message, exit loop
 					return nil
 				}
 			}

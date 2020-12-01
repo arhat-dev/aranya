@@ -73,6 +73,7 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 			// TODO: handle invalid msg
 			return
 		}
+
 		switch s.Kind {
 		case aranyagopb.STATE_ONLINE:
 			logger.I("node connected", log.String("id", s.DeviceId))

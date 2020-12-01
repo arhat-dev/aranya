@@ -22,7 +22,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"sync"
+	"runtime"
+	"sync/atomic"
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
@@ -30,6 +31,7 @@ import (
 	"arhat.dev/pkg/log"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 )
@@ -156,7 +158,7 @@ type baseManager struct {
 	log              log.Interface
 	sendCmd          func(*aranyagopb.Cmd) error
 	globalMsgChan    chan *aranyagopb.Msg
-	connectedDevices map[string]struct{}
+	connectedDevices sets.String
 
 	// signals
 	connected       chan struct{}
@@ -165,8 +167,8 @@ type baseManager struct {
 	alreadyRejected bool
 
 	// status
-	stopped bool // we do not use atomic here since all related operation needs to be locked
-	mu      *sync.RWMutex
+	_stopped uint32
+	_working uint32
 }
 
 func newBaseManager(parentCtx context.Context, name string, config *Options) (*baseManager, error) {
@@ -218,16 +220,20 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) (*b
 		log:              log.Log.WithName(fmt.Sprintf("conn.%s", name)),
 		sendCmd:          nil,
 		globalMsgChan:    make(chan *aranyagopb.Msg, 1),
-		connectedDevices: make(map[string]struct{}),
+		connectedDevices: sets.NewString(),
 
 		connected:       make(chan struct{}),
 		disconnected:    disconnected,
 		rejected:        make(chan struct{}),
 		alreadyRejected: false,
 
-		stopped: false,
-		mu:      new(sync.RWMutex),
+		_stopped: 0,
+		_working: 0,
 	}, nil
+}
+
+func (m *baseManager) stopped() bool {
+	return atomic.LoadUint32(&m._stopped) == 1
 }
 
 func (m *baseManager) MaxPayloadSize() int {
@@ -235,92 +241,105 @@ func (m *baseManager) MaxPayloadSize() int {
 }
 
 func (m *baseManager) GlobalMessages() <-chan *aranyagopb.Msg {
+	// global message channel is never recreated, so no lock needed
 	return m.globalMsgChan
 }
 
-// Connected
+func (m *baseManager) doExclusive(f func()) {
+	for !atomic.CompareAndSwapUint32(&m._working, 0, 1) {
+		runtime.Gosched()
+	}
+
+	f()
+
+	atomic.StoreUint32(&m._working, 0)
+}
+
+// Connected notify when agent connected
 func (m *baseManager) Connected() <-chan struct{} {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	var ret <-chan struct{}
+	m.doExclusive(func() {
+		ret = m.connected
+	})
 
-	return m.connected
+	return ret
 }
 
-// Disconnected
+// Disconnected notify when agent disconnected
 func (m *baseManager) Disconnected() <-chan struct{} {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	var ret <-chan struct{}
+	m.doExclusive(func() {
+		ret = m.disconnected
+	})
 
-	return m.disconnected
+	return ret
 }
 
-// Rejected
+// Rejected notify when agent get rejected
 func (m *baseManager) Rejected() <-chan struct{} {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	var ret <-chan struct{}
+	m.doExclusive(func() {
+		ret = m.rejected
+	})
 
-	return m.rejected
+	return ret
 }
 
 func (m *baseManager) onReject(reject func()) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.doExclusive(func() {
+		if m.alreadyRejected {
+			return
+		}
 
-	if m.alreadyRejected {
-		return
-	}
-	m.alreadyRejected = true
+		m.alreadyRejected = true
 
-	reject()
+		reject()
 
-	close(m.rejected)
+		close(m.rejected)
+	})
 }
 
 func (m *baseManager) OnConnected(initialize func() (id string)) {
 	id := initialize()
 	if id == "" {
+		// not initialized
 		return
 	}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if m.stopped {
+	if m.stopped() {
 		return
 	}
 
-	skipSignal := true
-	if len(m.connectedDevices) == 0 {
-		skipSignal = false
-	}
+	m.doExclusive(func() {
+		// skip signal connected when there is already device
+		// connected (different device id)
+		skipSignal := m.connectedDevices.Len() != 0
 
-	m.connectedDevices[id] = struct{}{}
+		m.connectedDevices.Insert(id)
 
-	if skipSignal {
-		return
-	}
+		if skipSignal {
+			return
+		}
 
-	select {
-	case <-m.ctx.Done():
-		return
-	case <-m.connected:
-		return
-	default:
-		// signal device connected
-		close(m.connected)
-	}
+		select {
+		case <-m.ctx.Done():
+			return
+		case <-m.connected:
+			return
+		default:
+			// signal device connected
+			close(m.connected)
+		}
 
-	// refresh device disconnected signal
-	m.disconnected = make(chan struct{})
-	m.rejected = make(chan struct{})
-	m.alreadyRejected = false
+		// refresh device disconnected signal
+		m.disconnected = make(chan struct{})
+		m.rejected = make(chan struct{})
+		m.alreadyRejected = false
+	})
 }
 
 func (m *baseManager) onRecvMsg(msg *aranyagopb.Msg) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	if m.stopped {
+	if m.stopped() {
 		return
 	}
 
@@ -341,35 +360,34 @@ func (m *baseManager) onRecvMsg(msg *aranyagopb.Msg) {
 // onDisconnected delete device connection related jobs
 func (m *baseManager) OnDisconnected(finalize func() (id string, all bool)) {
 	// release device connection, refresh device connection signal
-	// and orphaned message channel
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	// and orphan message channel (not including stream sessions)
+	m.doExclusive(func() {
+		if m.connectedDevices.Len() == 0 {
+			return
+		}
 
-	if len(m.connectedDevices) == 0 {
-		return
-	}
+		id, all := finalize()
+		if !all {
+			m.connectedDevices.Delete(id)
+		} else {
+			m.connectedDevices = sets.NewString()
+		}
 
-	id, all := finalize()
-	if !all {
-		delete(m.connectedDevices, id)
-	} else {
-		m.connectedDevices = make(map[string]struct{})
-	}
+		if m.connectedDevices.Len() != 0 {
+			return
+		}
 
-	if len(m.connectedDevices) != 0 {
-		return
-	}
+		select {
+		case <-m.disconnected:
+		default:
+			// signal device disconnected
+			close(m.disconnected)
+		}
 
-	select {
-	case <-m.disconnected:
-	default:
-		// signal device disconnected
-		close(m.disconnected)
-	}
-
-	m.sessions.Cleanup()
-	// refresh connected signal
-	m.connected = make(chan struct{})
+		m.sessions.Cleanup()
+		// refresh connected signal
+		m.connected = make(chan struct{})
+	})
 }
 
 func (m *baseManager) PostData(
@@ -383,7 +401,6 @@ func (m *baseManager) PostData(
 	realSid, lastSeq uint64,
 	err error,
 ) {
-	m.mu.RLock()
 	defer func() {
 		if m.log.Enabled(log.LevelVerbose) {
 			m.log.V("remaining sessions",
@@ -391,11 +408,13 @@ func (m *baseManager) PostData(
 				log.Any("timed", m.sessions.TimedRemains()),
 			)
 		}
-		m.mu.RUnlock()
 	}()
 
-	if m.stopped {
-		return nil, 0, seq, ErrManagerClosed
+	lastSeq = seq
+
+	if m.stopped() {
+		err = ErrManagerClosed
+		return
 	}
 
 	var (
@@ -418,7 +437,8 @@ func (m *baseManager) PostData(
 		// only allowed in existing sessions
 		if sid == 0 {
 			// session must present, but got empty id
-			return nil, 0, seq, fmt.Errorf("invalid zero sid")
+			err = fmt.Errorf("invalid zero sid")
+			return
 		}
 
 		// avoid unexpected session creation when data sent after
@@ -436,41 +456,47 @@ func (m *baseManager) PostData(
 		}()
 	}
 
-	n := m.MaxPayloadSize()
-	for len(data) > n {
+	chunkSize := m.MaxPayloadSize()
+	for len(data) > chunkSize {
 		err = m.sendCmd(&aranyagopb.Cmd{
 			Kind:      kind,
 			Sid:       realSid,
-			Seq:       seq,
+			Seq:       lastSeq,
 			Completed: false,
-			Payload:   data[:n],
+			Payload:   data[:chunkSize],
 		})
 		if err != nil {
-			return nil, 0, seq, fmt.Errorf("failed to post cmd chunk: %w", err)
+			err = fmt.Errorf("failed to post cmd chunk: %w", err)
+			return
 		}
-		seq++
-		data = data[n:]
+		lastSeq++
+		data = data[chunkSize:]
 	}
 
 	err = m.sendCmd(&aranyagopb.Cmd{
 		Kind:      kind,
 		Sid:       realSid,
-		Seq:       seq,
+		Seq:       lastSeq,
 		Completed: completed,
 		Payload:   data,
 	})
 	if err != nil {
-		return nil, 0, seq, fmt.Errorf("failed to post cmd chunk: %w", err)
+		err = fmt.Errorf("failed to post cmd chunk: %w", err)
+		return
 	}
 
-	return msgCh, realSid, seq, nil
+	return
 }
 
 func (m *baseManager) PostCmd(
 	sid uint64,
 	kind aranyagopb.CmdType,
 	cmd proto.Marshaler,
-) (msgCh <-chan interface{}, realSID uint64, err error) {
+) (
+	msgCh <-chan interface{},
+	realSID uint64,
+	err error,
+) {
 	var payload []byte
 	if cmd != nil {
 		payload, err = cmd.Marshal()
@@ -484,14 +510,13 @@ func (m *baseManager) PostCmd(
 }
 
 func (m *baseManager) onClose(closeManager func()) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if m.stopped {
+	if m.stopped() {
 		return
 	}
 
-	m.exit()
-	closeManager()
-	m.stopped = true
+	m.doExclusive(func() {
+		m.exit()
+		closeManager()
+		atomic.StoreUint32(&m._stopped, 1)
+	})
 }
