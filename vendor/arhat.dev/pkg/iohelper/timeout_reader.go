@@ -17,11 +17,18 @@ limitations under the License.
 package iohelper
 
 import (
+	"bufio"
 	"io"
 	"runtime"
 	"sync/atomic"
 	"time"
 )
+
+type bufferedReader interface {
+	io.Reader
+	io.ByteReader
+	Buffered() int
+}
 
 // NewTimeoutReader creates a new idle timeout reader from a blocking reader
 func NewTimeoutReader(r io.Reader) *TimeoutReader {
@@ -31,24 +38,27 @@ func NewTimeoutReader(r io.Reader) *TimeoutReader {
 	)
 
 	// check if can set read deadline
-	rs, ok := r.(interface {
+	rs, canSetReadDeadline := r.(interface {
 		SetReadDeadline(t time.Time) error
 	})
 
 	// clear read deadline in advance to check set deadline capability
-	if ok && rs.SetReadDeadline(time.Time{}) == nil {
+	if canSetReadDeadline && rs.SetReadDeadline(time.Time{}) == nil {
 		setReadDeadline = rs.SetReadDeadline
 	} else {
 		// mark set read deadline not working
 		close(cannotSetDeadline)
 	}
 
+	// create an idle timer when reader doesn't support SetReadDeadline
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
 		<-timer.C
 	}
 
 	return &TimeoutReader{
+		buf: make([]byte, 0, 8),
+
 		timer: timer,
 
 		setReadDeadline:   setReadDeadline,
@@ -65,8 +75,6 @@ func NewTimeoutReader(r io.Reader) *TimeoutReader {
 
 		maxRead:  0,
 		dataFull: make(chan struct{}),
-
-		oneByte: make([]byte, 1),
 
 		err: new(atomic.Value),
 
@@ -111,8 +119,6 @@ type TimeoutReader struct {
 	readOneByteReqCh chan struct{}
 	firstByteReady   chan struct{}
 	firstByte        chan byte
-
-	oneByte []byte
 
 	err *atomic.Value
 
@@ -160,16 +166,19 @@ func (t *TimeoutReader) doExclusive(f func()) {
 
 // FallbackReading is a helper routine for data reading/waiting
 // for readers with SetReadDeadline support, it is used for waiting until data prepared (WaitForData)
-// for other readers without SetReadDeadline, it is in one byte read mode for data reading (WaitForData and Read)
+// for other readers without SetReadDeadline, it is in (buffered) one byte read mode (WaitForData and Read)
 //
-// this function will block until EOF or error, so must be called in a goroutine other than
-// the one you are reading data
+// this function will block until EOF or error reading, so must be called in a goroutine other than
+// the one you are reading data, and once called, you should never access the raw reader you have provided
+// directly unless you are sure it is not read
 //
 // NOTE: this function MUST be called exactly once
 func (t *TimeoutReader) FallbackReading(stopSig <-chan struct{}) {
 	var (
-		n   int
-		err error
+		n           int
+		err         error
+		initialByte byte
+		oneByteBuf  [1]byte
 	)
 
 loop:
@@ -188,11 +197,11 @@ loop:
 			}
 
 			// read one byte in blocking mode
-			n, err = t.r.Read(t.oneByte)
+			n, err = t.r.Read(oneByteBuf[:])
 			if n == 1 {
 				// notify wait for data
 				t.firstByteReady <- struct{}{}
-				t.firstByte <- t.oneByte[0]
+				t.firstByte <- oneByteBuf[0]
 			} else {
 				// no data read, failed, try to fallback
 				close(t.cannotSetDeadline)
@@ -216,7 +225,7 @@ loop:
 	// case 2: SetReadDeadline function call failed
 
 	// check if reader is ok
-	_, err = t.r.Read(t.oneByte[:0])
+	_, err = t.r.Read(oneByteBuf[:0])
 	if err != nil {
 		// reader got some error, usually closed
 		close(t.hasData)
@@ -224,47 +233,71 @@ loop:
 		return
 	}
 
+	br, isBufferedReader := t.r.(bufferedReader)
+	if !isBufferedReader {
+		br = bufio.NewReader(t.r)
+	}
+
 	for {
 		// read one byte a time to avoid being blocked
-		n, err = t.r.Read(t.oneByte)
-		switch n {
-		case 0:
-			// no bytes read or error happened, exit now
-			if err == nil {
-				err = io.EOF
-			}
-
-			t.doExclusive(func() {
-				select {
-				case <-t.hasData:
-				default:
-					close(t.hasData)
-				}
-			})
-		case 1:
-			t.doExclusive(func() {
-				// rely on the default slice grow
-				t.buf = append(t.buf, t.oneByte[0])
-
-				select {
-				case <-t.hasData:
-				default:
-					close(t.hasData)
-				}
-
-				// signal data full
-				if len(t.buf) >= t.maxRead {
-					select {
-					case <-t.dataFull:
-					default:
-						close(t.dataFull)
-					}
-				}
-			})
-		}
-
+		initialByte, err = br.ReadByte()
 		if err != nil {
 			t.err.Store(err)
+
+			// release signal to cancel potential wait
+			t.doExclusive(func() {
+				select {
+				case <-t.hasData:
+				default:
+					close(t.hasData)
+				}
+			})
+			return
+		}
+
+		// avoid unexpected access to t.buf
+		t.doExclusive(func() {
+			// rely on the default slice grow
+			t.buf = append(t.buf, initialByte)
+
+			// read all buffered data
+			start := len(t.buf)
+			n = br.Buffered()
+			end := start + n
+
+			if c := cap(t.buf); c < end {
+				// grow slice for reading buffered data
+				buf := make([]byte, end, 2*c+n)
+				_ = copy(buf, t.buf)
+				t.buf = buf
+			}
+
+			// usually should read end-start bytes, record n just in case
+			n, err = br.Read(t.buf[start:end])
+			if err != nil {
+				t.err.Store(err)
+				// usually should not happen, do not return here since we
+			}
+			t.buf = t.buf[:start+n]
+
+			// notify read wait
+			select {
+			case <-t.hasData:
+			default:
+				close(t.hasData)
+			}
+
+			// notify data full
+			if start+n >= t.maxRead {
+				select {
+				case <-t.dataFull:
+				default:
+					close(t.dataFull)
+				}
+			}
+		})
+
+		if err != nil {
 			return
 		}
 
