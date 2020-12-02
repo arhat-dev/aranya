@@ -499,32 +499,34 @@ func (m *Manager) doServeTerminalStream(
 	}
 
 	if stdin != nil {
-		// stdin provided by http request is a spdy/websocket stream
-		// which has no set read deadline support
-		//
-		// here we create a pair of os.Pipe to take advantage of SetReadDeadline
-		// thus we can reduce cpu load in TimeoutReader (avoid one byte read mode)
-		pr, pw, err2 := os.Pipe()
-		if err2 == nil {
-			go func() {
-				// ReadFrom requires go1.15
-				_, err3 := pw.ReadFrom(stdin)
-				if err3 != nil {
-					logger.I("error happened in pipe reading", log.Error(err3))
-				}
+		// TODO: currently we can not wrap stdin by adding pipe proxy, which will block indefinitely
 
-				_ = pw.Close()
+		// // stdin provided by http request is a spdy/websocket stream
+		// // which has no set read deadline support
+		// //
+		// // here we create a pair of os.Pipe to take advantage of SetReadDeadline
+		// // thus we can reduce cpu load in TimeoutReader (avoid one byte read mode)
+		// pr, pw, err2 := os.Pipe()
+		// if err2 == nil {
+		// 	go func() {
+		// 		// ReadFrom requires go1.15
+		// 		_, err3 := pw.ReadFrom(stdin)
+		// 		if err3 != nil {
+		// 			logger.I("error happened in pipe reading", log.Error(err3))
+		// 		}
 
-				// according to os.File.Close() doc:
-				//   > On files that support SetDeadline, any pending I/O operations will
-				//   > be canceled and return immediately with an error.
-				// so we should not close pipe reader immediately here, close it until no data remain
+		// 		_ = pw.Close()
 
-				closeReaderWithDelay(pr)
-			}()
+		// 		// according to os.File.Close() doc:
+		// 		//   > On files that support SetDeadline, any pending I/O operations will
+		// 		//   > be canceled and return immediately with an error.
+		// 		// so we should not close pipe reader immediately here, close it until no data remain
 
-			stdin = pr
-		}
+		// 		closeReaderWithDelay(pr)
+		// 	}()
+
+		// 	stdin = pr
+		// }
 
 		readTimeout := constant.NonInteractiveStreamReadTimeout
 		if resizeCh != nil {
@@ -535,9 +537,9 @@ func (m *Manager) doServeTerminalStream(
 
 		go func() {
 			defer func() {
-				if err2 == nil {
-					_ = pr.Close()
-				}
+				// if err2 == nil {
+				// 	_ = pr.Close()
+				// }
 
 				logger.V("closing remote read")
 				_, _, _, err3 := m.ConnectivityManager.PostData(
@@ -612,16 +614,16 @@ func nextSeq(p *uint64) uint64 {
 	return atomic.AddUint64(p, 1) - 1
 }
 
-func closeReaderWithDelay(file *os.File) {
-	fd := file.Fd()
-	for {
-		time.Sleep(time.Second)
+// func closeReaderWithDelay(file *os.File) {
+// 	fd := file.Fd()
+// 	for {
+// 		time.Sleep(time.Second)
 
-		n, err := iohelper.CheckBytesToRead(fd)
-		if err != nil || n == 0 {
-			break
-		}
-	}
+// 		n, err := iohelper.CheckBytesToRead(fd)
+// 		if err != nil || n == 0 {
+// 			break
+// 		}
+// 	}
 
-	_ = file.Close()
-}
+// 	_ = file.Close()
+// }

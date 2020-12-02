@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -289,42 +288,43 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 	}
 
 	reader := s.data
-	pr, pw, err := os.Pipe()
-	if err == nil {
-		go func() {
-			// ReadFrom requires go1.15
-			_, err2 := pw.ReadFrom(s.data)
-			if err2 != nil {
-				s.close(fmt.Sprintf("error happened in pipe reading: %v", err2))
-			}
+	// TODO: same as terminal stream, need to wrap reader with file to lower cpu load
+	// pr, pw, err := os.Pipe()
+	// if err == nil {
+	// 	go func() {
+	// 		// ReadFrom requires go1.15
+	// 		_, err2 := pw.ReadFrom(s.data)
+	// 		if err2 != nil {
+	// 			s.close(fmt.Sprintf("error happened in pipe reading: %v", err2))
+	// 		}
 
-			_ = pw.Close()
+	// 		_ = pw.Close()
 
-			// according to os.File.Close() doc:
-			//   > On files that support SetDeadline, any pending I/O operations will
-			//   > be canceled and return immediately with an error.
-			// so we should not close pipe reader here
+	// 		// according to os.File.Close() doc:
+	// 		//   > On files that support SetDeadline, any pending I/O operations will
+	// 		//   > be canceled and return immediately with an error.
+	// 		// so we should not close pipe reader here
 
-			closeReaderWithDelay(pr)
-		}()
+	// 		closeReaderWithDelay(pr)
+	// 	}()
 
-		reader = pr
-	}
+	// 	reader = pr
+	// }
 
 	go func() {
 		var seq uint64
 
 		defer func() {
-			if err == nil {
-				_ = pr.Close()
-			}
+			// if err == nil {
+			// 	_ = pr.Close()
+			// }
 
 			_, _, _, err2 := m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
 			if err2 != nil {
 				s.close(fmt.Sprintf("failed to post port-forward read close cmd: %v", err2))
+			} else {
+				s.close("stream finished")
 			}
-
-			s.close("stream finished")
 
 			// close session with best effort
 			_, _, _ = m.ConnectivityManager.PostCmd(sid, aranyagopb.CMD_SESSION_CLOSE, &aranyagopb.SessionCloseCmd{
