@@ -128,16 +128,24 @@ type Manager interface {
 		sid uint64,
 		kind aranyagopb.CmdType,
 		seq uint64, completed bool,
-		data []byte,
-	) (msgCh <-chan interface{}, realSID, lastSeq uint64, err error)
+		payload []byte,
+	) (
+		msgCh <-chan interface{},
+		realSID, lastSeq uint64,
+		err error,
+	)
 
 	// PostCmd send a command to remote device with timeout
 	// return a channel for messages to be received in the session
 	PostCmd(
 		sid uint64,
 		kind aranyagopb.CmdType,
-		cmd proto.Marshaler,
-	) (msgCh <-chan interface{}, realSID uint64, err error)
+		payloadCmd proto.Marshaler,
+	) (
+		msgCh <-chan interface{},
+		realSID uint64,
+		err error,
+	)
 
 	// MaxPayloadSize of this kind connectivity method, used to reduce message overhead
 	// when handling date streams for port-forward and command execution
@@ -409,7 +417,7 @@ func (m *baseManager) PostData(
 	kind aranyagopb.CmdType,
 	seq uint64,
 	completed bool,
-	data []byte,
+	payload []byte,
 ) (
 	msgCh <-chan interface{},
 	realSid, lastSeq uint64,
@@ -471,20 +479,20 @@ func (m *baseManager) PostData(
 	}
 
 	chunkSize := m.MaxPayloadSize()
-	for len(data) > chunkSize {
+	for len(payload) > chunkSize {
 		err = m.sendCmd(&aranyagopb.Cmd{
 			Kind:      kind,
 			Sid:       realSid,
 			Seq:       lastSeq,
 			Completed: false,
-			Payload:   data[:chunkSize],
+			Payload:   payload[:chunkSize],
 		})
 		if err != nil {
 			err = fmt.Errorf("failed to post cmd chunk: %w", err)
 			return
 		}
 		lastSeq++
-		data = data[chunkSize:]
+		payload = payload[chunkSize:]
 	}
 
 	err = m.sendCmd(&aranyagopb.Cmd{
@@ -492,7 +500,7 @@ func (m *baseManager) PostData(
 		Sid:       realSid,
 		Seq:       lastSeq,
 		Completed: completed,
-		Payload:   data,
+		Payload:   payload,
 	})
 	if err != nil {
 		err = fmt.Errorf("failed to post cmd chunk: %w", err)
@@ -505,17 +513,17 @@ func (m *baseManager) PostData(
 func (m *baseManager) PostCmd(
 	sid uint64,
 	kind aranyagopb.CmdType,
-	cmd proto.Marshaler,
+	payloadCmd proto.Marshaler,
 ) (
 	msgCh <-chan interface{},
 	realSID uint64,
 	err error,
 ) {
 	var payload []byte
-	if cmd != nil {
-		payload, err = cmd.Marshal()
+	if payloadCmd != nil {
+		payload, err = payloadCmd.Marshal()
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to marshal cmd: %w", err)
+			return nil, 0, fmt.Errorf("failed to marshal payload cmd: %w", err)
 		}
 	}
 
