@@ -119,11 +119,9 @@ func (m *Manager) handleWebSocketPortForward(
 		go func() {
 			defer func() {
 				wg.Done()
-
-				s.close("")
 			}()
 
-			m.doPortForward(r.Context(), s)
+			m.doPortForward(r.Context(), m.Log.WithFields(log.String("action", "port-forward")), s)
 		}()
 	}
 
@@ -234,7 +232,7 @@ func (m *Manager) handleNewHTTPStream(ctx context.Context, wg *sync.WaitGroup, s
 		return nil
 	}
 
-	logger := m.Log.WithFields(log.String("id", s.reqID))
+	logger := m.Log.WithFields(log.String("action", "port-forward"), log.String("id", s.reqID))
 	wg.Add(1)
 	go func() {
 		defer func() {
@@ -244,13 +242,13 @@ func (m *Manager) handleNewHTTPStream(ctx context.Context, wg *sync.WaitGroup, s
 			s.close("")
 		}()
 
-		m.doPortForward(ctx, s)
+		m.doPortForward(ctx, logger, s)
 	}()
 
 	return nil
 }
 
-func (m *Manager) doPortForward(ctx context.Context, s *stream) {
+func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, s *stream) {
 	pfCmd := &aranyagopb.PortForwardCmd{
 		PodUid:  s.podUID,
 		Network: s.protocol,
@@ -270,7 +268,8 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 		// is runtime pod port-forward
 		data, err := pfCmd.Marshal()
 		if err != nil {
-			s.close(fmt.Sprintf("failed to marshal port-forward options: %v", err))
+			logger.D("failed to create marshal port-forward options", log.Error(err))
+			s.close(fmt.Sprintf("prepare: %v", err))
 			return
 		}
 
@@ -283,108 +282,91 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 
 	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, kind, cmd)
 	if err != nil {
-		s.close(fmt.Sprintf("failed to create port-forward session: %v", err))
+		logger.D("failed to create session", log.Error(err))
+		s.close(fmt.Sprintf("prepare: %v", err))
 		return
 	}
 
-	reader := s.data
-	// TODO: same as terminal stream, need to wrap reader with file to lower cpu load
-	// pr, pw, err := os.Pipe()
-	// if err == nil {
-	// 	go func() {
-	// 		// ReadFrom requires go1.15
-	// 		_, err2 := pw.ReadFrom(s.data)
-	// 		if err2 != nil {
-	// 			s.close(fmt.Sprintf("error happened in pipe reading: %v", err2))
-	// 		}
-
-	// 		_ = pw.Close()
-
-	// 		// according to os.File.Close() doc:
-	// 		//   > On files that support SetDeadline, any pending I/O operations will
-	// 		//   > be canceled and return immediately with an error.
-	// 		// so we should not close pipe reader here
-
-	// 		closeReaderWithDelay(pr)
-	// 	}()
-
-	// 	reader = pr
-	// }
+	// write routine is closed when read routine finished
 
 	go func() {
-		var seq uint64
-
 		defer func() {
-			// if err == nil {
-			// 	_ = pr.Close()
-			// }
-
-			_, _, _, err2 := m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
-			if err2 != nil {
-				s.close(fmt.Sprintf("failed to post port-forward read close cmd: %v", err2))
-			} else {
-				s.close("stream finished")
-			}
-
-			// close session with best effort
-			_, _, _ = m.ConnectivityManager.PostCmd(sid, aranyagopb.CMD_SESSION_CLOSE, &aranyagopb.SessionCloseCmd{
-				Sid: sid,
-			})
+			s.close("")
 		}()
 
-		r := iohelper.NewTimeoutReader(reader)
-		go r.FallbackReading(ctx.Done())
+		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
+			if msgErr := msg.GetError(); msgErr != nil {
+				logger.I("error happened", log.Error(msgErr))
+				s.close(fmt.Sprintf("error happened in remote: %s", msgErr.Error()))
+			} else {
+				logger.I("unexpected non data msg", log.Int32("kind", int32(msg.Kind)), log.Uint64("sid", sid))
+				s.close(fmt.Sprintf("unexpected non data msg %d", msg.Kind))
+			}
 
-		bufSize := m.ConnectivityManager.MaxPayloadSize()
-		if bufSize > constant.MaxBufSize {
-			bufSize = constant.MaxBufSize
+			return true
+		}, func(dataMsg *connectivity.Data) (exit bool) {
+			_, err2 := s.data.Write(dataMsg.Payload)
+			if err2 != nil {
+				logger.I("failed to write data", log.Error(err2))
+				s.close(fmt.Sprintf("write: %v", err2))
+				return true
+			}
+
+			return false
+		}, connectivity.LogUnknownMessage(m.Log))
+	}()
+
+	// read routine
+
+	var seq uint64
+	defer func() {
+		_, _, _, err2 := m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
+		if err2 != nil {
+			logger.D("failed to post read close cmd", log.Error(err2))
 		}
 
-		buf := make([]byte, bufSize)
-		for r.WaitForData(ctx.Done()) {
-			data, shouldCopy, err2 := r.Read(constant.PortForwardStreamReadTimeout, buf)
-			if err2 != nil {
-				if len(data) == 0 && err2 != iohelper.ErrDeadlineExceeded {
-					s.close(fmt.Sprintf("failed to read data stream: %v", err2))
-					return
-				}
-			}
+		// close session with best effort
+		_, _, _ = m.ConnectivityManager.PostCmd(sid, aranyagopb.CMD_SESSION_CLOSE, &aranyagopb.SessionCloseCmd{
+			Sid: sid,
+		})
+	}()
 
-			if shouldCopy {
-				data = make([]byte, len(data))
-				_ = copy(data, buf[:len(data)])
-			}
+	r := iohelper.NewTimeoutReader(s.data)
+	go r.FallbackReading(ctx.Done())
 
-			// do not check returned last seq since we have limited the buffer size
-			_, _, _, err2 = m.ConnectivityManager.PostData(
-				sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
-			)
+	bufSize := m.ConnectivityManager.MaxPayloadSize()
+	if bufSize > constant.MaxBufSize {
+		bufSize = constant.MaxBufSize
+	}
 
-			if err2 != nil {
-				// TODO: shall we redo data post until successful?
-				s.close(fmt.Sprintf("failed to post data read from stream: %v", err2))
+	buf := make([]byte, bufSize)
+	for r.WaitForData(ctx.Done()) {
+		data, shouldCopy, err2 := r.Read(constant.PortForwardStreamReadTimeout, buf)
+		if err2 != nil {
+			if len(data) == 0 && err2 != iohelper.ErrDeadlineExceeded {
+				logger.I("failed to read data", log.Error(err2))
+				s.writeErr(fmt.Sprintf("read: %v", err2))
 				return
 			}
 		}
-	}()
 
-	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
-		if msgErr := msg.GetError(); msgErr != nil {
-			s.close(fmt.Sprintf("error happened in remote node: %s", msgErr.Error()))
-		} else {
-			s.close(fmt.Sprintf("unexpected non data msg %d in session %d", msg.Kind, sid))
+		if shouldCopy {
+			data = make([]byte, len(data))
+			_ = copy(data, buf[:len(data)])
 		}
 
-		return true
-	}, func(dataMsg *connectivity.Data) (exit bool) {
-		_, err2 := s.data.Write(dataMsg.Payload)
+		// do not check returned last seq since we have limited the buffer size
+		_, _, _, err2 = m.ConnectivityManager.PostData(
+			sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
+		)
+
 		if err2 != nil {
-			s.close(fmt.Sprintf("failed to write data stream: %v", err2))
-			return true
+			// TODO: shall we redo data post until successful?
+			logger.I("failed to post data", log.Error(err2))
+			s.writeErr(fmt.Sprintf("post: %v", err2))
+			return
 		}
-
-		return false
-	}, connectivity.LogUnknownMessage(m.Log))
+	}
 }
 
 type stream struct {
