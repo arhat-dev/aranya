@@ -433,7 +433,7 @@ func (m *baseManager) PostData(
 
 	var (
 		recordSession = true
-		timed         = true
+		isStream      = false
 	)
 
 	// session id should not be empty if it's a input or resize command
@@ -446,7 +446,7 @@ func (m *baseManager) PostData(
 	case aranyagopb.CMD_EXEC, aranyagopb.CMD_ATTACH,
 		aranyagopb.CMD_LOGS, aranyagopb.CMD_PORT_FORWARD:
 		// do not timeout stream sessions
-		timed = false
+		isStream = true
 	case aranyagopb.CMD_TTY_RESIZE, aranyagopb.CMD_DATA_UPSTREAM:
 		// only allowed in existing sessions
 		if sid == 0 {
@@ -462,7 +462,7 @@ func (m *baseManager) PostData(
 	}
 
 	if recordSession {
-		realSid, msgCh = m.sessions.Add(sid, timed)
+		realSid, msgCh = m.sessions.Add(sid, isStream)
 		defer func() {
 			if err != nil {
 				m.sessions.Delete(realSid)
