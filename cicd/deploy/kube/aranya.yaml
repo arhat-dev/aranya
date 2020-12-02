@@ -801,7 +801,7 @@ metadata:
   name: aranya
   namespace: default
   labels:
-    helm.sh/chart: aranya-0.1.1
+    helm.sh/chart: aranya-0.1.2
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"
@@ -814,7 +814,7 @@ metadata:
   name: aranya
   namespace: default
   labels:
-    helm.sh/chart: aranya-0.1.1
+    helm.sh/chart: aranya-0.1.2
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"
@@ -899,10 +899,13 @@ data:
             privateKey: ""
         enabled: false
         mesh:
-          ipv4CIDR: 100.64.0.0/10
-          ipv6CIDR: ""
+          ipv4Blocks:
+          - cidr: 100.64.0.0/10
+            end: 100.64.0.100
+            start: 100.64.0.1
+          ipv6Blocks: []
         networkService:
-          ip: ""
+          addresses: []
           name: abbot-network
           port: 30000
           type: NodePort
@@ -975,7 +978,6 @@ data:
           - 8.8.8.8
         timers:
           forceSyncInterval: 10m
-          resyncInterval: 60s
           streamCreationTimeout: 30s
           streamIdleTimeout: 30m
       storage:
@@ -985,7 +987,7 @@ data:
         rootDir: /var/lib/aranya
         sftp:
           enabled: false
-          hostKeyFile: /etc/ssh/ssh_host_ed25519_key
+          hostKey: /etc/ssh/ssh_host_ed25519_key
 ---
 # Source: aranya/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1205,7 +1207,7 @@ metadata:
   namespace: default
   labels:
     app.kubernetes.io/component: metrics
-    helm.sh/chart: aranya-0.1.1
+    helm.sh/chart: aranya-0.1.2
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"
@@ -1227,7 +1229,7 @@ metadata:
   name: aranya
   namespace: default
   labels:
-    helm.sh/chart: aranya-0.1.1
+    helm.sh/chart: aranya-0.1.2
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"

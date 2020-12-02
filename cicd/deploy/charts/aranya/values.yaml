@@ -268,10 +268,9 @@ config:
         # - firefox.+
 
     pod:
+      # default allocatable pods
       allocatable: 10
       timers:
-        # interval pod informer to resync cached pods
-        resyncInterval: 60s
         # force sync pod status from edge device after
         forceSyncInterval: 10m
         # close stream when no traffic has been sent/recv for
@@ -299,7 +298,7 @@ config:
       # sftp server
       sftp:
         enabled: false
-        hostKeyFile: /etc/ssh/ssh_host_ed25519_key
+        hostKey: /etc/ssh/ssh_host_ed25519_key
 
     network:
       # enabled mesh network among nodes in the watch namespace
@@ -310,8 +309,11 @@ config:
       enabled: false
       mesh:
         # set ip cidrs for mesh devices, if not set, will disable according ip network
-        ipv4CIDR: 100.64.0.0/10
-        ipv6CIDR: ""
+        ipv4Blocks:
+        - cidr: 100.64.0.0/10
+          start: "100.64.0.1"
+          end: "100.64.0.100"
+        ipv6Blocks: []
       backend:
         driver: wireguard
         wireguard:
@@ -345,7 +347,8 @@ config:
         # for LoadBalancer, it is the loadbalancer ip
         # for NodePort, it is a node ip
         # for Local, it is a lan ip
-        ip: ""
+        addresses: []
+        #- "mesh.example.com"
         # for NodePort, it is a port in allowed port range
         port: 30000
 
