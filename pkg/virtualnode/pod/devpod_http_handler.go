@@ -535,6 +535,10 @@ func (m *Manager) doServeTerminalStream(
 
 		go func() {
 			defer func() {
+				if err2 == nil {
+					_ = pr.Close()
+				}
+
 				logger.V("closing remote read")
 				_, _, _, err3 := m.ConnectivityManager.PostData(
 					sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil,

@@ -315,6 +315,10 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 		var seq uint64
 
 		defer func() {
+			if err == nil {
+				_ = pr.Close()
+			}
+
 			_, _, _, err2 := m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
 			if err2 != nil {
 				s.close(fmt.Sprintf("failed to post port-forward read close cmd: %v", err2))
