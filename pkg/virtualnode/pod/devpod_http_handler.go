@@ -499,6 +499,32 @@ func (m *Manager) doServeTerminalStream(
 	}
 
 	if stdin != nil {
+		// stdin provided by http request is a spdy/websocket stream
+		// which has no set read deadline support
+		//
+		// here we create a pair of os.Pipe to take advantage of SetReadDeadline
+		// thus we can reduce cpu load in TimeoutReader (avoid one byte read mode)
+		pr, pw, err2 := os.Pipe()
+		if err2 == nil {
+			go func() {
+				// ReadFrom requires go1.15
+				_, err3 := pw.ReadFrom(stdin)
+				if err3 != nil {
+					logger.I("error happened in pipe reading", log.Error(err3))
+				}
+
+				_ = pw.Close()
+
+				// according to os.File.Close() doc:
+				//   > On files that support SetDeadline, any pending I/O operations will
+				//   > be canceled and return immediately with an error.
+				// so we should not close pipe reader here
+				// _ = pr.Close()
+			}()
+
+			stdin = pr
+		}
+
 		readTimeout := constant.NonInteractiveStreamReadTimeout
 		if resizeCh != nil {
 			readTimeout = constant.InteractiveStreamReadTimeout
@@ -508,12 +534,16 @@ func (m *Manager) doServeTerminalStream(
 
 		go func() {
 			defer func() {
+				if err2 == nil {
+					_ = pr.Close()
+				}
+
 				logger.V("closing remote read")
-				_, _, _, err2 := m.ConnectivityManager.PostData(
+				_, _, _, err3 := m.ConnectivityManager.PostData(
 					sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil,
 				)
-				if err2 != nil {
-					logger.I("failed to post input close cmd", log.Error(err2))
+				if err3 != nil {
+					logger.I("failed to post input close cmd", log.Error(err3))
 				}
 
 				logger.D("finished terminal input")
@@ -528,9 +558,9 @@ func (m *Manager) doServeTerminalStream(
 			}
 			buf := make([]byte, bufSize)
 			for r.WaitForData(ctx.Done()) {
-				data, shouldCopy, err2 := r.Read(readTimeout, buf)
-				if err2 != nil {
-					if len(data) == 0 && err2 != iohelper.ErrDeadlineExceeded {
+				data, shouldCopy, err3 := r.Read(readTimeout, buf)
+				if err3 != nil {
+					if len(data) == 0 && err3 != iohelper.ErrDeadlineExceeded {
 						break
 					}
 				}
@@ -540,12 +570,12 @@ func (m *Manager) doServeTerminalStream(
 					_ = copy(data, buf[:len(data)])
 				}
 
-				_, _, _, err2 = m.ConnectivityManager.PostData(
+				_, _, _, err3 = m.ConnectivityManager.PostData(
 					sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
 				)
 
-				if err2 != nil {
-					logger.I("failed to post user input", log.Error(err2))
+				if err3 != nil {
+					logger.I("failed to post user input", log.Error(err3))
 					return
 				}
 			}

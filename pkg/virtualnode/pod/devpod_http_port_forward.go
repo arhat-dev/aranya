@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -287,10 +288,36 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 		return
 	}
 
+	reader := s.data
+	pr, pw, err := os.Pipe()
+	if err == nil {
+		go func() {
+			// ReadFrom requires go1.15
+			_, err2 := pw.ReadFrom(s.data)
+			if err2 != nil {
+				s.close(fmt.Sprintf("error happened in pipe reading: %v", err2))
+			}
+
+			_ = pw.Close()
+
+			// according to os.File.Close() doc:
+			//   > On files that support SetDeadline, any pending I/O operations will
+			//   > be canceled and return immediately with an error.
+			// so we should not close pipe reader here
+			// _ = pr.Close()
+		}()
+
+		reader = pr
+	}
+
 	go func() {
 		var seq uint64
 
 		defer func() {
+			if err == nil {
+				_ = pr.Close()
+			}
+
 			_, _, _, err2 := m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
 			if err2 != nil {
 				s.close(fmt.Sprintf("failed to post port-forward read close cmd: %v", err2))
@@ -304,7 +331,7 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 			})
 		}()
 
-		r := iohelper.NewTimeoutReader(s.data)
+		r := iohelper.NewTimeoutReader(reader)
 		go r.FallbackReading(ctx.Done())
 
 		bufSize := m.ConnectivityManager.MaxPayloadSize()
@@ -351,7 +378,7 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 	}, func(dataMsg *connectivity.Data) (exit bool) {
 		_, err2 := s.data.Write(dataMsg.Payload)
 		if err2 != nil {
-			s.close(fmt.Sprintf("failed to write data stream: %v", err))
+			s.close(fmt.Sprintf("failed to write data stream: %v", err2))
 			return true
 		}
 
