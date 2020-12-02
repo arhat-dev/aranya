@@ -518,8 +518,9 @@ func (m *Manager) doServeTerminalStream(
 				// according to os.File.Close() doc:
 				//   > On files that support SetDeadline, any pending I/O operations will
 				//   > be canceled and return immediately with an error.
-				// so we should not close pipe reader here
-				// _ = pr.Close()
+				// so we should not close pipe reader immediately here, close it until no data remain
+
+				closeReaderWithDelay(pr)
 			}()
 
 			stdin = pr
@@ -534,10 +535,6 @@ func (m *Manager) doServeTerminalStream(
 
 		go func() {
 			defer func() {
-				if err2 == nil {
-					_ = pr.Close()
-				}
-
 				logger.V("closing remote read")
 				_, _, _, err3 := m.ConnectivityManager.PostData(
 					sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil,
@@ -609,4 +606,18 @@ func (m *Manager) doServeTerminalStream(
 
 func nextSeq(p *uint64) uint64 {
 	return atomic.AddUint64(p, 1) - 1
+}
+
+func closeReaderWithDelay(file *os.File) {
+	fd := file.Fd()
+	for {
+		time.Sleep(time.Second)
+
+		n, err := iohelper.CheckBytesToRead(fd)
+		if err != nil || n == 0 {
+			break
+		}
+	}
+
+	_ = file.Close()
 }

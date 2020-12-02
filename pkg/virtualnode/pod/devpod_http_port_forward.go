@@ -304,7 +304,8 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 			//   > On files that support SetDeadline, any pending I/O operations will
 			//   > be canceled and return immediately with an error.
 			// so we should not close pipe reader here
-			// _ = pr.Close()
+
+			closeReaderWithDelay(pr)
 		}()
 
 		reader = pr
@@ -314,10 +315,6 @@ func (m *Manager) doPortForward(ctx context.Context, s *stream) {
 		var seq uint64
 
 		defer func() {
-			if err == nil {
-				_ = pr.Close()
-			}
-
 			_, _, _, err2 := m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
 			if err2 != nil {
 				s.close(fmt.Sprintf("failed to post port-forward read close cmd: %v", err2))
