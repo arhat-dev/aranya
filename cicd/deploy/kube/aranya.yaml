@@ -899,10 +899,7 @@ data:
             privateKey: ""
         enabled: false
         mesh:
-          ipv4Blocks:
-          - cidr: 100.64.0.0/10
-            end: 100.64.0.100
-            start: 100.64.0.1
+          ipv4Blocks: []
           ipv6Blocks: []
         networkService:
           addresses: []

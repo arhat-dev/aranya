@@ -309,10 +309,10 @@ config:
       enabled: false
       mesh:
         # set ip cidrs for mesh devices, if not set, will disable according ip network
-        ipv4Blocks:
-        - cidr: 100.64.0.0/10
-          start: "100.64.0.1"
-          end: "100.64.0.100"
+        ipv4Blocks: []
+        # - cidr: 100.64.0.0/10
+        #   start: "100.64.0.1" # yamllint disable-line rule:quoted-strings
+        #   end: "100.64.0.100" # yamllint disable-line rule:quoted-strings
         ipv6Blocks: []
       backend:
         driver: wireguard
