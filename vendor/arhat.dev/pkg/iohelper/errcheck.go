@@ -22,7 +22,7 @@ import (
 )
 
 // ErrDeadlineExceeded is the export of internal/poll.ErrDeadlineExceeded
-// which is the same as os.ErrDeadlineExceeded on go1.15 and forward
+// which is the same as os.ErrDeadlineExceeded in go1.15 and onwards
 //
 //go:linkname ErrDeadlineExceeded internal/poll.ErrDeadlineExceeded
 var ErrDeadlineExceeded error
