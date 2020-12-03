@@ -29,8 +29,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"arhat.dev/aranya/pkg/constant"
 )
 
 var _ Manager = &GRPCManager{}
@@ -112,7 +110,7 @@ func (m *GRPCManager) Sync(server rpcpb.EdgeDevice_SyncServer) error {
 	connCtx, closeConn := context.WithCancel(server.Context())
 	defer closeConn()
 
-	allMsgCh := make(chan *aranyagopb.Msg, constant.DefaultConnectivityMsgChannelSize)
+	allMsgCh := make(chan *aranyagopb.Msg, 16)
 	go func() {
 		for {
 			msg, err := server.Recv()

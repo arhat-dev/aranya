@@ -499,87 +499,79 @@ func (m *Manager) doServeTerminalStream(
 	}
 
 	if stdin != nil {
-		// TODO: currently we can not wrap stdin by adding pipe proxy, which will block indefinitely
-
-		// // stdin provided by http request is a spdy/websocket stream
-		// // which has no set read deadline support
-		// //
-		// // here we create a pair of os.Pipe to take advantage of SetReadDeadline
-		// // thus we can reduce cpu load in TimeoutReader (avoid one byte read mode)
-		// pr, pw, err2 := os.Pipe()
-		// if err2 == nil {
-		// 	go func() {
-		// 		// ReadFrom requires go1.15
-		// 		_, err3 := pw.ReadFrom(stdin)
-		// 		if err3 != nil {
-		// 			logger.I("error happened in pipe reading", log.Error(err3))
-		// 		}
-
-		// 		_ = pw.Close()
-
-		// 		// according to os.File.Close() doc:
-		// 		//   > On files that support SetDeadline, any pending I/O operations will
-		// 		//   > be canceled and return immediately with an error.
-		// 		// so we should not close pipe reader immediately here, close it until no data remain
-
-		// 		closeReaderWithDelay(pr)
-		// 	}()
-
-		// 	stdin = pr
-		// }
-
-		readTimeout := constant.NonInteractiveStreamReadTimeout
-		if resizeCh != nil {
-			readTimeout = constant.InteractiveStreamReadTimeout
-		}
-
 		seq := uint64(0)
 
 		go func() {
 			defer func() {
-				// if err2 == nil {
-				// 	_ = pr.Close()
-				// }
-
 				logger.V("closing remote read")
-				_, _, _, err3 := m.ConnectivityManager.PostData(
+				_, _, _, err2 := m.ConnectivityManager.PostData(
 					sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil,
 				)
-				if err3 != nil {
-					logger.I("failed to post input close cmd", log.Error(err3))
+				if err2 != nil {
+					logger.I("failed to post input close cmd", log.Error(err2))
 				}
 
 				logger.D("finished terminal input")
 			}()
 
-			r := iohelper.NewTimeoutReader(stdin)
-			go r.FallbackReading(ctx.Done())
-
 			bufSize := m.ConnectivityManager.MaxPayloadSize()
 			if bufSize > constant.MaxBufSize {
 				bufSize = constant.MaxBufSize
 			}
+
 			buf := make([]byte, bufSize)
-			for r.WaitForData(ctx.Done()) {
-				data, shouldCopy, err3 := r.Read(readTimeout, buf)
-				if err3 != nil {
-					if len(data) == 0 && err3 != iohelper.ErrDeadlineExceeded {
-						break
+
+			if resizeCh == nil {
+				// not a tty, read as many data as possible
+				for {
+					n, err2 := stdin.Read(buf)
+					if err2 != nil {
+						logger.I("failed to read data", log.Error(err2))
+						if n == 0 {
+							return
+						}
+					}
+
+					data := make([]byte, n)
+					_ = copy(data, buf)
+
+					// do not check returned last seq since we have limited the buffer size
+					_, _, _, err2 = m.ConnectivityManager.PostData(
+						sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
+					)
+
+					if err2 != nil {
+						// TODO: shall we redo data post until successful?
+						logger.I("failed to post data", log.Error(err2))
+						return
 					}
 				}
+			} else {
+				// is a tty, make it real-time
+				r := iohelper.NewTimeoutReader(stdin)
+				go r.FallbackReading(ctx.Done())
 
-				if shouldCopy {
-					data = make([]byte, len(data))
-					_ = copy(data, buf[:len(data)])
-				}
+				for r.WaitForData(ctx.Done()) {
+					data, shouldCopy, err3 := r.Read(constant.InteractiveStreamReadTimeout, buf)
+					if err3 != nil {
+						if len(data) == 0 && err3 != iohelper.ErrDeadlineExceeded {
+							break
+						}
+					}
 
-				_, _, _, err3 = m.ConnectivityManager.PostData(
-					sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
-				)
+					if shouldCopy {
+						data = make([]byte, len(data))
+						_ = copy(data, buf[:len(data)])
+					}
 
-				if err3 != nil {
-					logger.I("failed to post user input", log.Error(err3))
-					return
+					_, _, _, err3 = m.ConnectivityManager.PostData(
+						sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
+					)
+
+					if err3 != nil {
+						logger.I("failed to post user input", log.Error(err3))
+						return
+					}
 				}
 			}
 		}()

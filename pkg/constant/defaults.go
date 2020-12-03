@@ -65,14 +65,9 @@ const (
 )
 
 const (
-	InteractiveStreamReadTimeout    = 20 * time.Millisecond
-	NonInteractiveStreamReadTimeout = 200 * time.Millisecond
-	PortForwardStreamReadTimeout    = 50 * time.Millisecond
-)
-
-// Default channel size
-const (
-	DefaultConnectivityMsgChannelSize = 32
+	// additional 20ms is not sensible in most case but would be helpful
+	// to reduce protocol overhead
+	InteractiveStreamReadTimeout = 20 * time.Millisecond
 )
 
 const (

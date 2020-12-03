@@ -28,7 +28,6 @@ import (
 
 	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/aranya-proto/aranyagopb/runtimepb"
-	"arhat.dev/pkg/iohelper"
 	"arhat.dev/pkg/log"
 	"github.com/gogo/protobuf/proto"
 	"k8s.io/apimachinery/pkg/util/httpstream"
@@ -275,6 +274,8 @@ func (m *Manager) handleNewHTTPStream(
 }
 
 func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *sync.WaitGroup, s *stream) {
+	_ = ctx
+
 	logger.D("forwarding to remote")
 
 	pfCmd := &aranyagopb.PortForwardCmd{
@@ -351,9 +352,9 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 
 	var seq uint64
 	defer func() {
-		_, _, _, err2 := m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
-		if err2 != nil {
-			logger.D("failed to post read close cmd", log.Error(err2))
+		_, _, _, err = m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
+		if err != nil {
+			logger.D("failed to post read close cmd", log.Error(err))
 		}
 
 		// close session with best effort
@@ -362,39 +363,38 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 		})
 	}()
 
-	r := iohelper.NewTimeoutReader(s.data)
-	go r.FallbackReading(ctx.Done())
-
 	bufSize := m.ConnectivityManager.MaxPayloadSize()
 	if bufSize > constant.MaxBufSize {
 		bufSize = constant.MaxBufSize
 	}
 
+	var n int
 	buf := make([]byte, bufSize)
-	for r.WaitForData(ctx.Done()) {
-		data, shouldCopy, err2 := r.Read(constant.PortForwardStreamReadTimeout, buf)
-		if err2 != nil {
-			if len(data) == 0 && err2 != iohelper.ErrDeadlineExceeded {
-				logger.I("failed to read data", log.Error(err2))
-				s.writeErr(fmt.Sprintf("read: %v", err2))
+	for {
+		n, err = s.data.Read(buf)
+		if err != nil {
+			if err != io.EOF {
+				logger.I("failed to read data", log.Error(err))
+				s.writeErr(fmt.Sprintf("read: %v", err))
+			}
+
+			if n == 0 {
 				return
 			}
 		}
 
-		if shouldCopy {
-			data = make([]byte, len(data))
-			_ = copy(data, buf[:len(data)])
-		}
+		data := make([]byte, n)
+		_ = copy(data, buf)
 
 		// do not check returned last seq since we have limited the buffer size
-		_, _, _, err2 = m.ConnectivityManager.PostData(
+		_, _, _, err = m.ConnectivityManager.PostData(
 			sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), false, data,
 		)
 
-		if err2 != nil {
+		if err != nil {
 			// TODO: shall we redo data post until successful?
-			logger.I("failed to post data", log.Error(err2))
-			s.writeErr(fmt.Sprintf("post: %v", err2))
+			logger.I("failed to post data", log.Error(err))
+			s.writeErr(fmt.Sprintf("post: %v", err))
 			return
 		}
 	}
