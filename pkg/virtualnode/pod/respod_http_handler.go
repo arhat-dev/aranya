@@ -251,7 +251,7 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 
 // HandlePodPortForward proxy http based kubectl port-forward command to edge device
 func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
-	logger := m.Log.WithFields(log.String("type", "http"), log.String("action", "portforward"))
+	logger := m.Log.WithFields(log.String("type", "http"), log.String("action", "port-forward"))
 
 	podName, uid := getParamsForPortForward(r)
 	logger.D("resolving port-forward options")
@@ -299,11 +299,13 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 
 	logger.D("serving port forward")
 	err = m.servePortForward(
-		w, r, /* http context */
-		string(podUID),     /* unique id of pod */
-		portForwardOptions, /* port forward options (ports) */
+		logger,
+		w, r, // http context
+		string(podUID),     // unique id of pod
+		portForwardOptions, // port forward options (ports)
 		// timeout options
-		m.options.Config.Timers.StreamIdleTimeout, m.options.Config.Timers.StreamCreationTimeout,
+		m.options.Config.Timers.StreamIdleTimeout,
+		m.options.Config.Timers.StreamCreationTimeout,
 		// supported protocols
 		kubeletpf.SupportedProtocols)
 

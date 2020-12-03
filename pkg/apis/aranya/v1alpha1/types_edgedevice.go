@@ -194,7 +194,7 @@ type (
 		// AllowAttach to allow "create" for resource pods/attach
 		AllowAttach *bool `json:"allowAttach,omitempty" yaml:"allowAttach"`
 
-		// AllowPortForward to allow "create" for resource pods/portforward
+		// AllowPortForward to allow "create" for resource pods/port-forward
 		AllowPortForward *bool `json:"allowPortForward,omitempty" yaml:"allowPortForward"`
 
 		// AllowLog to allow "create" for resource pods/log

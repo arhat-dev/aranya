@@ -47,6 +47,7 @@ const (
 )
 
 func (m *Manager) servePortForward(
+	logger log.Interface,
 	w http.ResponseWriter,
 	r *http.Request,
 	podUID string,
@@ -55,13 +56,16 @@ func (m *Manager) servePortForward(
 	supportedProtocols []string,
 ) error {
 	if wsstream.IsWebSocketRequest(r) {
-		return m.handleWebSocketPortForward(w, r, podUID, idleTimeout, opts)
+		logger.V("serving websocket")
+		return m.handleWebSocketPortForward(logger, w, r, podUID, idleTimeout, opts)
 	}
 
-	return m.handleHTTPPortForward(w, r, podUID, idleTimeout, streamCreationTimeout, supportedProtocols)
+	logger.V("serving spdy streams")
+	return m.handleHTTPPortForward(logger, w, r, podUID, idleTimeout, streamCreationTimeout, supportedProtocols)
 }
 
 func (m *Manager) handleWebSocketPortForward(
+	logger log.Interface,
 	w http.ResponseWriter,
 	r *http.Request,
 	podUID string,
@@ -121,7 +125,7 @@ func (m *Manager) handleWebSocketPortForward(
 				wg.Done()
 			}()
 
-			m.doPortForward(r.Context(), m.Log.WithFields(log.String("action", "port-forward")), s)
+			m.doPortForward(r.Context(), logger, wg, s)
 		}()
 	}
 
@@ -129,6 +133,7 @@ func (m *Manager) handleWebSocketPortForward(
 }
 
 func (m *Manager) handleHTTPPortForward(
+	logger log.Interface,
 	w http.ResponseWriter,
 	r *http.Request,
 	podUID string,
@@ -141,7 +146,7 @@ func (m *Manager) handleHTTPPortForward(
 		// Handshake writes the error to the client
 		return err
 	}
-	streamChan := make(chan httpstream.Stream, 1)
+	streamChan := make(chan httpstream.Stream, 16)
 
 	up := spdy.NewResponseUpgrader()
 	conn := up.UpgradeResponse(w, r, validateNewHTTPStream(streamChan))
@@ -151,14 +156,16 @@ func (m *Manager) handleHTTPPortForward(
 	conn.SetIdleTimeout(idleTimeout)
 
 	wg := new(sync.WaitGroup)
-	timeoutCheckTk := time.NewTicker(streamCreationTimeout / 5)
+	timeoutCheck := time.NewTimer(streamCreationTimeout / 5)
 
 	streamPairs := make(map[string]*stream)
 	for {
 		select {
 		case <-conn.CloseChan():
-			// connection closed, close all streams
-			timeoutCheckTk.Stop()
+			logger.D("request closed, closing all streams")
+			if !timeoutCheck.Stop() {
+				<-timeoutCheck.C
+			}
 
 			for _, s := range streamPairs {
 				s.close("")
@@ -168,13 +175,20 @@ func (m *Manager) handleHTTPPortForward(
 
 			wg.Wait()
 
+			logger.V("all streams exited")
+
 			return nil
-		case <-timeoutCheckTk.C:
+		case <-timeoutCheck.C:
+			logger.V("detecting expired streams")
+			timeoutCheck.Reset(streamCreationTimeout / 5)
+
 			var toDelete []string
 			now := time.Now()
 			for reqID, p := range streamPairs {
 				// stream pair created, check if its creation has timed out
 				if now.After(p.creationFailAt) && !p.prepared() {
+					logger.D("stream creation timeout", log.String("reqID", reqID))
+
 					p.close("stream creation timeout")
 					toDelete = append(toDelete, reqID)
 				}
@@ -185,6 +199,8 @@ func (m *Manager) handleHTTPPortForward(
 			}
 		case hs := <-streamChan:
 			reqID := hs.Headers().Get(api.PortForwardRequestIDHeader)
+			logger.V("new stream created", log.String("reqID", reqID))
+
 			s, hasStreamPair := streamPairs[reqID]
 			if !hasStreamPair {
 				s = &stream{
@@ -197,20 +213,29 @@ func (m *Manager) handleHTTPPortForward(
 				streamPairs[reqID] = s
 			}
 
-			err = m.handleNewHTTPStream(r.Context(), wg, s, hs)
+			err = m.handleNewHTTPStream(r.Context(), logger.WithFields(log.String("reqID", s.reqID)), wg, s, hs)
 			if err != nil {
+				logger.D("invalid stream", log.Error(err))
 				s.writeErr(err.Error())
 			}
 		}
 	}
 }
 
-func (m *Manager) handleNewHTTPStream(ctx context.Context, wg *sync.WaitGroup, s *stream, hs httpstream.Stream) error {
-	switch hs.Headers().Get(api.StreamType) {
+func (m *Manager) handleNewHTTPStream(
+	ctx context.Context,
+	logger log.Interface,
+	wg *sync.WaitGroup,
+	s *stream,
+	hs httpstream.Stream,
+) error {
+	switch t := hs.Headers().Get(api.StreamType); t {
 	case api.StreamTypeData:
 		if s.data != nil {
 			return fmt.Errorf("data stream already assigned")
 		}
+
+		logger.V("set data stream")
 
 		portString := hs.Headers().Get(api.PortHeader)
 		port, _ := strconv.ParseInt(portString, 10, 32)
@@ -222,9 +247,11 @@ func (m *Manager) handleNewHTTPStream(ctx context.Context, wg *sync.WaitGroup, s
 			return fmt.Errorf("error stream already assigned")
 		}
 
+		logger.V("set error stream")
+
 		s.error = hs
 	default:
-		// ignore other streams
+		logger.D("ignored stream", log.String("streamType", t))
 		return nil
 	}
 
@@ -232,7 +259,6 @@ func (m *Manager) handleNewHTTPStream(ctx context.Context, wg *sync.WaitGroup, s
 		return nil
 	}
 
-	logger := m.Log.WithFields(log.String("action", "port-forward"), log.String("id", s.reqID))
 	wg.Add(1)
 	go func() {
 		defer func() {
@@ -242,13 +268,15 @@ func (m *Manager) handleNewHTTPStream(ctx context.Context, wg *sync.WaitGroup, s
 			s.close("")
 		}()
 
-		m.doPortForward(ctx, logger, s)
+		m.doPortForward(ctx, logger, wg, s)
 	}()
 
 	return nil
 }
 
-func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, s *stream) {
+func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *sync.WaitGroup, s *stream) {
+	logger.D("forwarding to remote")
+
 	pfCmd := &aranyagopb.PortForwardCmd{
 		PodUid:  s.podUID,
 		Network: s.protocol,
@@ -268,7 +296,7 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, s *st
 		// is runtime pod port-forward
 		data, err := pfCmd.Marshal()
 		if err != nil {
-			logger.D("failed to create marshal port-forward options", log.Error(err))
+			logger.D("failed to marshal port-forward options", log.Error(err))
 			s.close(fmt.Sprintf("prepare: %v", err))
 			return
 		}
@@ -289,9 +317,12 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, s *st
 
 	// write routine is closed when read routine finished
 
+	wg.Add(1)
 	go func() {
 		defer func() {
 			s.close("")
+
+			wg.Done()
 		}()
 
 		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
@@ -412,7 +443,7 @@ func (s *stream) writeErr(err string) {
 // forward streams. It checks each stream's port and stream type headers,
 // rejecting any streams that with missing or invalid values. Each valid
 // stream is sent to the streams channel.
-func validateNewHTTPStream(streams chan httpstream.Stream) func(httpstream.Stream, <-chan struct{}) error {
+func validateNewHTTPStream(streams chan<- httpstream.Stream) func(httpstream.Stream, <-chan struct{}) error {
 	return func(stream httpstream.Stream, replySent <-chan struct{}) error {
 		// make sure it has a valid port header
 		portString := stream.Headers().Get(api.PortHeader)

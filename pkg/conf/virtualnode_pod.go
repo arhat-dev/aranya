@@ -52,9 +52,9 @@ func FlagsForVirtualnodePodConfig(prefix string, config *VirtualnodePodConfig) *
 	flags.DurationVar(&config.Timers.ForceSyncInterval, prefix+"forceSyncInterval", 0,
 		"device pod status sync interval, reject device if operation failed")
 	flags.DurationVar(&config.Timers.StreamCreationTimeout, prefix+"streamCreationTimeout",
-		constant.DefaultStreamCreationTimeout, "kubectl stream creation timeout (exec, attach, port.forward)")
+		constant.DefaultStreamCreationTimeout, "kubectl stream creation timeout (exec, attach, port-forward)")
 	flags.DurationVar(&config.Timers.StreamIdleTimeout, prefix+"streamIdleTimeout",
-		constant.DefaultStreamIdleTimeout, "kubectl stream idle timeout (exec, attach, port.forward)")
+		constant.DefaultStreamIdleTimeout, "kubectl stream idle timeout (exec, attach, port-forward)")
 
 	flags.IntVar(&config.Allocatable, prefix+"allocatable", 10, "set max pods assigned to this node")
 
