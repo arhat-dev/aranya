@@ -495,6 +495,20 @@ func (c *Controller) prepareConnectivityOptions(
 	vnConfig *conf.VirtualnodeConfig,
 ) (config *connectivity.Options, err error) {
 	config = &connectivity.Options{
+		AddTimedStreamCreation: func(sid uint64, onCreationTimeout connectivity.SessionTimeoutHandleFunc) {
+			key := sessionTimeoutKey{
+				name: edgeDevice.Name,
+				sid:  sid,
+			}
+			_ = c.timedSessionsTQ.OfferWithDelay(
+				key,
+				sessionTimeoutValue{
+					handleSessionTimeout: onCreationTimeout,
+				},
+				vnConfig.Pod.Timers.StreamCreationTimeout,
+			)
+		},
+
 		AddTimedSession: func(sid uint64, onSessionTimeout connectivity.SessionTimeoutHandleFunc) {
 			key := sessionTimeoutKey{
 				name: edgeDevice.Name,

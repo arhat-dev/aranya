@@ -51,7 +51,7 @@ func (m *Manager) CollectMetrics(peripheralName string) error {
 
 		// should get done
 		return false
-	}, nil, connectivity.LogUnknownMessage(m.Log))
+	})
 
 	return err
 }

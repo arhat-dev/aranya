@@ -240,7 +240,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 					"Pulled", "Successfully pulled all images")
 			}
 			return false
-		}, nil, connectivity.LogUnknownMessage(m.Log))
+		})
 
 		if err != nil {
 			return err
@@ -316,7 +316,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 					"PodInitialized", "Init container(s) created and finished")
 				_ = m.UpdateMirrorPod(pod, ps, true)
 				return false
-			}, nil, connectivity.LogUnknownMessage(m.Log))
+			})
 
 			if err != nil {
 				return err
@@ -398,7 +398,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, "Started", "Container(s) created and started")
 			_ = m.UpdateMirrorPod(pod, ps, false)
 			return false
-		}, nil, connectivity.LogUnknownMessage(m.Log))
+		})
 	}
 
 	// do not return nil here, we may have collected err from message channel
@@ -489,7 +489,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 			m.options.EventRecorder.Event(podToDelete, corev1.EventTypeNormal, "Killed", "Delete pod succeeded")
 		}
 		return false
-	}, nil, connectivity.LogUnknownMessage(m.Log))
+	})
 
 	return err
 }
@@ -569,7 +569,7 @@ func (m *Manager) SyncDevicePods() error {
 		}
 
 		return false
-	}, nil, connectivity.LogUnknownMessage(logger))
+	})
 
 	if err != nil {
 		return err

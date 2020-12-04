@@ -18,71 +18,11 @@ package connectivity
 
 import (
 	"fmt"
-	"io/ioutil"
-	"sync"
 	"testing"
 
 	"arhat.dev/aranya-proto/aranyagopb"
 	"github.com/stretchr/testify/assert"
 )
-
-func BenchmarkSession_deliverMsg(b *testing.B) {
-	for _, size := range []int{1, 8, 256, 512, 1024, 64 * 1024, 256 * 1024, 1024 * 1024} {
-		b.Run(fmt.Sprintf("normal msg payload size %d", size), func(b *testing.B) {
-			s := newSession(1, true)
-			data := make([]*aranyagopb.Msg, b.N)
-			payload := make([]byte, size)
-			for i := 0; i < b.N; i++ {
-				data[i] = &aranyagopb.Msg{
-					Kind:      aranyagopb.MSG_CRED_STATUS,
-					Sid:       1,
-					Seq:       uint64(i),
-					Completed: i == b.N-1,
-					Payload:   payload,
-				}
-			}
-
-			msgCh := s.msgCh
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				s.deliverMsg(data[i])
-			}
-			<-msgCh
-		})
-
-		b.Run(fmt.Sprintf("stream msg payload size %d", size), func(b *testing.B) {
-			s := newSession(1, true)
-			data := make([]*aranyagopb.Msg, b.N)
-			payload := make([]byte, size)
-			for i := 0; i < b.N; i++ {
-				data[i] = &aranyagopb.Msg{
-					Kind:      aranyagopb.MSG_DATA,
-					Sid:       1,
-					Seq:       uint64(i),
-					Completed: i == b.N-1,
-					Payload:   payload,
-				}
-			}
-
-			msgCh := s.msgCh
-			wg := new(sync.WaitGroup)
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for m := range msgCh {
-					d := m.(*Data)
-					_, _ = ioutil.Discard.Write(d.Payload)
-				}
-			}()
-
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				s.deliverMsg(data[i])
-			}
-			wg.Wait()
-		})
-	}
-}
 
 func TestSession_deliverMsg(t *testing.T) {
 	// these are chunks for a NodeStatusMsg

@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"runtime"
 	"sync/atomic"
@@ -77,6 +78,8 @@ type (
 )
 
 type Options struct {
+	AddTimedStreamCreation TimedSessionAddFunc
+
 	AddTimedSession  TimedSessionAddFunc
 	DelTimedSession  TimedSessionDelFunc
 	GetTimedSessions TimedSessionGetFunc
@@ -130,7 +133,7 @@ type Manager interface {
 		seq uint64, completed bool,
 		payload []byte,
 	) (
-		msgCh <-chan interface{},
+		msgCh <-chan *aranyagopb.Msg,
 		realSID, lastSeq uint64,
 		err error,
 	)
@@ -142,7 +145,20 @@ type Manager interface {
 		kind aranyagopb.CmdType,
 		payloadCmd proto.Marshaler,
 	) (
-		msgCh <-chan interface{},
+		msgCh <-chan *aranyagopb.Msg,
+		realSID uint64,
+		err error,
+	)
+
+	// PostStreamCmd is like PostCmd, but will set session in streaming mode, received stream
+	// data will be written to dataOut/errOut directly
+	PostStreamCmd(
+		kind aranyagopb.CmdType,
+		payloadCmd proto.Marshaler,
+		dataOut, errOut io.Writer,
+	) (
+		msgCh <-chan *aranyagopb.Msg,
+		streamReady <-chan struct{},
 		realSID uint64,
 		err error,
 	)
@@ -198,13 +214,6 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) (*b
 	disconnected := make(chan struct{})
 	close(disconnected)
 
-	sessions := NewSessionManager(config.AddTimedSession, config.DelTimedSession, config.GetTimedSessions)
-	err := sessions.Start(ctx.Done())
-	if err != nil {
-		exit()
-		return nil, fmt.Errorf("failed to start session manager: %w", err)
-	}
-
 	var maxDataSize int
 	switch {
 	case config.MQTTOpts != nil:
@@ -233,10 +242,14 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) (*b
 	}
 
 	return &baseManager{
-		ctx:      ctx,
-		exit:     exit,
-		config:   config,
-		sessions: sessions,
+		ctx:    ctx,
+		exit:   exit,
+		config: config,
+
+		sessions: NewSessionManager(
+			config.AddTimedSession, config.DelTimedSession,
+			config.GetTimedSessions, config.AddTimedStreamCreation,
+		),
 
 		maxDataSize:      maxDataSize,
 		log:              log.Log.WithName(fmt.Sprintf("conn.%s", name)),
@@ -265,6 +278,61 @@ func (m *baseManager) MaxPayloadSize() int {
 func (m *baseManager) GlobalMessages() <-chan *aranyagopb.Msg {
 	// global message channel is never recreated, so no lock needed
 	return m.globalMsgChan
+}
+
+func (m *baseManager) PostStreamCmd(
+	kind aranyagopb.CmdType,
+	payloadCmd proto.Marshaler,
+	dataOut, errOut io.Writer,
+) (
+	msgCh <-chan *aranyagopb.Msg,
+	streamReady <-chan struct{},
+	realSID uint64,
+	err error,
+) {
+	if m.stopped() {
+		err = ErrManagerClosed
+		return
+	}
+
+	var payload []byte
+	switch kind {
+	case aranyagopb.CMD_METRICS_COLLECT:
+		// metrics stream
+	case aranyagopb.CMD_EXEC, aranyagopb.CMD_ATTACH,
+		aranyagopb.CMD_LOGS, aranyagopb.CMD_PORT_FORWARD,
+		// runtime exec/attach/logs/port-forward
+		aranyagopb.CMD_RUNTIME:
+		if payloadCmd == nil {
+			err = fmt.Errorf("invalid empty payload for stream operation")
+			return
+		}
+
+		payload, err = payloadCmd.Marshal()
+		if err != nil {
+			err = fmt.Errorf("failed to marshal payload: %w", err)
+			return
+		}
+	default:
+		err = fmt.Errorf("invalid non stream cmd %q", kind.String())
+		return
+	}
+
+	realSID, msgCh = m.sessions.Add(0, true)
+	defer func() {
+		if err != nil {
+			m.sessions.Delete(realSID)
+		}
+	}()
+
+	streamReady, ok := m.sessions.SetStream(realSID, dataOut, errOut)
+	if !ok {
+		err = fmt.Errorf("failed to set session to stream mode")
+		return
+	}
+
+	_, err = m.doPostData(kind, realSID, 0, true, payload)
+	return
 }
 
 func (m *baseManager) doExclusive(f func()) {
@@ -369,13 +437,13 @@ func (m *baseManager) onRecvMsg(msg *aranyagopb.Msg) {
 		m.globalMsgChan <- msg
 	}
 
-	// nolint:gocritic
 	switch msg.Kind {
 	case aranyagopb.MSG_ERROR:
 		if msg.GetError().GetKind() == aranyagopb.ERR_TIMEOUT {
 			// close session with best effort
 			_, _, _ = m.PostCmd(0, aranyagopb.CMD_SESSION_CLOSE, &aranyagopb.SessionCloseCmd{Sid: msg.Sid})
 		}
+	default:
 	}
 }
 
@@ -412,6 +480,42 @@ func (m *baseManager) OnDisconnected(finalize func() (id string, all bool)) {
 	})
 }
 
+func (m *baseManager) doPostData(
+	kind aranyagopb.CmdType,
+	realSid, lastSeq uint64,
+	complete bool,
+	payload []byte,
+) (_ uint64, err error) {
+	chunkSize := m.MaxPayloadSize()
+	for len(payload) > chunkSize {
+		err = m.sendCmd(&aranyagopb.Cmd{
+			Kind:      kind,
+			Sid:       realSid,
+			Seq:       lastSeq,
+			Completed: false,
+			Payload:   payload[:chunkSize],
+		})
+		if err != nil {
+			return lastSeq, fmt.Errorf("failed to post cmd chunk: %w", err)
+		}
+		lastSeq++
+		payload = payload[chunkSize:]
+	}
+
+	err = m.sendCmd(&aranyagopb.Cmd{
+		Kind:      kind,
+		Sid:       realSid,
+		Seq:       lastSeq,
+		Completed: complete,
+		Payload:   payload,
+	})
+	if err != nil {
+		return lastSeq, fmt.Errorf("failed to post cmd chunk: %w", err)
+	}
+
+	return lastSeq, err
+}
+
 func (m *baseManager) PostData(
 	sid uint64,
 	kind aranyagopb.CmdType,
@@ -419,7 +523,7 @@ func (m *baseManager) PostData(
 	completed bool,
 	payload []byte,
 ) (
-	msgCh <-chan interface{},
+	msgCh <-chan *aranyagopb.Msg,
 	realSid, lastSeq uint64,
 	err error,
 ) {
@@ -439,11 +543,7 @@ func (m *baseManager) PostData(
 		return
 	}
 
-	var (
-		recordSession = true
-		isStream      = false
-	)
-
+	recordSession := true
 	// session id should not be empty if it's a input or resize command
 	switch kind {
 	case aranyagopb.CMD_SESSION_CLOSE:
@@ -452,9 +552,11 @@ func (m *baseManager) PostData(
 
 		m.sessions.Delete(realSid)
 	case aranyagopb.CMD_EXEC, aranyagopb.CMD_ATTACH,
-		aranyagopb.CMD_LOGS, aranyagopb.CMD_PORT_FORWARD:
-		// do not timeout stream sessions
-		isStream = true
+		aranyagopb.CMD_LOGS, aranyagopb.CMD_PORT_FORWARD,
+		aranyagopb.CMD_METRICS_COLLECT:
+		// do not handle stream commands here
+		err = fmt.Errorf("use PostStreamCmd to start stream session")
+		return
 	case aranyagopb.CMD_TTY_RESIZE, aranyagopb.CMD_DATA_UPSTREAM:
 		// only allowed in existing sessions
 		if sid == 0 {
@@ -470,7 +572,7 @@ func (m *baseManager) PostData(
 	}
 
 	if recordSession {
-		realSid, msgCh = m.sessions.Add(sid, isStream)
+		realSid, msgCh = m.sessions.Add(sid, false)
 		defer func() {
 			if err != nil {
 				m.sessions.Delete(realSid)
@@ -478,35 +580,7 @@ func (m *baseManager) PostData(
 		}()
 	}
 
-	chunkSize := m.MaxPayloadSize()
-	for len(payload) > chunkSize {
-		err = m.sendCmd(&aranyagopb.Cmd{
-			Kind:      kind,
-			Sid:       realSid,
-			Seq:       lastSeq,
-			Completed: false,
-			Payload:   payload[:chunkSize],
-		})
-		if err != nil {
-			err = fmt.Errorf("failed to post cmd chunk: %w", err)
-			return
-		}
-		lastSeq++
-		payload = payload[chunkSize:]
-	}
-
-	err = m.sendCmd(&aranyagopb.Cmd{
-		Kind:      kind,
-		Sid:       realSid,
-		Seq:       lastSeq,
-		Completed: completed,
-		Payload:   payload,
-	})
-	if err != nil {
-		err = fmt.Errorf("failed to post cmd chunk: %w", err)
-		return
-	}
-
+	lastSeq, err = m.doPostData(kind, realSid, lastSeq, completed, payload)
 	return
 }
 
@@ -515,7 +589,7 @@ func (m *baseManager) PostCmd(
 	kind aranyagopb.CmdType,
 	payloadCmd proto.Marshaler,
 ) (
-	msgCh <-chan interface{},
+	msgCh <-chan *aranyagopb.Msg,
 	realSID uint64,
 	err error,
 ) {

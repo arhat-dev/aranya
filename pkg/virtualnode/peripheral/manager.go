@@ -127,7 +127,7 @@ func (m *Manager) Start() error {
 				}
 
 				return false
-			}, nil, connectivity.LogUnknownMessage(logger))
+			})
 
 			if err != nil {
 				goto waitUntilDisconnected
@@ -230,7 +230,7 @@ func (m *Manager) removePeripherals(peripheralsToRemove sets.String) sets.String
 			}
 
 			return false
-		}, nil, connectivity.LogUnknownMessage(logger))
+		})
 	}
 
 	return peripheralsToRemove
@@ -280,7 +280,7 @@ func (m *Manager) ensurePeripherals(
 			}
 
 			return false
-		}, nil, connectivity.LogUnknownMessage(logger))
+		})
 	}
 
 	return nextRound

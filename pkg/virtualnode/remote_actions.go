@@ -52,7 +52,7 @@ func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeInfoGetCmd_Kin
 
 		vn.updateNodeCache(ns)
 		return false
-	}, nil, connectivity.LogUnknownMessage(vn.log))
+	})
 
 	if err != nil {
 		return fmt.Errorf("failed to sync node status: %w", err)

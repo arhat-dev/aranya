@@ -31,7 +31,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var _ Manager = &GRPCManager{}
+var _ Manager = (*GRPCManager)(nil)
 
 type GRPCManager struct {
 	*baseManager

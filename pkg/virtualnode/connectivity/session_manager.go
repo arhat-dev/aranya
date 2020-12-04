@@ -18,24 +18,31 @@ package connectivity
 
 import (
 	"bytes"
+	"io"
+	"io/ioutil"
 	"runtime"
 	"sort"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/queue"
+	"arhat.dev/pkg/wellknownerrors"
 )
 
 func newSession(epoch uint64, isStream bool) *session {
 	return &session{
 		epoch: epoch,
-		msgCh: make(chan interface{}, 1),
+		msgCh: make(chan *aranyagopb.Msg, 1),
 
 		// initialized when necessary
 		msgBuffer: nil,
 		seqQ:      nil,
+
+		dataOut:      nil,
+		errOut:       nil,
+		streamReady:  nil,
+		_streamReady: 0,
 
 		_closed:  0,
 		_working: 0,
@@ -45,10 +52,19 @@ func newSession(epoch uint64, isStream bool) *session {
 }
 
 type session struct {
-	epoch     uint64
-	msgCh     chan interface{}
+	epoch uint64
+	msgCh chan *aranyagopb.Msg
+
 	msgBuffer *bytes.Buffer
-	seqQ      *queue.SeqQueue
+	// seq queue is resued by both msg and data streaming
+	seqQ *queue.SeqQueue
+
+	// data streaming
+	dataOut io.Writer
+	errOut  io.Writer
+	// once it's set, this session can accept data stream
+	streamReady  chan struct{}
+	_streamReady uint32
 
 	_working uint32
 	_closed  uint32
@@ -70,21 +86,101 @@ func (s *session) closed() bool {
 	return atomic.LoadUint32(&s._closed) == 1
 }
 
-func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
-	if s.closed() {
-		// session closed, no message shall be delivered
-		return false, true
+func (s *session) setStream(dataOut, errOut io.Writer, ready chan struct{}) bool {
+	set := false
+	s.doExclusive(func() {
+		if s.streamReady != nil {
+			return
+		}
+
+		set = true
+		if dataOut == nil {
+			dataOut = ioutil.Discard
+		}
+
+		if errOut == nil {
+			errOut = dataOut
+		}
+
+		s.dataOut = dataOut
+		s.errOut = errOut
+		s.streamReady = ready
+		s._streamReady = 0
+	})
+
+	return set
+}
+
+func (s *session) writeToStream(kind aranyagopb.MsgType, data []byte) error {
+	if !s.isStream {
+		return wellknownerrors.ErrNotSupported
 	}
 
+	if atomic.CompareAndSwapUint32(&s._streamReady, 0, 1) {
+		// notify ready on first data write
+		select {
+		case <-s.streamReady:
+			// closed by others, this stream is discarded
+			return wellknownerrors.ErrNotSupported
+		default:
+			close(s.streamReady)
+		}
+	}
+
+	target := s.dataOut
+	if kind == aranyagopb.MSG_DATA_STDERR {
+		target = s.errOut
+	}
+
+	var (
+		n    int
+		size = len(data)
+		sum  int
+		err  error
+	)
+	for sum != size {
+		n, err = target.Write(data[sum:])
+		if err != nil {
+			return err
+		}
+
+		sum += n
+	}
+
+	return nil
+}
+
+type data struct {
+	kind    aranyagopb.MsgType
+	payload []byte
+}
+
+func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 	// deliver message exclusively to ensure data order
 	s.doExclusive(func() {
+		if s.closed() {
+			// session closed, no message shall be delivered
+			delivered, complete = false, true
+			return
+		}
+
 		// all in one packet, no need to reassemble packets
 		if msg.Seq == 0 && msg.Completed {
 			switch msg.Kind {
 			case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
-				s.msgCh <- &Data{
-					Kind:    msg.Kind,
-					Payload: msg.Payload,
+				err := s.writeToStream(msg.Kind, msg.Payload)
+				if err != nil {
+					errMsgData, _ := (&aranyagopb.ErrorMsg{
+						Kind:        aranyagopb.ERR_COMMON,
+						Description: err.Error(),
+					}).Marshal()
+					s.msgCh <- &aranyagopb.Msg{
+						Kind:      aranyagopb.MSG_ERROR,
+						Sid:       msg.Sid,
+						Seq:       0,
+						Completed: true,
+						Payload:   errMsgData,
+					}
 				}
 			default:
 				s.msgCh <- msg
@@ -100,9 +196,9 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 		}
 
 		var orderedChunks []interface{}
-		orderedChunks, complete = s.seqQ.Offer(msg.Seq, &Data{
-			Kind:    msg.Kind,
-			Payload: msg.Payload,
+		orderedChunks, complete = s.seqQ.Offer(msg.Seq, &data{
+			kind:    msg.Kind,
+			payload: msg.Payload,
 		})
 
 		if msg.Completed {
@@ -111,12 +207,26 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 
 		// handle ordered data chunks
 		for _, ck := range orderedChunks {
-			data := ck.(*Data)
+			data := ck.(*data)
 
-			switch data.Kind {
+			switch data.kind {
 			case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
 				// is stream data, send directly
-				s.msgCh <- data
+				err := s.writeToStream(data.kind, data.payload)
+				if err != nil {
+					errMsgData, _ := (&aranyagopb.ErrorMsg{
+						Kind:        aranyagopb.ERR_COMMON,
+						Description: err.Error(),
+					}).Marshal()
+
+					s.msgCh <- &aranyagopb.Msg{
+						Kind:      aranyagopb.MSG_ERROR,
+						Sid:       msg.Sid,
+						Seq:       0,
+						Completed: true,
+						Payload:   errMsgData,
+					}
+				}
 			default:
 				// is message data, collect until complete
 				// message data can be the last several data chunks in a stream
@@ -127,7 +237,7 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 					s.msgBuffer = new(bytes.Buffer)
 				}
 
-				s.msgBuffer.Write(data.Payload)
+				s.msgBuffer.Write(data.payload)
 			}
 		}
 
@@ -163,11 +273,25 @@ func (s *session) close() {
 
 	atomic.StoreUint32(&s._closed, 1)
 
+	if atomic.CompareAndSwapUint32(&s._streamReady, 0, 1) {
+		if s.streamReady != nil {
+			// release stream preparation
+			select {
+			case <-s.streamReady:
+				// could be canceled by others
+			default:
+				close(s.streamReady)
+			}
+		}
+	}
+
 	if s.msgBuffer != nil {
 		s.msgBuffer.Reset()
 		s.msgBuffer = nil
 	}
 
+	s.dataOut = nil
+	s.errOut = nil
 	s.seqQ = nil
 
 	if s.msgCh != nil {
@@ -180,6 +304,7 @@ func NewSessionManager(
 	addTimedSession TimedSessionAddFunc,
 	delTimedSession TimedSessionDelFunc,
 	getTimedSessions TimedSessionGetFunc,
+	addTimedStreamCreation TimedSessionAddFunc,
 ) *SessionManager {
 	now := uint64(time.Now().UTC().UnixNano())
 	return &SessionManager{
@@ -189,10 +314,10 @@ func NewSessionManager(
 		delTimedSession:  delTimedSession,
 		getTimedSessions: getTimedSessions,
 
+		addTimedStreamCreation: addTimedStreamCreation,
+
 		sid:   now,
 		epoch: now,
-
-		mu: new(sync.RWMutex),
 	}
 }
 
@@ -203,10 +328,22 @@ type SessionManager struct {
 	delTimedSession  TimedSessionDelFunc
 	getTimedSessions TimedSessionGetFunc
 
+	addTimedStreamCreation TimedSessionAddFunc
+
 	sid   uint64
 	epoch uint64
 
-	mu *sync.RWMutex
+	_working uint32
+}
+
+func (m *SessionManager) doExclusive(f func()) {
+	for !atomic.CompareAndSwapUint32(&m._working, 0, 1) {
+		runtime.Gosched()
+	}
+
+	f()
+
+	atomic.StoreUint32(&m._working, 0)
 }
 
 // nextSid is only intended to be used when s.mu has been locked
@@ -220,8 +357,34 @@ func (m *SessionManager) nextSid() uint64 {
 	return m.sid
 }
 
-func (m *SessionManager) Start(stopCh <-chan struct{}) error {
-	return nil
+func (m *SessionManager) SetStream(sid uint64, dataOut, errOut io.Writer) (<-chan struct{}, bool) {
+	var (
+		session *session
+		ok      bool
+	)
+	m.doExclusive(func() {
+		session, ok = m.sessions[sid]
+	})
+
+	if !ok {
+		return nil, false
+	}
+
+	ret := make(chan struct{})
+	if !session.setStream(dataOut, errOut, ret) {
+		return nil, false
+	}
+
+	m.addTimedStreamCreation(sid, func() {
+		select {
+		case <-ret:
+			// can be closed by session
+		default:
+			close(ret)
+		}
+	})
+
+	return ret, true
 }
 
 // Add or reuse a session
@@ -230,47 +393,46 @@ func (m *SessionManager) Add(
 	isStream bool,
 ) (
 	realSid uint64,
-	ch chan interface{},
+	ch chan *aranyagopb.Msg,
 ) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.doExclusive(func() {
+		realSid = sid
+		// check if old sid valid
+		if oldSession, ok := m.sessions[realSid]; ok {
+			// reuse old channel if valid
+			ch = oldSession.msgCh
+		} else {
+			// create new channel if invalid
+			session := newSession(m.epoch, isStream)
 
-	realSid = sid
-	// check if old sid valid
-	if oldSession, ok := m.sessions[realSid]; ok {
-		// reuse old channel if valid
-		ch = oldSession.msgCh
-	} else {
-		// create new channel if invalid
-		session := newSession(m.epoch, isStream)
+			ch = session.msgCh
+			realSid = m.nextSid()
 
-		ch = session.msgCh
-		realSid = m.nextSid()
+			if !isStream {
+				m.addTimedSession(realSid, func() {
+					data, _ := (&aranyagopb.ErrorMsg{
+						Kind:        aranyagopb.ERR_TIMEOUT,
+						Description: "timeout",
+						Code:        0,
+					}).Marshal()
 
-		if !isStream {
-			m.addTimedSession(realSid, func() {
-				data, _ := (&aranyagopb.ErrorMsg{
-					Kind:        aranyagopb.ERR_TIMEOUT,
-					Description: "timeout",
-					Code:        0,
-				}).Marshal()
+					m.Dispatch(&aranyagopb.Msg{
+						Kind:      aranyagopb.MSG_ERROR,
+						Sid:       sid,
+						Seq:       0,
+						Completed: true,
+						Payload:   data,
+					})
 
-				m.Dispatch(&aranyagopb.Msg{
-					Kind:      aranyagopb.MSG_ERROR,
-					Sid:       sid,
-					Seq:       0,
-					Completed: true,
-					Payload:   data,
+					m.Delete(sid)
 				})
+			}
 
-				m.Delete(sid)
-			})
+			m.sessions[realSid] = session
 		}
+	})
 
-		m.sessions[realSid] = session
-	}
-
-	return realSid, ch
+	return
 }
 
 func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
@@ -281,9 +443,13 @@ func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
 
 	sid := msg.Sid
 
-	m.mu.RLock()
-	session, ok := m.sessions[sid]
-	m.mu.RUnlock()
+	var (
+		session *session
+		ok      bool
+	)
+	m.doExclusive(func() {
+		session, ok = m.sessions[sid]
+	})
 
 	if !ok {
 		return false
@@ -304,64 +470,63 @@ func (m *SessionManager) Dispatch(msg *aranyagopb.Msg) bool {
 }
 
 func (m *SessionManager) Delete(sid uint64) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.doExclusive(func() {
+		if session, ok := m.sessions[sid]; ok {
+			session.doExclusive(session.close)
 
-	if session, ok := m.sessions[sid]; ok {
-		session.doExclusive(session.close)
-
-		m.delTimedSession(sid)
-		delete(m.sessions, sid)
-	}
+			m.delTimedSession(sid)
+			delete(m.sessions, sid)
+		}
+	})
 }
 
 func (m *SessionManager) Cleanup() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.doExclusive(func() {
+		allSid := make([]uint64, len(m.sessions))
+		i := 0
+		for sid, session := range m.sessions {
+			if session.isStream {
+				// do not close streams
+				continue
+			}
 
-	allSid := make([]uint64, len(m.sessions))
-	i := 0
-	for sid, session := range m.sessions {
-		if session.isStream {
-			// do not close streams
-			continue
+			session.doExclusive(session.close)
+
+			m.delTimedSession(sid)
+			allSid[i] = sid
+			i++
 		}
 
-		session.doExclusive(session.close)
+		for _, sid := range allSid {
+			delete(m.sessions, sid)
+		}
 
-		m.delTimedSession(sid)
-		allSid[i] = sid
-		i++
-	}
+		now := uint64(time.Now().UTC().UnixNano())
 
-	for _, sid := range allSid {
-		delete(m.sessions, sid)
-	}
-
-	now := uint64(time.Now().UTC().UnixNano())
-
-	m.epoch = now
-	// m.sid > now is the rare case, but we have to make sure sid is
-	// always increasing in this session manager
-	if m.sid < now {
-		m.sid = now
-	}
+		m.epoch = now
+		// m.sid > now is the rare case, but we have to make sure sid is
+		// always increasing in this session manager
+		if m.sid < now {
+			m.sid = now
+		}
+	})
 }
 
 func (m *SessionManager) Remains() []uint64 {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	var result []uint64
 
-	if len(m.sessions) == 0 {
-		return nil
-	}
+	m.doExclusive(func() {
+		if len(m.sessions) == 0 {
+			return
+		}
 
-	result := make([]uint64, len(m.sessions))
-	i := 0
-	for sid := range m.sessions {
-		result[i] = sid
-		i++
-	}
+		result = make([]uint64, len(m.sessions))
+		i := 0
+		for sid := range m.sessions {
+			result[i] = sid
+			i++
+		}
+	})
 
 	sort.Slice(result, func(i, j int) bool {
 		return result[i] < result[j]

@@ -17,6 +17,7 @@ limitations under the License.
 package metrics
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sync/atomic"
@@ -224,7 +225,7 @@ func (m *Manager) configureMetricsCollection(forRuntime bool, cmd *aranyagopb.Me
 			}
 
 			return true
-		}, nil, connectivity.LogUnknownMessage(m.Log))
+		})
 
 		return
 	}
@@ -253,28 +254,28 @@ func (m *Manager) configureMetricsCollection(forRuntime bool, cmd *aranyagopb.Me
 			atomic.StoreUint32(&m.supportNodeMetrics, 0)
 			return true
 		}
-	}, nil, connectivity.LogUnknownMessage(m.Log))
+	})
 }
 
 func (m *Manager) retrieveDeviceMetrics(forRuntime bool) {
 	var (
-		msgCh <-chan interface{}
+		msgCh <-chan *aranyagopb.Msg
 		err   error
+		buf   = new(bytes.Buffer)
 	)
 	if forRuntime {
-		msgCh, _, err = m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
+		msgCh, _, _, err = m.ConnectivityManager.PostStreamCmd(aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
 			Kind:    runtimepb.CMD_METRICS_COLLECT,
 			Payload: nil,
-		})
+		}, buf, nil)
 	} else {
-		msgCh, _, err = m.ConnectivityManager.PostCmd(0, aranyagopb.CMD_METRICS_COLLECT, nil)
+		msgCh, _, _, err = m.ConnectivityManager.PostStreamCmd(aranyagopb.CMD_METRICS_COLLECT, nil, buf, nil)
 	}
 	if err != nil {
 		m.Log.I("failed to post metrics collect cmd", log.Error(err))
 		return
 	}
 
-	var metricsData []byte
 	connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
 		if err := msg.GetError(); err != nil {
 			m.Log.I("failed to get metrics", log.Error(err))
@@ -296,12 +297,9 @@ func (m *Manager) retrieveDeviceMetrics(forRuntime bool) {
 		}
 
 		return false
-	}, func(data *connectivity.Data) (exit bool) {
-		metricsData = append(metricsData, data.Payload...)
-		return false
-	}, connectivity.LogUnknownMessage(m.Log))
+	})
 
-	err = m.UpdateMetrics(forRuntime, metricsData)
+	err = m.UpdateMetrics(forRuntime, buf.Bytes())
 	if err != nil {
 		m.Log.I("failed to update metrics", log.Error(err))
 	}

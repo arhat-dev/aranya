@@ -18,45 +18,16 @@ package connectivity
 
 import (
 	"arhat.dev/aranya-proto/aranyagopb"
-	"arhat.dev/pkg/log"
 )
-
-type Data struct {
-	Kind    aranyagopb.MsgType
-	Payload []byte
-}
 
 type (
-	MsgHandleFunc        func(msg *aranyagopb.Msg) (exit bool)
-	DataHandleFunc       func(data *Data) (exit bool)
-	UnknownMsgHandleFunc func(u interface{}) (exit bool)
+	MsgHandleFunc func(msg *aranyagopb.Msg) (exit bool)
 )
 
-func LogUnknownMessage(logger log.Interface) UnknownMsgHandleFunc {
-	return func(u interface{}) bool {
-		logger.I("unknown message type", log.Any("msg", u))
-		return true
-	}
-}
-
 func HandleMessages(
-	msgCh <-chan interface{},
+	msgCh <-chan *aranyagopb.Msg,
 	onMsg MsgHandleFunc,
-	onData DataHandleFunc,
-	onUnknown UnknownMsgHandleFunc,
 ) {
-	if onMsg == nil {
-		onMsg = func(*aranyagopb.Msg) bool { return false }
-	}
-
-	if onData == nil {
-		onData = func(*Data) bool { return false }
-	}
-
-	if onUnknown == nil {
-		onUnknown = func(u interface{}) bool { return false }
-	}
-
 	exit := false
 
 	// always drain message channel
@@ -65,13 +36,6 @@ func HandleMessages(
 			continue
 		}
 
-		switch m := msg.(type) {
-		case *aranyagopb.Msg:
-			exit = onMsg(m)
-		case *Data:
-			exit = onData(m)
-		default:
-			exit = onUnknown(msg)
-		}
+		exit = onMsg(msg)
 	}
 }

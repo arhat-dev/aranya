@@ -68,6 +68,6 @@ func (m *Manager) Operate(peripheralName, operationName string, data []byte, out
 		}
 
 		return false
-	}, nil, connectivity.LogUnknownMessage(m.Log))
+	})
 	return nil
 }

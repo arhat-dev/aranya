@@ -104,12 +104,8 @@ func (m *Manager) doHandleLogs(
 		bytesLimit int64 = -1
 		kind             = aranyagopb.CMD_LOGS
 		cmd        proto.Marshaler
-		logger     = m.Log.WithFields(log.String("type", "logs"))
-
-		handleData = func(data []byte) error {
-			_, err := httpWriter.Write(data)
-			return err
-		}
+		logger     = m.Log.WithFields(log.String("action", "logs"))
+		output     = httpWriter
 	)
 
 	switch {
@@ -187,10 +183,7 @@ func (m *Manager) doHandleLogs(
 			Path: logPath,
 		}
 		pr, pw := iohelper.Pipe()
-		handleData = func(data []byte) error {
-			_, err2 := pw.Write(data)
-			return err2
-		}
+		output = pw
 
 		defer func() {
 			_ = pw.Close()
@@ -243,7 +236,7 @@ func (m *Manager) doHandleLogs(
 		return fmt.Errorf("bad log options")
 	}
 
-	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, kind, cmd)
+	msgCh, _, sid, err := m.ConnectivityManager.PostStreamCmd(kind, cmd, output, output)
 	if err != nil {
 		logger.I("failed to post log cmd", log.Error(err))
 		return err
@@ -266,15 +259,7 @@ func (m *Manager) doHandleLogs(
 		}
 
 		return true
-	}, func(data *connectivity.Data) (exit bool) {
-		err2 := handleData(data.Payload)
-		if err2 != nil {
-			logger.I("failed to write log data", log.Error(err2))
-			return true
-		}
-
-		return false
-	}, connectivity.LogUnknownMessage(logger))
+	})
 
 	return err
 }
@@ -427,7 +412,9 @@ func (m *Manager) doServeTerminalStream(
 		return fmt.Errorf("output should not be nil")
 	}
 
-	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, kind, initialCmd)
+	msgCh, streamReady, sid, err := m.ConnectivityManager.PostStreamCmd(
+		kind, initialCmd, stdout, stderr,
+	)
 	if err != nil {
 		logger.I("failed to create session", log.Error(err))
 		return err
@@ -436,8 +423,14 @@ func (m *Manager) doServeTerminalStream(
 	logger = logger.WithFields(log.Uint64("sid", sid))
 
 	ctx, cancel := context.WithCancel(ctx)
+
 	defer func() {
 		cancel()
+
+		// drain resize sig
+		for len(resizeCh) != 0 {
+			<-resizeCh
+		}
 
 		// close session, best effort
 		_, _, err2 := m.ConnectivityManager.PostCmd(
@@ -456,8 +449,17 @@ func (m *Manager) doServeTerminalStream(
 		}
 
 		go func() {
+			// wait until stream prepared
+			select {
+			case <-ctx.Done():
+				return
+			case <-streamReady:
+			}
+
 			for {
 				select {
+				case <-ctx.Done():
+					return
 				case size, ok := <-resizeCh:
 					if !ok {
 						return
@@ -491,8 +493,6 @@ func (m *Manager) doServeTerminalStream(
 					if err2 != nil {
 						logger.I("failed to post resize cmd", log.Error(err2))
 					}
-				case <-ctx.Done():
-					return
 				}
 			}
 		}()
@@ -520,6 +520,13 @@ func (m *Manager) doServeTerminalStream(
 			}
 
 			buf := make([]byte, bufSize)
+
+			// wait until stream prepared
+			select {
+			case <-ctx.Done():
+				return
+			case <-streamReady:
+			}
 
 			if resizeCh == nil {
 				// not a tty, read as many data as possible
@@ -584,20 +591,7 @@ func (m *Manager) doServeTerminalStream(
 
 		// unwanted message, this session is not valid anymore
 		return true
-	}, func(data *connectivity.Data) (exit bool) {
-		// default send to stdout
-		output := stdout
-		if data.Kind == aranyagopb.MSG_DATA_STDERR && stderr != nil {
-			output = stderr
-		}
-
-		_, err = output.Write(data.Payload)
-		if err != nil && err != io.EOF {
-			logger.I("failed to write output", log.Error(err))
-			return true
-		}
-		return false
-	}, connectivity.LogUnknownMessage(logger))
+	})
 
 	return err
 }
@@ -605,17 +599,3 @@ func (m *Manager) doServeTerminalStream(
 func nextSeq(p *uint64) uint64 {
 	return atomic.AddUint64(p, 1) - 1
 }
-
-// func closeReaderWithDelay(file *os.File) {
-// 	fd := file.Fd()
-// 	for {
-// 		time.Sleep(time.Second)
-
-// 		n, err := iohelper.CheckBytesToRead(fd)
-// 		if err != nil || n == 0 {
-// 			break
-// 		}
-// 	}
-
-// 	_ = file.Close()
-// }

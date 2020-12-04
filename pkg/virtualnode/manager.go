@@ -258,7 +258,7 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 			}
 
 			return false
-		}, nil, connectivity.LogUnknownMessage(vn.log))
+		})
 
 		if err != nil {
 			if e, ok := err.(*aranyagopb.ErrorMsg); ok && e.Kind == aranyagopb.ERR_NOT_SUPPORTED {

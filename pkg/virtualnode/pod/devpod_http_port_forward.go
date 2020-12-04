@@ -309,7 +309,7 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 		}
 	}
 
-	msgCh, sid, err := m.ConnectivityManager.PostCmd(0, kind, cmd)
+	msgCh, streamReady, sid, err := m.ConnectivityManager.PostStreamCmd(kind, cmd, s.data, s.error)
 	if err != nil {
 		logger.D("failed to create session", log.Error(err))
 		s.close(fmt.Sprintf("prepare: %v", err))
@@ -336,16 +336,7 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 			}
 
 			return true
-		}, func(dataMsg *connectivity.Data) (exit bool) {
-			_, err2 := s.data.Write(dataMsg.Payload)
-			if err2 != nil {
-				logger.I("failed to write data", log.Error(err2))
-				s.close(fmt.Sprintf("write: %v", err2))
-				return true
-			}
-
-			return false
-		}, connectivity.LogUnknownMessage(m.Log))
+		})
 	}()
 
 	// read routine
@@ -368,8 +359,16 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 		bufSize = constant.MaxBufSize
 	}
 
+	// wait until stream prepared
+	select {
+	case <-ctx.Done():
+		return
+	case <-streamReady:
+	}
+
 	var n int
 	buf := make([]byte, bufSize)
+
 	for {
 		n, err = s.data.Read(buf)
 		if err != nil {
