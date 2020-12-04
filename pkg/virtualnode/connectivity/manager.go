@@ -428,7 +428,14 @@ func (m *baseManager) OnConnected(initialize func() (id string)) {
 	})
 }
 
-func (m *baseManager) onRecvMsg(msg *aranyagopb.Msg) {
+func (m *baseManager) onRecvMsg(data []byte) {
+	msg := new(aranyagopb.Msg)
+	err := msg.Unmarshal(data)
+	if err != nil {
+		m.log.I("failed to unmarshal msg", log.Binary("data", data), log.Error(err))
+		return
+	}
+
 	if m.stopped() {
 		return
 	}

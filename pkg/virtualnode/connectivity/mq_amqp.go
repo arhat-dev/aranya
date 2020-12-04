@@ -105,7 +105,7 @@ type amqpClient struct {
 	log         log.Interface
 	url         string
 	tlsConfig   *tls.Config
-	onRecvMsg   func(*aranyagopb.Msg)
+	onRecvMsg   func(data []byte)
 	rejectAgent func()
 
 	sessionStore *atomic.Value
@@ -286,14 +286,7 @@ func (c *amqpClient) Subscribe() error {
 				return
 			}
 
-			msg := new(aranyagopb.Msg)
-			err := msg.Unmarshal(recvDeliver.Body)
-			if err != nil {
-				c.log.I("failed to unmarshal msg bytes", log.Error(err), log.Binary("msgBytes", recvDeliver.Body))
-				continue
-			}
-
-			go c.onRecvMsg(msg)
+			c.onRecvMsg(recvDeliver.Body)
 		}
 	}()
 

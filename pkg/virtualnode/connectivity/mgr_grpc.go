@@ -194,7 +194,8 @@ func (m *GRPCManager) Sync(server rpcpb.EdgeDevice_SyncServer) error {
 				continue
 			}
 
-			go m.onRecvMsg(msg)
+			data, _ := msg.Marshal()
+			m.onRecvMsg(data)
 		}
 	}
 }

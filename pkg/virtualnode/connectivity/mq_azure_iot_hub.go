@@ -62,15 +62,6 @@ func newAzureIoTHubClient(parent *MessageQueueManager) (*azureIoTHubClient, erro
 		pollInterval = time.Minute
 	}
 
-	onlineMsgBytes, _ := (&aranyagopb.StateMsg{
-		Kind:     aranyagopb.STATE_ONLINE,
-		DeviceId: opts.Config.DeviceID,
-	}).Marshal()
-	offlineMsgBytes, _ := (&aranyagopb.StateMsg{
-		Kind:     aranyagopb.STATE_OFFLINE,
-		DeviceId: opts.Config.DeviceID,
-	}).Marshal()
-
 	clientCtx, exit := context.WithCancel(parent.ctx)
 	client := &azureIoTHubClient{
 		log:  parent.log,
@@ -87,20 +78,8 @@ func newAzureIoTHubClient(parent *MessageQueueManager) (*azureIoTHubClient, erro
 		rejectAgent: func() {
 			parent.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "iot hub connection lost")
 		},
-		onlineMsg: &aranyagopb.Msg{
-			Kind:      aranyagopb.MSG_STATE,
-			Sid:       0,
-			Seq:       0,
-			Completed: true,
-			Payload:   onlineMsgBytes,
-		},
-		offlineMsg: &aranyagopb.Msg{
-			Kind:      aranyagopb.MSG_STATE,
-			Sid:       0,
-			Seq:       0,
-			Completed: true,
-			Payload:   offlineMsgBytes,
-		},
+		onlineMsg:  nil,
+		offlineMsg: nil,
 
 		recvOpts:        recvOpts,
 		senderStore:     new(atomic.Value),
@@ -108,6 +87,8 @@ func newAzureIoTHubClient(parent *MessageQueueManager) (*azureIoTHubClient, erro
 
 		msgPropTo: fmt.Sprintf("/devices/%s/messages/devicebound", opts.Config.DeviceID),
 	}
+
+	client.onlineMsg, client.offlineMsg = createStateMessages(opts.Config.DeviceID)
 
 	return client, nil
 }
@@ -123,10 +104,10 @@ type azureIoTHubClient struct {
 	iotHubParsedConn    *conn.ParsedConn
 	iotHubTokenProvider *sas.TokenProvider
 
-	onRecvMsg   func(*aranyagopb.Msg)
+	onRecvMsg   func(data []byte)
 	rejectAgent func()
-	onlineMsg   *aranyagopb.Msg
-	offlineMsg  *aranyagopb.Msg
+	onlineMsg   []byte
+	offlineMsg  []byte
 
 	hubOpts           []eventhub.HubOption
 	recvOpts          []eventhub.ReceiveOption
@@ -435,13 +416,7 @@ func (c *azureIoTHubClient) handleEvent(ctx context.Context, event *eventhub.Eve
 		return fmt.Errorf("device id not match")
 	}
 
-	msg := new(aranyagopb.Msg)
-	err := msg.Unmarshal(event.Data)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal event data: %w", err)
-	}
-
-	go c.onRecvMsg(msg)
+	c.onRecvMsg(event.Data)
 
 	return nil
 }

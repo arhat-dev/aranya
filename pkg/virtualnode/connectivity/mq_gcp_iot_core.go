@@ -62,15 +62,6 @@ func newGCPIoTCoreClient(parent *MessageQueueManager) (*gcpIoTCoreClient, error)
 		pollInterval = time.Minute
 	}
 
-	onlineMsgBytes, _ := (&aranyagopb.StateMsg{
-		Kind:     aranyagopb.STATE_ONLINE,
-		DeviceId: opts.Config.CloudIoT.DeviceID,
-	}).Marshal()
-	offlineMsgBytes, _ := (&aranyagopb.StateMsg{
-		Kind:     aranyagopb.STATE_OFFLINE,
-		DeviceId: opts.Config.CloudIoT.DeviceID,
-	}).Marshal()
-
 	client := &gcpIoTCoreClient{
 		log:          parent.log,
 		ctx:          ctx,
@@ -90,21 +81,11 @@ func newGCPIoTCoreClient(parent *MessageQueueManager) (*gcpIoTCoreClient, error)
 		rejectAgent: func() {
 			parent.Reject(aranyagopb.REJECTION_INTERNAL_SERVER_ERROR, "gcp iot core connection lost")
 		},
-		onlineMsg: &aranyagopb.Msg{
-			Kind:      aranyagopb.MSG_STATE,
-			Sid:       0,
-			Seq:       0,
-			Completed: true,
-			Payload:   onlineMsgBytes,
-		},
-		offlineMsg: &aranyagopb.Msg{
-			Kind:      aranyagopb.MSG_STATE,
-			Sid:       0,
-			Seq:       0,
-			Completed: true,
-			Payload:   offlineMsgBytes,
-		},
+		onlineMsg:  nil,
+		offlineMsg: nil,
 	}
+
+	client.onlineMsg, client.offlineMsg = createStateMessages(opts.Config.CloudIoT.DeviceID)
 
 	return client, nil
 }
@@ -122,10 +103,10 @@ type gcpIoTCoreClient struct {
 	stateTopic *pubsub.Topic
 	cmdTopic   string
 
-	onRecvMsg   func(*aranyagopb.Msg)
+	onRecvMsg   func(data []byte)
 	rejectAgent func()
-	onlineMsg   *aranyagopb.Msg
-	offlineMsg  *aranyagopb.Msg
+	onlineMsg   []byte
+	offlineMsg  []byte
 }
 
 func (c *gcpIoTCoreClient) Connect() error {
@@ -206,15 +187,12 @@ func (c *gcpIoTCoreClient) Subscribe() error {
 					break
 				}
 
-				var msg *aranyagopb.Msg
+				var data []byte
 				if online {
-					msg = c.onlineMsg
+					data = c.onlineMsg
 				} else {
-					msg = c.offlineMsg
+					data = c.offlineMsg
 				}
-
-				data, _ := msg.Marshal()
-
 				c.handleRecv(c.ctx, &pubsub.Message{
 					Attributes: map[string]string{
 						"deviceId": c.deviceID,
@@ -323,15 +301,7 @@ func (c *gcpIoTCoreClient) handleRecv(ctx context.Context, msg *pubsub.Message) 
 		return
 	}
 
-	m := new(aranyagopb.Msg)
-	err := m.Unmarshal(msg.Data)
-	if err != nil {
-		msg.Nack()
-		c.log.I("failed to unmarshal received data", log.Error(err))
-		return
-	}
-
 	msg.Ack()
 
-	go c.onRecvMsg(m)
+	c.onRecvMsg(msg.Data)
 }

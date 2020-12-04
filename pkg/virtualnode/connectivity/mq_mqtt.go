@@ -109,7 +109,7 @@ type mqttClient struct {
 	log         log.Interface
 	broker      string
 	client      libmqtt.Client
-	onRecvMsg   func(*aranyagopb.Msg)
+	onRecvMsg   func(data []byte)
 	rejectAgent func()
 
 	pubTopic     string
@@ -328,12 +328,5 @@ func (c *mqttClient) handlePub(client libmqtt.Client, topic string, err error) {
 }
 
 func (c *mqttClient) handleTopicMsg(client libmqtt.Client, topic string, qos libmqtt.QosLevel, msgBytes []byte) {
-	msg := new(aranyagopb.Msg)
-	err := msg.Unmarshal(msgBytes)
-	if err != nil {
-		c.log.I("failed to unmarshal msg", log.Binary("msgBytes", msgBytes), log.Error(err))
-		return
-	}
-
-	c.onRecvMsg(msg)
+	c.onRecvMsg(msgBytes)
 }
