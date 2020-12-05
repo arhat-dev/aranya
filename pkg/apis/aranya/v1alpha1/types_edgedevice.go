@@ -166,7 +166,7 @@ type (
 	}
 
 	PodRBACSpec struct {
-		// ClusterRolePermissions for the pods admitted by this edge device
+		// RolePermissions for the pods admitted by this edge device
 		//
 		// +optional
 		RolePermissions map[string]PodRolePermissions `json:"rolePermissions,omitempty"`

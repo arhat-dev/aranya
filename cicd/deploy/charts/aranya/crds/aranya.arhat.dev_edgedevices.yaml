@@ -347,10 +347,12 @@ spec:
                         the vpn endpoint address)
                       type: string
                     mtu:
+                      minimum: 0
                       type: integer
                     port:
                       description: ListenPort for receiving traffic from other mesh
                         members
+                      minimum: 0
                       type: integer
                     routingTable:
                       type: integer
@@ -699,7 +701,7 @@ spec:
                             type: boolean
                           allowPortForward:
                             description: AllowPortForward to allow "create" for resource
-                              pods/portforward
+                              pods/port-forward
                             type: boolean
                           podVerbs:
                             description: PodVerbs allowed verbs for resource pods
@@ -712,8 +714,8 @@ spec:
                               type: string
                             type: array
                         type: object
-                      description: ClusterRolePermissions for the pods admitted by
-                        this edge device
+                      description: RolePermissions for the pods admitted by this edge
+                        device
                       type: object
                     virtualpodRolePermissions:
                       additionalProperties:
@@ -731,7 +733,7 @@ spec:
                             type: boolean
                           allowPortForward:
                             description: AllowPortForward to allow "create" for resource
-                              pods/portforward
+                              pods/port-forward
                             type: boolean
                           podVerbs:
                             description: PodVerbs allowed verbs for resource pods

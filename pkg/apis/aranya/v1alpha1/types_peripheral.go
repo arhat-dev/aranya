@@ -26,7 +26,7 @@ const (
 	ReportViaNodeMetrics PeripheralMetricsReportMethod = "node"
 
 	// ReportViaArhatConnectivity will publish data using arhat's connectivity
-	// useful when you want realtime metrics but do not want to create
+	// useful when you want realtime metrics but do not want to create standalone metrics reporter
 	ReportViaArhatConnectivity PeripheralMetricsReportMethod = "arhat"
 
 	// ReportViaStandaloneClient will create a connectivity client for metrics reporting
