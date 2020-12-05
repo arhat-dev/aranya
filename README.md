@@ -5,7 +5,7 @@
 [![GoReportCard](https://goreportcard.com/badge/arhat.dev/aranya)](https://goreportcard.com/report/arhat.dev/aranya)
 [![codecov](https://codecov.io/gh/arhat-dev/aranya/branch/master/graph/badge.svg)](https://codecov.io/gh/arhat-dev/aranya)
 
-Manages all your devices in existing `Kubernetes` clusters.
+The refernce implementation of [`aranya-proto`](https://github.com/arhat-dev/aranya-proto), manages all your devices in `Kubernetes`
 
 [![overview](./docs/images/overview.svg)](./docs/images/overview.svg)
 
@@ -20,23 +20,57 @@ Manages all your devices in existing `Kubernetes` clusters.
   - `ansible` with `kubectl` connection, see [docs/Ansible.md](./docs/Ansible.md)
 
 - Easy deployment
-  - Single custom resource (`EdgeDevice`) to rule all kinds of devices
+  - Single custom resource (`EdgeDevice`) to rule all kinds of devices and workloads
   - Edge devices get integrated into `Kubernetes` with lightweight protocols like `MQTT`, `CoAP`
 
-- Flexible cluster network mesh in remote sites as a addon
+- Flexible cluster network mesh in remote sites as a addon (experimental)
   - Deploy and manage cluster network in device host/runtime with [`abbot`][abbot] container
 
-- Stadard `CSI` with remote access (see [Remote CSI](./docs/Remote-CSI.md))
+- Stadard `CSI` with remote access (experimental, see [Remote CSI](./docs/Remote-CSI.md))
   - Only mount operation happns in remote devices, everything else is your cloud `Kubernetes` cluster's duty
   - Dynamic private key generation and deployment for remote devices
 
 __NOTE:__ For details of the host management, please refer to [Maintenance #Host Management](./docs/Maintenance.md#host-management)
 
+## FAQ
+
+You may have a lot of questions regarding this project, such as `Why not k3s?`:
+
+see [docs/FAQ.md](./docs/FAQ.md) or file a issue for discussion!
+
 ## Project State
 
 EXPERIMENTAL, USE AT YOUR OWN __RISK__
 
-## Kubernetes Pod Support
+__TL;DR:__ Currently you can treate `aranya` as a management service for `arhat` with prometheus node metrics collecting support
+
+Currently state of functionalities:
+
+- Stable:
+  - Port-forward
+  - Exec/Attach
+  - Node metrics collecting
+  - Extended node info reporting and node field hooks
+  - MQTT connectivity
+  - gRPC connectivity
+- Unstable (subject to design change):
+  - Role & ClusterRole management
+  - GCP Cloud IoT connectivity
+  - Azure IoT Hub connectivity
+- Experimental (not fully supported):
+  - Pod management
+  - Network mesh with abbot
+  - Remote CSI
+  - Credential delivery
+  - AMQP 0.9 connectivity
+- TODO:
+  - NATS Stream connectivity
+  - Kafka connectivity
+  - AMQP 1.0 connectivity
+
+__NOTE:__ This project lacks tests, all kinds of contribution especially tests are welcome!
+
+### Kubernetes Pod Support
 
 - Pod environment variables source
   - [x] `configMap`
@@ -46,7 +80,7 @@ EXPERIMENTAL, USE AT YOUR OWN __RISK__
 - Pod volume
   - source
     - [x] `configMap`
-    - [x] `secret` (bind mount, not tmpfs mount as kubelet will do)
+    - [x] `secret`
     - [x] `hostPath`
     - [x] `persistentVolumeClaim` (backed by `CSI` only)
       - [ ] `subPath`
@@ -55,16 +89,16 @@ EXPERIMENTAL, USE AT YOUR OWN __RISK__
     - [x] `VolumeMount`
     - [ ] `VolumeDevice`
 - Pod network (requires [`abbot`][abbot])
-  - [x] device host/runtime <-> cluster
-  - [x] device host/runtime <-> device host/runtime
+  - [ ] device host/runtime <-> cluster
+  - [ ] device host/runtime <-> device host/runtime
 
-__NOTE:__ You __MUST NOT__ use unsupported features in your pod spec, which could result unexpected behavior!
+__NOTE:__ You __MUST NOT__ use unsupported features in your pod spec for `EdgeDevice` nodes, which could result unexpected behavior!
 
 ## Deployment Requirements
 
 - `Kubernetes` cluster with `RBAC` enabled
 
-__NOTE:__ `k3s` currently not compatible with this controller due to its api proxy handling
+__NOTE:__ `k3s` currently not compatible with this controller due to its api reverse-proxy handling
 
 ## Deployment Workflow
 
@@ -145,32 +179,12 @@ __NOTE:__ `k3s` currently not compatible with this controller due to its api pro
 
 see [docs/Build.md](./docs/Build.md)
 
-## Test
-
-see [docs/Test.md](./docs/Test.md)
-
-## Roadmap
-
-see [docs/Roadmap.md](./docs/Roadmap.md)
-
-## FAQ
-
-You may have a lot of questions regarding this project, such as `Why not k3s?`:
-
-see [docs/FAQ.md](./docs/FAQ.md) or file a issue for discussion!
-
 ## Special Thanks
 
 - [`Kubernetes`](https://github.com/kubernetes/kubernetes)
   - Really eased my life with my homelab.
 - [`virtual-kubelet`](https://github.com/virtual-kubelet/virtual-kubelet)
   - This project was inspired by its idea, which introduced an cloud agent to run containers in network edge.
-- `Buddhism`
-  - Which is the origin of the name `aranya` and [`arhat`][arhat].
-
-## Authors
-
-- [Jeffrey Stoke](https://github.com/jeffreystoke)
 
 ## LICENSE
 

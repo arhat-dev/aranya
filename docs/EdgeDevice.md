@@ -1,14 +1,16 @@
 # `EdgeDevice` CRD
 
+__NOTE:__ The `EdgeDevice` CRD is still in alpha stage, and changes to it may not be reflected in this doc accordingly
+
 - [Metadata](#metadata)
-- [Spec](#spec)
-  - [`spec.connectivity`: In Cloud connectivity to reach your EdgeDevice](#specconnectivity-in-cloud-connectivity-to-reach-your-edgedevice)
-  - [`spec.node`: Kubernetes node resource](#specnode-kubernetes-node-resource)
+- [Spec Overview](#spec-overview)
+  - [`spec.connectivity`: In cloud connectivity to reach your EdgeDevice](#specconnectivity-in-cloud-connectivity-to-reach-your-edgedevice)
+  - [`spec.node`: Kubernetes node resource customization](#specnode-kubernetes-node-resource-customization)
   - [`spec.network`: Network mesh for your cluster nodes and devices](#specnetwork-network-mesh-for-your-cluster-nodes-and-devices)
   - [`spec.storage`: Remote CSI for your EdgeDevices](#specstorage-remote-csi-for-your-edgedevices)
-  - [`spec.pod`: Kubernetes pod workload configuration](#specpod-kubernetes-pod-workload-configuration)
-  - [`spec.metricsReporters`: Optional metrics push client for your peripherals](#specmetricsreporters-optional-metrics-push-client-for-your-peripherals)
-  - [`spec.peripherals`: Peripherals definition and operation](#specperipherals-peripherals-definition-and-operation)
+  - [`spec.pod`: Kubernetes pod related customization](#specpod-kubernetes-pod-related-customization)
+  - [`spec.metricsReporters`: Optional metrics push client for your peripherals (experimental)](#specmetricsreporters-optional-metrics-push-client-for-your-peripherals-experimental)
+  - [`spec.peripherals`: Peripherals definition and operation (experimental)](#specperipherals-peripherals-definition-and-operation-experimental)
 - [Status](#status)
 
 ## Metadata
@@ -23,7 +25,9 @@ metadata:
   namespace: edge
 ```
 
-## Spec
+## Spec Overview
+
+__NOTE:__ if all you want is to use EdgeDevice for host management, you only need to specify `spec.connectivity`
 
 ```yaml
 spec:
@@ -36,35 +40,34 @@ spec:
   metricsReporters: []
 ```
 
-### `spec.connectivity`: In Cloud connectivity to reach your EdgeDevice
+### `spec.connectivity`: In cloud connectivity to reach your EdgeDevice
 
 ```yaml
 spec:
   connectivity:
     # set method to use different connectivity config
     #
-    # - grcp (requires grpc)
+    # - grcp (requires spec.connectivity.grpc)
     #   A gRPC server will be created and served by aranya according to the
     #   spec.connectivity.grpcConfig, aranya also maintains an according
     #   service object for that server.
     #
-    # - mqtt (requires mqtt)
+    # - mqtt (requires spec.connectivity.mqtt)
     #   aranya will try to talk to your mqtt message broker according to the
-    #   spec.connectivity.mqttConfig. the config option topicNamespace must
-    #   match between aranya and arhat to get arhat able to communicate with
-    #   aranya.
+    #   spec.connectivity.mqtt. the config option topicNamespace must
+    #   match between aranya and arhat to get arhat to communicate
     #
-    # - amqp (AMQP 0.9, requires amqp)
+    # - amqp (AMQP 0.9, requires spec.connectivity.amqp)
     #   aranya will connect to your AMQP 0.9 broker, typically a RabbitMQ
     #   endpoint. Like mqtt, it has an config option topicNamespace, but it is
     #   only intended to be used inside the AMQP 0.9 broker only, you have to
     #   configure your broker to expose mqtt connectivity support
     #
-    # - azure-iot-hub (requires azureIoTHub)
+    # - azure-iot-hub (requires spec.connectivity.azureIoTHub)
     #   aranya will connect to iot hub endpoint for message receiving and event
     #   hub to send commands to arhat
     #
-    # - gcp-iot-core (requires gcpIoTCore)
+    # - gcp-iot-core (requires spec.connectivity.gcpIoTCore)
     #   aranya will receiving messages from PubSub service and publish commands
     #   via cloud iot http endpoint
     #
@@ -81,6 +84,7 @@ spec:
     # --------------------------------------- #
     # config for specific connectivity method #
     # --------------------------------------- #
+
     gcpIoTCore:
       projectID: foo-12345
       pubSub:
@@ -99,6 +103,7 @@ spec:
         credentialsSecretKeyRef:
           name: my-gcp-iot-core-secret
           key: cloud-iot-creds.json
+
     # --------------------------------------- #
     azureIoTHub:
       # the device id in your iot hub
@@ -115,10 +120,13 @@ spec:
 
         # optional, will default to "$Default" if not set
         consumerGroup: "$Default"
+
     # --------------------------------------- #
     grpc:
-      # here, with empty ref, aranya will setup an insecure grpc server
+      # tls certificate for grpc server
+      # otherwise, aranya will setup an insecure grpc server
       tlsSecretRef: {}
+
     # --------------------------------------- #
     mqtt:
       # mqtt message namespace for aranya communication
@@ -140,6 +148,7 @@ spec:
       clientID: aranya(example-edge-device)
       # time in seconds
       keepalive: 30
+
     # --------------------------------------- #
     amqp:
       # amqp broker address
@@ -159,7 +168,7 @@ spec:
         name: amqp-user-pass
 ```
 
-### `spec.node`: Kubernetes node resource
+### `spec.node`: Kubernetes node resource customization
 
 ```yaml
 spec:
@@ -174,54 +183,45 @@ spec:
       locality: ""
       org: myOrg
       orgUnit: myOrgUnit
+
     # define pod cidr for this node, or it will be allocated by kubernetes dynamically
     podCIDR: 10.0.10.0/24
-    # labels applied to the according node object
+
+    # additional labels applied to the according node object
     labels: {}
       # key: value
-    # annotations applied to the according node object
+
+    # additional annotations applied to the according node object
     annotations: {}
       # key: value
-    storage:
-      enabled: true
 
-    # node metrics from node_exporter/windows_exporter
+    taints:
+    - key: example.com/taint-name
+      value: foo
+      effect: NoSchedule
+
+    # node metrics collection configuration for node_exporter/windows_exporter
     metrics:
-      # report metrics if it's required by the cloud
+      # report metrics if it's required by the cloud (prometheus server configured to scrape node_exporter metrics)
       enabled: true
-      paths:
-        # sysfs path
-        sysfs: /sys
-        # procfs path
-        procfs: /proc
-        # textfile directory to store all textfile metrics
-        textfile: /tmp/metrics/textfile
 
-      # what metrics to collect
+      # what metrics to collect (overrides aranya's os specific presets)
       #
-      # supported metrics collectors is the subset of the collectors listed in
-      #   https://github.com/prometheus/node_exporter#collectors (linux,darwin) and
+      # supported metrics collectors are listed in
+      #   https://github.com/prometheus/node_exporter#collectors (unix-like) and
       #   https://github.com/prometheus-community/windows_exporter#collectors (windows)
-      # to be specific, collectors require cgo are not supported
-      #
-      # unsupported collectors are:
-      #   1) on linux: (none)
-      #   2) on darwin: boottime,cpu,filesystem,diskstats,loadavg,meminfo,netdev,uname,ntp,time
-      #   3) on windows: (none)
       collect:
       - time
       - textfile
       # ...
 
-      # additional args for metrics collection, os dependent
+      # additional args for metrics collection
       extraArgs:
-      # example for unix-like (node_exporter)
       # - --collector.
-      # example for windows (windows_exporter)
       # - --collector.service.services-where="Name='windows_exporter'"
 
     # field hook to update annotation/label value according
-    # to current value of the Node object
+    # to current value of the Node object when node get updated
     fieldHooks:
       # text query in jq syntax
     - query: .metadata.annotations."example.com/foo"
@@ -231,9 +231,18 @@ spec:
       value: "true"
       # jq syntax expression to process query result and set target field
       #valueExpression: .[0] < 5
-```
 
-Please refer to [prometheus/node_exporter](https://github.com/prometheus/node_exporter) and [prometheus-community/windows_exporter](https://github.com/prometheus-community/windows_exporter) for the full list of supported collectors and extra args
+    rbac:
+      clusterRolePermissions:
+        # key: cluster role name
+        foo:
+          nodeVerbs:
+          - get
+          - list
+          statusVerbs:
+          - get
+          - list
+```
 
 ### `spec.network`: Network mesh for your cluster nodes and devices
 
@@ -241,7 +250,7 @@ Please refer to [prometheus/node_exporter](https://github.com/prometheus/node_ex
 spec:
   network:
     # enabled network mesh
-    enabled: true
+    enabled: false
 ```
 
 __HINT:__ You can apply network policies to isolate the EdgeDevice workload namespace for certain group of devices to achieve namespaced network mesh.
@@ -255,7 +264,7 @@ spec:
     enabled: true
 ```
 
-### `spec.pod`: Kubernetes pod workload configuration
+### `spec.pod`: Kubernetes pod related customization
 
 ```yaml
 spec:
@@ -274,9 +283,39 @@ spec:
       - cluster.local
       options:
       - ndots:5
+
+    # how many pods this EdgeDevice node can admit, will affect kubernetes node resource
+    # reporting
+    allocatable: 10
+
+    rbac:
+      rolePermissions:
+        foo:
+          podVerbs:
+          - get
+          - list
+          statusVerbs:
+          - get
+          - list
+          allowExec: false
+          allowAttach: false
+          allowPortForward: false
+          allowLog: false
+      virtualpodRolePermissions:
+        bar:
+          podVerbs:
+          - get
+          - list
+          statusVerbs:
+          - get
+          - list
+          allowExec: false
+          allowAttach: false
+          allowPortForward: false
+          allowLog: false
 ```
 
-### `spec.metricsReporters`: Optional metrics push client for your peripherals
+### `spec.metricsReporters`: Optional metrics push client for your peripherals (experimental)
 
 ```yaml
 spec:
@@ -291,7 +330,7 @@ spec:
         client_id: foo
 ```
 
-### `spec.peripherals`: Peripherals definition and operation
+### `spec.peripherals`: Peripherals definition and operation (experimental)
 
 ```yaml
 spec:
@@ -312,12 +351,12 @@ spec:
       pseudoCommand: start
       # operation params are resolved by your custom peripheral extension
       params:
-        text_data: "FOO AT CMD"
+        text_data: FOO AT CMD
     - name: Stop
       pseudoCommand: stop
       # operation params are resolved by your custom peripheral extension
       params:
-        hex_data: "0123456789ABCDEF"
+        hex_data: 0123456789ABCDEF
     metrics:
     - name: foo_node_stats
       valueType: counter
@@ -344,4 +383,9 @@ spec:
 ```yaml
 status:
   hostNode: <node-name>
+  network:
+    podCIDRv4: ""
+    podCIDRv6: ""
+    meshIPv4Addr: ""
+    meshIPv6Addr: ""
 ```

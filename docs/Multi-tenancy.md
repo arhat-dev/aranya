@@ -1,5 +1,7 @@
 # Multi-tenancy
 
+__NOTE:__ this doc is not updated for a while, please do not rely on this for multi-tenancy setup
+
 This document, presents serials of sample deployment scripts and commands, shifting management responsibilities of the namespace `foo` to user `bar`, user `bar` will be able to use its edge devices as `Kubernetes` nodes, and no user workload will be scheduled to cluster nodes except the `aranya` deployment.
 
 Shifting management of edge devices to others requires knowledge in `RBAC` world, familiar yourself with `Kubernetes RBAC` [https://kubernetes.io/docs/reference/access-authn-authz/rbac/](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
