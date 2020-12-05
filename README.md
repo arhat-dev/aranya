@@ -5,7 +5,7 @@
 [![GoReportCard](https://goreportcard.com/badge/arhat.dev/aranya)](https://goreportcard.com/report/arhat.dev/aranya)
 [![codecov](https://codecov.io/gh/arhat-dev/aranya/branch/master/graph/badge.svg)](https://codecov.io/gh/arhat-dev/aranya)
 
-The refernce implementation of [`aranya-proto`](https://github.com/arhat-dev/aranya-proto), manages all your devices in `Kubernetes`
+The refernce controller implementation of [`aranya-proto`](https://github.com/arhat-dev/aranya-proto), manages all your devices in `Kubernetes`
 
 [![overview](./docs/images/overview.svg)](./docs/images/overview.svg)
 
