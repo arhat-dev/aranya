@@ -5,9 +5,9 @@ go 1.15
 require (
 	arhat.dev/abbot-proto v0.1.1
 	arhat.dev/aranya-proto v0.3.2
-	arhat.dev/pkg v0.5.1
+	arhat.dev/pkg v0.5.3-0.20201205203348-e1350a8c66d5
 	cloud.google.com/go/pubsub v1.3.1
-	ext.arhat.dev/runtimeutil v0.2.6
+	ext.arhat.dev/runtimeutil v0.3.0
 	github.com/Azure/azure-amqp-common-go/v3 v3.0.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.0
 	github.com/Azure/azure-sdk-for-go v45.1.0+incompatible // indirect

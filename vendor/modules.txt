@@ -7,7 +7,7 @@ arhat.dev/aranya-proto/aranyagopb
 arhat.dev/aranya-proto/aranyagopb/aranyagoconst
 arhat.dev/aranya-proto/aranyagopb/rpcpb
 arhat.dev/aranya-proto/aranyagopb/runtimepb
-# arhat.dev/pkg v0.5.1
+# arhat.dev/pkg v0.5.3-0.20201205203348-e1350a8c66d5
 ## explicit
 arhat.dev/pkg/backoff
 arhat.dev/pkg/decodehelper
@@ -35,7 +35,7 @@ cloud.google.com/go/internal/version
 cloud.google.com/go/pubsub
 cloud.google.com/go/pubsub/apiv1
 cloud.google.com/go/pubsub/internal/distribution
-# ext.arhat.dev/runtimeutil v0.2.6
+# ext.arhat.dev/runtimeutil v0.3.0
 ## explicit
 ext.arhat.dev/runtimeutil/actionutil
 # github.com/Azure/azure-amqp-common-go/v3 v3.0.0

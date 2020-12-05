@@ -104,7 +104,7 @@ type TimeoutReader struct {
 
 	r io.Reader
 
-	// signal to notify user can do ReadUntilTimeout operation
+	// signal to notify user can cal Read
 	hasData chan struct{}
 
 	maxRead  int
@@ -163,12 +163,12 @@ type bufferedReader interface {
 	Buffered() int
 }
 
-type bufferedFdReader struct {
+type fdBufferedReader struct {
 	fd uintptr
 	io.Reader
 }
 
-func (r *bufferedFdReader) Buffered() int {
+func (r *fdBufferedReader) Buffered() int {
 	n, _ := CheckBytesToRead(r.fd)
 	return n
 }
@@ -206,6 +206,9 @@ loop:
 		case <-t.cannotSetDeadline:
 			break loop
 		case <-t.readOneByteReqCh:
+			// user called WaitForData
+			//
+			// clear read deadline, read in block mode
 			err = t.setReadDeadline(time.Time{})
 			if err != nil {
 				// set read deadline not working
@@ -214,7 +217,7 @@ loop:
 			}
 
 			// read one byte in blocking mode
-			n, err = t.r.Read(oneByteBuf[:])
+			n, err = t.r.Read(oneByteBuf[:1])
 			if n == 1 {
 				// notify wait for data
 				t.firstByteReady <- struct{}{}
@@ -288,13 +291,11 @@ loop:
 		}
 
 		if hasFd {
-			br = &bufferedFdReader{
+			br = &fdBufferedReader{
 				fd:     fd,
 				Reader: t.r,
 			}
 		} else {
-			// use of ReadByte() of bufio.Reader can cause unexpected block due to its fill() function call
-			// so we actually can not use any buffering feature from bufio.Reader
 			br = &fakeBufferedReader{
 				Reader: t.r,
 			}
@@ -303,7 +304,10 @@ loop:
 
 	for {
 		// read one byte to avoid being blocked
-		n, err = br.Read(oneByteBuf[:])
+		//
+		// use of ReadByte() of bufio.Reader can cause unexpected block due to its fill() function call
+		// so we actually can not use any buffering feature from bufio.Reader
+		n, err = br.Read(oneByteBuf[:1])
 		if err != nil {
 			t.err.Store(err)
 

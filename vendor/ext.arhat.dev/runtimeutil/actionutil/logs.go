@@ -1,4 +1,4 @@
-// +build !js,!plan9,!aix
+// +build android darwin dragonfly linux freebsd netbsd openbsd solaris windows
 
 /*
 Copyright 2017 The Kubernetes Authors.

@@ -1,4 +1,4 @@
-// +build windows plan9 solaris aix js
+// +build !darwin,!linux,!freebsd,!openbsd,!netbsd,!dragonfly
 
 /*
 Copyright 2020 The arhat.dev Authors.
@@ -19,9 +19,11 @@ limitations under the License.
 package iohelper
 
 import (
-	"syscall"
+	"errors"
 )
 
+var errNOSYS = errors.New("function not implemented")
+
 func CheckBytesToRead(fd uintptr) (int, error) {
-	return 0, syscall.EINVAL
+	return 0, errNOSYS
 }
