@@ -50,13 +50,13 @@ func (m *Manager) servePortForward(
 	w http.ResponseWriter,
 	r *http.Request,
 	podUID string,
-	opts *kubeletpf.V4Options,
+	wsPfOpts *kubeletpf.V4Options, // for websocket stream only
 	idleTimeout, streamCreationTimeout time.Duration,
 	supportedProtocols []string,
 ) error {
 	if wsstream.IsWebSocketRequest(r) {
 		logger.V("serving websocket")
-		return m.handleWebSocketPortForward(logger, w, r, podUID, idleTimeout, opts)
+		return m.handleWebSocketPortForward(logger, w, r, podUID, idleTimeout, wsPfOpts)
 	}
 
 	logger.V("serving spdy streams")
@@ -107,7 +107,7 @@ func (m *Manager) handleWebSocketPortForward(
 		s := &stream{
 			podUID:   podUID,
 			protocol: "tcp",
-			port:     opts.Ports[1],
+			port:     opts.Ports[i],
 
 			data:  streams[i*2],
 			error: streams[i*2+1],

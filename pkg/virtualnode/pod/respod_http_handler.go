@@ -202,15 +202,16 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 
 	logger.D("serving exec")
 	kubeletrc.ServeExec(
-		w, r, /* http context */
-		m.doHandleExec(r.Context()), /* wrapped pod executor */
-		"",                          /* pod name (unused) */
-		podUID,                      /* unique id of pod */
-		containerName,               /* container name to execute in*/
-		cmd,                         /* commands to execute */
-		getRemoteCommandOptions(r),  /* stream options */
+		w, r, // http context
+		m.doHandleExec(r.Context()), // wrapped pod executor
+		"",                          // pod name (unused)
+		podUID,                      // unique id of pod
+		containerName,               // container name to execute in
+		cmd,                         // commands to execute
+		getRemoteCommandOptions(r),  // stream options
 		// timeout options
-		m.options.Config.Timers.StreamIdleTimeout, m.options.Config.Timers.StreamCreationTimeout,
+		m.options.Config.Timers.StreamIdleTimeout,
+		m.options.Config.Timers.StreamCreationTimeout,
 		// supported protocols
 		rcconst.SupportedStreamingProtocols)
 }
@@ -237,16 +238,18 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 
 	logger.D("serving container attach")
 	kubeletrc.ServeAttach(
-		w, r, /* http context */
-		m.doHandleAttach(r.Context()), /* wrapped pod attacher */
-		"",                            /* pod name (unused) */
-		podUID,                        /* unique id of pod */
-		containerName,                 /* container to execute in */
-		getRemoteCommandOptions(r),    /* stream options */
+		w, r, // http context
+		m.doHandleAttach(r.Context()), // wrapped pod attacher
+		"",                            // pod name (unused)
+		podUID,                        // unique id of pod
+		containerName,                 // container to execute in
+		getRemoteCommandOptions(r),    // stream options
 		// timeout options
-		m.options.Config.Timers.StreamIdleTimeout, m.options.Config.Timers.StreamCreationTimeout,
+		m.options.Config.Timers.StreamIdleTimeout,
+		m.options.Config.Timers.StreamCreationTimeout,
 		// supported protocols
-		rcconst.SupportedStreamingProtocols)
+		rcconst.SupportedStreamingProtocols,
+	)
 }
 
 // HandlePodPortForward proxy http based kubectl port-forward command to edge device
@@ -255,6 +258,7 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 
 	podName, uid := getParamsForPortForward(r)
 	logger.D("resolving port-forward options")
+
 	portForwardOptions, err := kubeletpf.NewV4Options(r)
 	if err != nil {
 		logger.I("failed to parse port-forward options", log.Error(err))
@@ -307,7 +311,8 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 		m.options.Config.Timers.StreamIdleTimeout,
 		m.options.Config.Timers.StreamCreationTimeout,
 		// supported protocols
-		kubeletpf.SupportedProtocols)
+		kubeletpf.SupportedProtocols,
+	)
 
 	if err != nil {
 		logger.I("failed to serve port-forward", log.Error(err))
