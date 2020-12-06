@@ -26,7 +26,7 @@ The refernce controller implementation of [`aranya-proto`](https://github.com/ar
 - Flexible cluster network mesh in remote sites as a addon (experimental)
   - Deploy and manage cluster network in device host/runtime with [`abbot`][abbot] container
 
-- Stadard `CSI` with remote access (experimental, see [Remote CSI](./docs/Remote-CSI.md))
+- Standard `CSI` with remote access (experimental, see [Remote CSI](./docs/Remote-CSI.md))
   - Only mount operation happns in remote devices, everything else is your cloud `Kubernetes` cluster's duty
   - Dynamic private key generation and deployment for remote devices
 
