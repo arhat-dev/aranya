@@ -17,14 +17,16 @@ limitations under the License.
 package pod
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
-	"k8s.io/apiserver/pkg/util/flushwriter"
-
+	"arhat.dev/pkg/iohelper"
 	"arhat.dev/pkg/log"
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +34,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/httpstream"
 	rcconst "k8s.io/apimachinery/pkg/util/remotecommand"
+	"k8s.io/apiserver/pkg/util/flushwriter"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	_ "k8s.io/kubernetes/pkg/apis/core/install" // install legacyscheme
 	"k8s.io/kubernetes/pkg/apis/core/v1/validation"
@@ -213,7 +217,8 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 		m.options.Config.Timers.StreamIdleTimeout,
 		m.options.Config.Timers.StreamCreationTimeout,
 		// supported protocols
-		rcconst.SupportedStreamingProtocols)
+		rcconst.SupportedStreamingProtocols,
+	)
 }
 
 // HandlePodAttach proxy http based kubectl attach command to edge device
@@ -259,13 +264,6 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 	podName, uid := getParamsForPortForward(r)
 	logger.D("resolving port-forward options")
 
-	portForwardOptions, err := kubeletpf.NewV4Options(r)
-	if err != nil {
-		logger.I("failed to parse port-forward options", log.Error(err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	var podUID types.UID
 	if podName == m.nodeName {
 		// forward to host
@@ -279,16 +277,91 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	forHost := podUID == ""
+
+	pfOpts, err := kubeletpf.NewV4Options(r)
+	if err != nil {
+		// only can error when this is a websocket stream
+		logger.I("failed to parse port-forward options", log.Error(err))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if r.Header.Get(httpstream.HeaderProtocolVersion) == "" {
+		// not a standard kubernetes port-forward request, MUST be issued to host port-forward
+		if !forHost {
+			msg := "invalid request with no " + httpstream.HeaderProtocolVersion
+			logger.I(msg)
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		}
+
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		opts := new(customPortForwardOptions)
+		err = dec.Decode(opts)
+		if err != nil {
+			logger.I("failed to resolve custom port-forward options", log.Error(err))
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		hijacker, ok := w.(http.Hijacker)
+		if !ok {
+			logger.I("response is not a hijacker")
+			http.Error(w, "unable to hijack response", http.StatusInternalServerError)
+			return
+		}
+
+		// TODO: shall we add any header here?
+		//       we do not have any header set here since we are doing direct read/write
+
+		w.WriteHeader(http.StatusSwitchingProtocols)
+
+		conn, bufRW, err2 := hijacker.Hijack()
+		if err2 != nil {
+			logger.I("failed to hijack response", log.Error(err2))
+			http.Error(w, "unable to hijack response", http.StatusInternalServerError)
+			return
+		}
+
+		defer func() {
+			_ = conn.Close()
+		}()
+
+		// discard all unread data, these are invalid data
+		_, _ = bufRW.Reader.Discard(bufRW.Reader.Buffered())
+
+		// clear read/write deadline
+		_ = conn.SetReadDeadline(time.Time{})
+		_ = conn.SetWriteDeadline(time.Time{})
+
+		// we are good to go, do port-forward now
+
+		m.doPortForward(r.Context(), logger, nil, &stream{
+			reqID:          "",
+			creationFailAt: time.Time{},
+			podUID:         "",
+			network:        opts.Network,
+			host:           opts.Address,
+			port:           opts.Port,
+			dataStream:     conn,
+			errorStream:    iohelper.NopWriteCloser(ioutil.Discard),
+		})
+
+		return
+	}
+
 	// build port protocol map
 	pod, ok := m.podCache.GetByID(podUID)
-	if podUID != "" && !ok {
+	if !forHost && !ok {
 		logger.I("pod not found", log.String("podUID", string(podUID)))
 		http.Error(w, "pod not found", http.StatusNotFound)
 		return
 	}
 
 	portProto := make(map[int32]string)
-	for _, port := range portForwardOptions.Ports {
+	for _, port := range pfOpts.Ports {
 		// defaults to tcp
 		portProto[port] = "tcp"
 	}
@@ -305,17 +378,17 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 	err = m.servePortForward(
 		logger,
 		w, r, // http context
-		string(podUID),     // unique id of pod
-		portForwardOptions, // port forward options (ports)
+		string(podUID), // unique id of pod
+		pfOpts,         // port forward options (ports)
 		// timeout options
 		m.options.Config.Timers.StreamIdleTimeout,
 		m.options.Config.Timers.StreamCreationTimeout,
 		// supported protocols
 		kubeletpf.SupportedProtocols,
 	)
-
 	if err != nil {
 		logger.I("failed to serve port-forward", log.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
