@@ -45,6 +45,12 @@ const (
 	v4Base64WebsocketProtocol = "v4." + wsstream.Base64ChannelWebSocketProtocol
 )
 
+type customPortForwardOptions struct {
+	Network string `json:"network"`
+	Address string `json:"address"`
+	Port    int32  `json:"port"`
+}
+
 func (m *Manager) servePortForward(
 	logger log.Interface,
 	w http.ResponseWriter,
@@ -105,18 +111,18 @@ func (m *Manager) handleWebSocketPortForward(
 
 	for i := range opts.Ports {
 		s := &stream{
-			podUID:   podUID,
-			protocol: "tcp",
-			port:     opts.Ports[i],
+			podUID:  podUID,
+			network: "tcp",
+			port:    opts.Ports[i],
 
-			data:  streams[i*2],
-			error: streams[i*2+1],
+			dataStream:  streams[i*2],
+			errorStream: streams[i*2+1],
 		}
 
 		portBytes := make([]byte, 2)
 		binary.LittleEndian.PutUint16(portBytes, uint16(s.port))
-		_, _ = s.data.Write(portBytes)
-		_, _ = s.error.Write(portBytes)
+		_, _ = s.dataStream.Write(portBytes)
+		_, _ = s.errorStream.Write(portBytes)
 
 		wg.Add(1)
 		go func() {
@@ -207,7 +213,7 @@ func (m *Manager) handleHTTPPortForward(
 
 					creationFailAt: time.Now().Add(streamCreationTimeout),
 					podUID:         podUID,
-					protocol:       "tcp",
+					network:        "tcp",
 				}
 				streamPairs[reqID] = s
 			}
@@ -230,7 +236,7 @@ func (m *Manager) handleNewHTTPStream(
 ) error {
 	switch t := hs.Headers().Get(api.StreamType); t {
 	case api.StreamTypeData:
-		if s.data != nil {
+		if s.dataStream != nil {
 			return fmt.Errorf("data stream already assigned")
 		}
 
@@ -239,16 +245,16 @@ func (m *Manager) handleNewHTTPStream(
 		portString := hs.Headers().Get(api.PortHeader)
 		port, _ := strconv.ParseInt(portString, 10, 32)
 
-		s.data = hs
+		s.dataStream = hs
 		s.port = int32(port)
 	case api.StreamTypeError:
-		if s.error != nil {
+		if s.errorStream != nil {
 			return fmt.Errorf("error stream already assigned")
 		}
 
 		logger.V("set error stream")
 
-		s.error = hs
+		s.errorStream = hs
 	default:
 		logger.D("ignored stream", log.String("streamType", t))
 		return nil
@@ -280,7 +286,8 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 
 	pfCmd := &aranyagopb.PortForwardCmd{
 		PodUid:  s.podUID,
-		Network: s.protocol,
+		Network: s.network,
+		Host:    s.host,
 		Port:    s.port,
 	}
 
@@ -309,7 +316,7 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 		}
 	}
 
-	msgCh, streamReady, sid, err := m.ConnectivityManager.PostStreamCmd(kind, cmd, s.data, s.error)
+	msgCh, streamReady, sid, err := m.ConnectivityManager.PostStreamCmd(kind, cmd, s.dataStream, s.errorStream)
 	if err != nil {
 		logger.D("failed to create session", log.Error(err))
 		s.close(fmt.Sprintf("prepare: %v", err))
@@ -318,12 +325,16 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 
 	// write routine is closed when read routine finished
 
-	wg.Add(1)
+	if wg != nil {
+		wg.Add(1)
+	}
 	go func() {
 		defer func() {
 			s.close("")
 
-			wg.Done()
+			if wg != nil {
+				wg.Done()
+			}
 		}()
 
 		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
@@ -370,7 +381,7 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 	buf := make([]byte, bufSize)
 
 	for {
-		n, err = s.data.Read(buf)
+		n, err = s.dataStream.Read(buf)
 		if err != nil {
 			if err != io.EOF {
 				logger.I("failed to read data", log.Error(err))
@@ -404,18 +415,19 @@ type stream struct {
 
 	creationFailAt time.Time
 
-	podUID   string
-	protocol string
-	port     int32
+	podUID  string
+	network string
+	host    string
+	port    int32
 
-	data  io.ReadWriteCloser
-	error io.WriteCloser
+	dataStream  io.ReadWriteCloser
+	errorStream io.WriteCloser
 }
 
 func (s *stream) prepared() bool {
 	// s.podUID can be empty (for host port-forward)
-	// s.protocol can be empty (default to tcp)
-	return s.data != nil && s.error != nil && s.port > 0
+	// s.network can be empty (default to tcp)
+	return s.dataStream != nil && s.errorStream != nil && s.port > 0
 }
 
 func (s *stream) close(reason string) {
@@ -423,18 +435,18 @@ func (s *stream) close(reason string) {
 		s.writeErr(fmt.Sprintf("[%s]: %s", s.reqID, reason))
 	}
 
-	if s.data != nil {
-		_ = s.data.Close()
+	if s.dataStream != nil {
+		_ = s.dataStream.Close()
 	}
 
-	if s.error != nil {
-		_ = s.error.Close()
+	if s.errorStream != nil {
+		_ = s.errorStream.Close()
 	}
 }
 
 func (s *stream) writeErr(err string) {
-	if s.error != nil {
-		_, _ = s.error.Write([]byte(err))
+	if s.errorStream != nil {
+		_, _ = s.errorStream.Write([]byte(err))
 	}
 }
 
