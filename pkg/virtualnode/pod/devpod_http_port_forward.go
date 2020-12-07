@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httputil"
 	"strconv"
 	"sync"
 	"time"
@@ -501,9 +500,7 @@ func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, lo
 		return
 	}
 
-	respHeader := w.Header()
-
-	conn, bufRW, err := hijacker.Hijack()
+	conn, _, err := hijacker.Hijack()
 	if err != nil {
 		logger.I("failed to hijack response", log.Error(err))
 		http.Error(w, "unable to hijack response", http.StatusInternalServerError)
@@ -513,10 +510,6 @@ func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, lo
 	// clear read/write deadline
 	_ = conn.SetReadDeadline(time.Time{})
 	_ = conn.SetWriteDeadline(time.Time{})
-
-	// we want to use conn for direct read/write, but still need to write http header
-	// nolint:staticcheck
-	srvConn := httputil.NewServerConn(conn, bufRW.Reader)
 
 	// create a session for port-forward stream now
 
@@ -537,6 +530,7 @@ func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, lo
 		return
 	}
 
+	respHeader := make(http.Header)
 	respHeader.Set(aranyagoconst.HeaderSessionID,
 		strconv.FormatInt(int64(sid), 10),
 	)
@@ -544,11 +538,13 @@ func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, lo
 		strconv.FormatInt(int64(m.ConnectivityManager.MaxPayloadSize()), 10),
 	)
 
-	err = srvConn.Write(r, &http.Response{
+	resp := &http.Response{
 		StatusCode: http.StatusSwitchingProtocols,
 		Header:     respHeader,
 		Close:      false,
-	})
+	}
+
+	err = resp.Write(conn)
 	if err != nil {
 		close(canWrite)
 		_ = conn.Close()
@@ -556,9 +552,6 @@ func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, lo
 		logger.I("failed to write header response", log.Error(err))
 		return
 	}
-
-	// hijack again to avoid unexpected read/write as http protocol
-	_, _ = srvConn.Hijack()
 
 	close(canWrite)
 
