@@ -17,16 +17,12 @@ limitations under the License.
 package pod
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
-	"time"
 
-	"arhat.dev/pkg/iohelper"
 	"arhat.dev/pkg/log"
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
@@ -296,59 +292,7 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		dec := json.NewDecoder(r.Body)
-		dec.DisallowUnknownFields()
-		opts := new(customPortForwardOptions)
-		err = dec.Decode(opts)
-		if err != nil {
-			logger.I("failed to resolve custom port-forward options", log.Error(err))
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		hijacker, ok := w.(http.Hijacker)
-		if !ok {
-			logger.I("response is not a hijacker")
-			http.Error(w, "unable to hijack response", http.StatusInternalServerError)
-			return
-		}
-
-		// TODO: shall we add any header here?
-		//       we do not have any header set here since we are doing direct read/write
-
-		w.WriteHeader(http.StatusSwitchingProtocols)
-
-		conn, bufRW, err2 := hijacker.Hijack()
-		if err2 != nil {
-			logger.I("failed to hijack response", log.Error(err2))
-			http.Error(w, "unable to hijack response", http.StatusInternalServerError)
-			return
-		}
-
-		defer func() {
-			_ = conn.Close()
-		}()
-
-		// discard all unread data, these are invalid data
-		_, _ = bufRW.Reader.Discard(bufRW.Reader.Buffered())
-
-		// clear read/write deadline
-		_ = conn.SetReadDeadline(time.Time{})
-		_ = conn.SetWriteDeadline(time.Time{})
-
-		// we are good to go, do port-forward now
-
-		m.doPortForward(r.Context(), logger, nil, &stream{
-			reqID:          "",
-			creationFailAt: time.Time{},
-			podUID:         "",
-			network:        opts.Network,
-			host:           opts.Address,
-			port:           opts.Port,
-			dataStream:     conn,
-			errorStream:    iohelper.NopWriteCloser(ioutil.Discard),
-		})
-
+		m.doCustomPortForward(w, r, logger)
 		return
 	}
 

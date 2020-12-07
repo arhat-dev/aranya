@@ -52,7 +52,7 @@ func TestSession_deliverMsg(t *testing.T) {
 
 	for i, serial := range seqSeries {
 		t.Run(fmt.Sprintf("serial %d", i), func(t *testing.T) {
-			s := newSession(1, true)
+			s := newSession(1, true, true)
 			msgCh := s.msgCh
 			go func() {
 				for j, seq := range serial {

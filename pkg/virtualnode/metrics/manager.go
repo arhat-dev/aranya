@@ -267,9 +267,11 @@ func (m *Manager) retrieveDeviceMetrics(forRuntime bool) {
 		msgCh, _, _, err = m.ConnectivityManager.PostStreamCmd(aranyagopb.CMD_RUNTIME, &runtimepb.Packet{
 			Kind:    runtimepb.CMD_METRICS_COLLECT,
 			Payload: nil,
-		}, buf, nil)
+		}, buf, nil, true, nil)
 	} else {
-		msgCh, _, _, err = m.ConnectivityManager.PostStreamCmd(aranyagopb.CMD_METRICS_COLLECT, nil, buf, nil)
+		msgCh, _, _, err = m.ConnectivityManager.PostStreamCmd(
+			aranyagopb.CMD_METRICS_COLLECT, nil, buf, nil, true, nil,
+		)
 	}
 	if err != nil {
 		m.Log.I("failed to post metrics collect cmd", log.Error(err))

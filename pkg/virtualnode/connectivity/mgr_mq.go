@@ -89,12 +89,7 @@ func NewMessageQueueManager(
 		return nil, fmt.Errorf("failed to subscribe topic %v: %v", mgr.client.SubTopics(), err)
 	}
 
-	mgr.sendCmd = func(cmd *aranyagopb.Cmd) error {
-		data, err := cmd.Marshal()
-		if err != nil {
-			return err
-		}
-
+	mgr.sendData = func(data []byte, ensure bool) error {
 		return mgr.client.Publish(data)
 	}
 
@@ -132,19 +127,21 @@ func (m *MessageQueueManager) Close() {
 func (m *MessageQueueManager) Reject(reason aranyagopb.RejectionReason, message string) {
 	m.onReject(func() {
 		// best effort
-		if m.sendCmd != nil {
+		if m.sendData != nil {
 			data, _ := (&aranyagopb.RejectCmd{
 				Reason:  reason,
 				Message: message,
 			}).Marshal()
 
-			_ = m.sendCmd(&aranyagopb.Cmd{
-				Kind:      aranyagopb.CMD_REJECT,
-				Sid:       0,
-				Seq:       0,
-				Completed: true,
-				Payload:   data,
-			})
+			data, _ = (&aranyagopb.Cmd{
+				Kind:     aranyagopb.CMD_REJECT,
+				Sid:      0,
+				Seq:      0,
+				Complete: true,
+				Payload:  data,
+			}).Marshal()
+
+			_ = m.sendData(data, true)
 		}
 	})
 }

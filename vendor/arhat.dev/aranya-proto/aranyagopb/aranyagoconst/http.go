@@ -14,25 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package aranyagopb
+package aranyagoconst
 
-import (
-	"math"
+const (
+	HeaderSessionID      = "X-Aranya-Session-ID"
+	HeaderMaxPayloadSize = "X-Aranya-Max-Payload-Size"
 )
 
-var (
-	EmptyMsgSize int
-)
+type CustomPortForwardOptions struct {
+	Network string `json:"network"`
+	Address string `json:"address"`
+	Port    int32  `json:"port"`
 
-func init() {
-	emptyMsg := &Msg{
-		Kind:     math.MaxInt32,
-		Sid:      math.MaxUint64,
-		Seq:      math.MaxUint64,
-		Complete: true,
-		Payload:  nil,
-	}
-
-	EmptyMsgSize = emptyMsg.Size()
-	_ = EmptyMsgSize
+	// currently all packet oriented connections are unordered
+	Ordered bool `json:"ordered"`
 }

@@ -236,7 +236,7 @@ func (m *Manager) doHandleLogs(
 		return fmt.Errorf("bad log options")
 	}
 
-	msgCh, _, sid, err := m.ConnectivityManager.PostStreamCmd(kind, cmd, output, output)
+	msgCh, _, sid, err := m.ConnectivityManager.PostStreamCmd(kind, cmd, output, output, true, nil)
 	if err != nil {
 		logger.I("failed to post log cmd", log.Error(err))
 		return err
@@ -413,7 +413,7 @@ func (m *Manager) doServeTerminalStream(
 	}
 
 	msgCh, streamReady, sid, err := m.ConnectivityManager.PostStreamCmd(
-		kind, initialCmd, stdout, stderr,
+		kind, initialCmd, stdout, stderr, true, nil,
 	)
 	if err != nil {
 		logger.I("failed to create session", log.Error(err))

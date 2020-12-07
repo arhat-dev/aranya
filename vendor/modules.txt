@@ -1,13 +1,13 @@
 # arhat.dev/abbot-proto v0.1.1
 ## explicit
 arhat.dev/abbot-proto/abbotgopb
-# arhat.dev/aranya-proto v0.3.2
+# arhat.dev/aranya-proto v0.3.3
 ## explicit
 arhat.dev/aranya-proto/aranyagopb
 arhat.dev/aranya-proto/aranyagopb/aranyagoconst
 arhat.dev/aranya-proto/aranyagopb/rpcpb
 arhat.dev/aranya-proto/aranyagopb/runtimepb
-# arhat.dev/pkg v0.5.3-0.20201205203348-e1350a8c66d5
+# arhat.dev/pkg v0.5.3
 ## explicit
 arhat.dev/pkg/backoff
 arhat.dev/pkg/decodehelper

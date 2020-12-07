@@ -138,6 +138,10 @@ type Manager interface {
 		err error,
 	)
 
+	// PostEncodedData regardless of the size of the data, if ensure is true, will make sure data sent even when
+	// connection lost (block and set after get connected again)
+	PostEncodedData(data []byte, ensure bool) error
+
 	// PostCmd send a command to remote device with timeout
 	// return a channel for messages to be received in the session
 	PostCmd(
@@ -156,6 +160,8 @@ type Manager interface {
 		kind aranyagopb.CmdType,
 		payloadCmd proto.Marshaler,
 		dataOut, errOut io.Writer,
+		ensureOrder bool,
+		canWrite <-chan struct{},
 	) (
 		msgCh <-chan *aranyagopb.Msg,
 		streamReady <-chan struct{},
@@ -188,12 +194,13 @@ type baseManager struct {
 	maxDataSize int
 	log         log.Interface
 
-	// sendCmd registered by the actual implementation
-	// it MUST block when connectivity lost
-	// it MUST only return error when it is being terminated
+	// sendData registered by the actual implementation
+	// when ensureSend is true:
+	//  MUST block when connectivity lost
+	//  MUST only return error when it is being terminated
 	//
 	// so the implementation MUST reconnect to server automatically
-	sendCmd func(*aranyagopb.Cmd) error
+	sendData func(data []byte, ensureSend bool) error
 
 	globalMsgChan    chan *aranyagopb.Msg
 	connectedDevices sets.String
@@ -253,7 +260,7 @@ func newBaseManager(parentCtx context.Context, name string, config *Options) (*b
 
 		maxDataSize:      maxDataSize,
 		log:              log.Log.WithName(fmt.Sprintf("conn.%s", name)),
-		sendCmd:          nil,
+		sendData:         nil,
 		globalMsgChan:    make(chan *aranyagopb.Msg, 1),
 		connectedDevices: sets.NewString(),
 
@@ -284,6 +291,8 @@ func (m *baseManager) PostStreamCmd(
 	kind aranyagopb.CmdType,
 	payloadCmd proto.Marshaler,
 	dataOut, errOut io.Writer,
+	ensureOrder bool,
+	canWrite <-chan struct{},
 ) (
 	msgCh <-chan *aranyagopb.Msg,
 	streamReady <-chan struct{},
@@ -318,14 +327,14 @@ func (m *baseManager) PostStreamCmd(
 		return
 	}
 
-	realSID, msgCh = m.sessions.Add(0, true)
+	realSID, msgCh = m.sessions.Add(0, true, ensureOrder)
 	defer func() {
 		if err != nil {
 			m.sessions.Delete(realSID)
 		}
 	}()
 
-	streamReady, ok := m.sessions.SetStream(realSID, dataOut, errOut)
+	streamReady, ok := m.sessions.SetStream(realSID, dataOut, errOut, canWrite)
 	if !ok {
 		err = fmt.Errorf("failed to set session to stream mode")
 		return
@@ -333,6 +342,10 @@ func (m *baseManager) PostStreamCmd(
 
 	_, err = m.doPostData(kind, realSID, 0, true, payload)
 	return
+}
+
+func (m *baseManager) PostEncodedData(data []byte, ensure bool) error {
+	return m.sendData(data, ensure)
 }
 
 func (m *baseManager) doExclusive(f func()) {
@@ -495,13 +508,15 @@ func (m *baseManager) doPostData(
 ) (_ uint64, err error) {
 	chunkSize := m.MaxPayloadSize()
 	for len(payload) > chunkSize {
-		err = m.sendCmd(&aranyagopb.Cmd{
-			Kind:      kind,
-			Sid:       realSid,
-			Seq:       lastSeq,
-			Completed: false,
-			Payload:   payload[:chunkSize],
-		})
+		data, _ := (&aranyagopb.Cmd{
+			Kind:     kind,
+			Sid:      realSid,
+			Seq:      lastSeq,
+			Complete: false,
+			Payload:  payload[:chunkSize],
+		}).Marshal()
+
+		err = m.sendData(data, true)
 		if err != nil {
 			return lastSeq, fmt.Errorf("failed to post cmd chunk: %w", err)
 		}
@@ -509,13 +524,15 @@ func (m *baseManager) doPostData(
 		payload = payload[chunkSize:]
 	}
 
-	err = m.sendCmd(&aranyagopb.Cmd{
-		Kind:      kind,
-		Sid:       realSid,
-		Seq:       lastSeq,
-		Completed: complete,
-		Payload:   payload,
-	})
+	data, _ := (&aranyagopb.Cmd{
+		Kind:     kind,
+		Sid:      realSid,
+		Seq:      lastSeq,
+		Complete: complete,
+		Payload:  payload,
+	}).Marshal()
+
+	err = m.sendData(data, true)
 	if err != nil {
 		return lastSeq, fmt.Errorf("failed to post cmd chunk: %w", err)
 	}
@@ -579,7 +596,7 @@ func (m *baseManager) PostData(
 	}
 
 	if recordSession {
-		realSid, msgCh = m.sessions.Add(sid, false)
+		realSid, msgCh = m.sessions.Add(sid, false, false)
 		defer func() {
 			if err != nil {
 				m.sessions.Delete(realSid)

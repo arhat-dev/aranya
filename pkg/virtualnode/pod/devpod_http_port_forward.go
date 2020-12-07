@@ -17,16 +17,20 @@ limitations under the License.
 package pod
 
 import (
+	"bufio"
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"strconv"
 	"sync"
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/aranya-proto/aranyagopb/aranyagoconst"
 	"arhat.dev/aranya-proto/aranyagopb/runtimepb"
 	"arhat.dev/pkg/log"
 	"github.com/gogo/protobuf/proto"
@@ -44,12 +48,6 @@ const (
 	v4BinaryWebsocketProtocol = "v4." + wsstream.ChannelWebSocketProtocol
 	v4Base64WebsocketProtocol = "v4." + wsstream.Base64ChannelWebSocketProtocol
 )
-
-type customPortForwardOptions struct {
-	Network string `json:"network"`
-	Address string `json:"address"`
-	Port    int32  `json:"port"`
-}
 
 func (m *Manager) servePortForward(
 	logger log.Interface,
@@ -287,7 +285,7 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 	pfCmd := &aranyagopb.PortForwardCmd{
 		PodUid:  s.podUID,
 		Network: s.network,
-		Host:    s.host,
+		Address: s.address,
 		Port:    s.port,
 	}
 
@@ -316,7 +314,9 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 		}
 	}
 
-	msgCh, streamReady, sid, err := m.ConnectivityManager.PostStreamCmd(kind, cmd, s.dataStream, s.errorStream)
+	msgCh, streamReady, sid, err := m.ConnectivityManager.PostStreamCmd(
+		kind, cmd, s.dataStream, s.errorStream, true, nil,
+	)
 	if err != nil {
 		logger.D("failed to create session", log.Error(err))
 		s.close(fmt.Sprintf("prepare: %v", err))
@@ -417,7 +417,7 @@ type stream struct {
 
 	podUID  string
 	network string
-	host    string
+	address string
 	port    int32
 
 	dataStream  io.ReadWriteCloser
@@ -480,5 +480,152 @@ func validateNewHTTPStream(streams chan<- httpstream.Stream) func(httpstream.Str
 
 		streams <- stream
 		return nil
+	}
+}
+
+func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, logger log.Interface) {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	opts := new(aranyagoconst.CustomPortForwardOptions)
+	err := dec.Decode(opts)
+	if err != nil {
+		logger.I("failed to resolve custom port-forward options", log.Error(err))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	hijacker, ok := w.(http.Hijacker)
+	if !ok {
+		logger.I("response is not a hijacker")
+		http.Error(w, "unable to hijack response", http.StatusInternalServerError)
+		return
+	}
+
+	respHeader := w.Header()
+
+	conn, bufRW, err := hijacker.Hijack()
+	if err != nil {
+		logger.I("failed to hijack response", log.Error(err))
+		http.Error(w, "unable to hijack response", http.StatusInternalServerError)
+		return
+	}
+
+	// clear read/write deadline
+	_ = conn.SetReadDeadline(time.Time{})
+	_ = conn.SetWriteDeadline(time.Time{})
+
+	// we want to use conn for direct read/write, but still need to write http header
+	// nolint:staticcheck
+	srvConn := httputil.NewServerConn(conn, bufRW.Reader)
+
+	// create a session for port-forward stream now
+
+	canWrite := make(chan struct{})
+	msgCh, streamReady, sid, err := m.ConnectivityManager.PostStreamCmd(
+		aranyagopb.CMD_PORT_FORWARD, &aranyagopb.PortForwardCmd{
+			PodUid:  "",
+			Network: opts.Network,
+			Address: opts.Address,
+			Port:    opts.Port,
+		}, conn, nil, opts.Ordered, canWrite,
+	)
+	if err != nil {
+		close(canWrite)
+		_ = conn.Close()
+
+		logger.D("failed to create session", log.Error(err))
+		return
+	}
+
+	respHeader.Set(aranyagoconst.HeaderSessionID,
+		strconv.FormatInt(int64(sid), 10),
+	)
+	respHeader.Set(aranyagoconst.HeaderMaxPayloadSize,
+		strconv.FormatInt(int64(m.ConnectivityManager.MaxPayloadSize()), 10),
+	)
+
+	err = srvConn.Write(r, &http.Response{
+		StatusCode: http.StatusSwitchingProtocols,
+		Header:     respHeader,
+		Close:      false,
+	})
+	if err != nil {
+		close(canWrite)
+		_ = conn.Close()
+
+		logger.I("failed to write header response", log.Error(err))
+		return
+	}
+
+	// hijack again to avoid unexpected read/write as http protocol
+	_, _ = srvConn.Hijack()
+
+	close(canWrite)
+
+	// we are good to go, handle port-forward stream now
+
+	go func() {
+		// wait until session closed
+
+		defer func() {
+			_ = conn.Close()
+		}()
+
+		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
+			if msgErr := msg.GetError(); msgErr != nil {
+				logger.I("error happened", log.Error(msgErr))
+			} else {
+				logger.I("unexpected non data msg", log.Int32("kind", int32(msg.Kind)), log.Uint64("sid", sid))
+			}
+
+			return true
+		})
+	}()
+
+	// read routine
+
+	var seq uint64
+	defer func() {
+		_, _, _, err = m.ConnectivityManager.PostData(sid, aranyagopb.CMD_DATA_UPSTREAM, nextSeq(&seq), true, nil)
+		if err != nil {
+			logger.D("failed to post read close cmd", log.Error(err))
+		}
+
+		// close session with best effort
+		_, _, _ = m.ConnectivityManager.PostCmd(sid, aranyagopb.CMD_SESSION_CLOSE, &aranyagopb.SessionCloseCmd{
+			Sid: sid,
+		})
+	}()
+
+	// wait until stream prepared
+	select {
+	case <-r.Context().Done():
+		return
+	case <-streamReady:
+	}
+
+	br := bufio.NewReader(conn)
+	for {
+		size, err2 := binary.ReadUvarint(br)
+		if err2 != nil {
+			logger.I("failed to read packet size", log.Error(err2))
+			return
+		}
+
+		data := make([]byte, size)
+		_, err2 = io.ReadFull(br, data)
+		if err2 != nil {
+			logger.I("failed to read packet data", log.Error(err2))
+			return
+		}
+
+		err2 = m.ConnectivityManager.PostEncodedData(data, opts.Ordered)
+		if err2 != nil {
+			logger.I("failed to post data", log.Error(err2))
+			if opts.Ordered {
+				// only can happen when this virtual node is exiting
+				return
+			}
+		}
 	}
 }

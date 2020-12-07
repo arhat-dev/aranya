@@ -30,7 +30,10 @@ import (
 	"arhat.dev/pkg/wellknownerrors"
 )
 
-func newSession(epoch uint64, isStream bool) *session {
+func newSession(epoch uint64, isStream, ensureOrder bool) *session {
+	// TODO: implement unordered stream handling
+	_ = ensureOrder
+
 	return &session{
 		epoch: epoch,
 		msgCh: make(chan *aranyagopb.Msg, 1),
@@ -43,14 +46,16 @@ func newSession(epoch uint64, isStream bool) *session {
 		errOut:       nil,
 		streamReady:  nil,
 		_streamReady: 0,
+		canWrite:     nil,
 
-		_closed:  0,
 		_working: 0,
+		_closed:  make(chan struct{}),
 
 		isStream: isStream,
 	}
 }
 
+// nolint:maligned
 type session struct {
 	epoch uint64
 	msgCh chan *aranyagopb.Msg
@@ -65,9 +70,10 @@ type session struct {
 	// once it's set, this session can accept data stream
 	streamReady  chan struct{}
 	_streamReady uint32
+	canWrite     <-chan struct{}
 
 	_working uint32
-	_closed  uint32
+	_closed  chan struct{}
 
 	isStream bool
 }
@@ -83,10 +89,15 @@ func (s *session) doExclusive(f func()) {
 }
 
 func (s *session) closed() bool {
-	return atomic.LoadUint32(&s._closed) == 1
+	select {
+	case <-s._closed:
+		return true
+	default:
+		return false
+	}
 }
 
-func (s *session) setStream(dataOut, errOut io.Writer, ready chan struct{}) bool {
+func (s *session) setStream(dataOut, errOut io.Writer, ready chan struct{}, canWrite <-chan struct{}) bool {
 	set := false
 	s.doExclusive(func() {
 		if s.streamReady != nil {
@@ -106,6 +117,7 @@ func (s *session) setStream(dataOut, errOut io.Writer, ready chan struct{}) bool
 		s.errOut = errOut
 		s.streamReady = ready
 		s._streamReady = 0
+		s.canWrite = canWrite
 	})
 
 	return set
@@ -124,6 +136,18 @@ func (s *session) writeToStream(kind aranyagopb.MsgType, data []byte) error {
 			return wellknownerrors.ErrNotSupported
 		default:
 			close(s.streamReady)
+		}
+	}
+
+	if s.canWrite != nil {
+		// wait until can write to data
+		// TODO: currently only custom port-forward will use this and will be closed
+		//       immediately after wrote response header, we may need to update the lock
+		//       implementation once we have other time consuming preparation
+		select {
+		case <-s.canWrite:
+		case <-s._closed:
+			return nil
 		}
 	}
 
@@ -165,7 +189,7 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 		}
 
 		// all in one packet, no need to reassemble packets
-		if msg.Seq == 0 && msg.Completed {
+		if msg.Seq == 0 && msg.Complete {
 			switch msg.Kind {
 			case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
 				err := s.writeToStream(msg.Kind, msg.Payload)
@@ -175,11 +199,11 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 						Description: err.Error(),
 					}).Marshal()
 					s.msgCh <- &aranyagopb.Msg{
-						Kind:      aranyagopb.MSG_ERROR,
-						Sid:       msg.Sid,
-						Seq:       0,
-						Completed: true,
-						Payload:   errMsgData,
+						Kind:     aranyagopb.MSG_ERROR,
+						Sid:      msg.Sid,
+						Seq:      0,
+						Complete: true,
+						Payload:  errMsgData,
 					}
 				}
 			default:
@@ -201,7 +225,7 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 			payload: msg.Payload,
 		})
 
-		if msg.Completed {
+		if msg.Complete {
 			complete = s.seqQ.SetMaxSeq(msg.Seq)
 		}
 
@@ -220,11 +244,11 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 					}).Marshal()
 
 					s.msgCh <- &aranyagopb.Msg{
-						Kind:      aranyagopb.MSG_ERROR,
-						Sid:       msg.Sid,
-						Seq:       0,
-						Completed: true,
-						Payload:   errMsgData,
+						Kind:     aranyagopb.MSG_ERROR,
+						Sid:      msg.Sid,
+						Seq:      0,
+						Complete: true,
+						Payload:  errMsgData,
 					}
 				}
 			default:
@@ -250,11 +274,11 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 
 		if s.msgBuffer != nil {
 			s.msgCh <- &aranyagopb.Msg{
-				Kind:      msg.Kind,
-				Sid:       msg.Sid,
-				Seq:       0,
-				Completed: true,
-				Payload:   s.msgBuffer.Bytes(),
+				Kind:     msg.Kind,
+				Sid:      msg.Sid,
+				Seq:      0,
+				Complete: true,
+				Payload:  s.msgBuffer.Bytes(),
 			}
 		}
 
@@ -267,11 +291,12 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 }
 
 func (s *session) close() {
-	if s.closed() {
+	select {
+	case <-s._closed:
 		return
+	default:
+		close(s._closed)
 	}
-
-	atomic.StoreUint32(&s._closed, 1)
 
 	if atomic.CompareAndSwapUint32(&s._streamReady, 0, 1) {
 		if s.streamReady != nil {
@@ -357,7 +382,9 @@ func (m *SessionManager) nextSid() uint64 {
 	return m.sid
 }
 
-func (m *SessionManager) SetStream(sid uint64, dataOut, errOut io.Writer) (<-chan struct{}, bool) {
+func (m *SessionManager) SetStream(
+	sid uint64, dataOut, errOut io.Writer, canWrite <-chan struct{},
+) (<-chan struct{}, bool) {
 	var (
 		session *session
 		ok      bool
@@ -371,7 +398,7 @@ func (m *SessionManager) SetStream(sid uint64, dataOut, errOut io.Writer) (<-cha
 	}
 
 	ret := make(chan struct{})
-	if !session.setStream(dataOut, errOut, ret) {
+	if !session.setStream(dataOut, errOut, ret, canWrite) {
 		return nil, false
 	}
 
@@ -391,6 +418,7 @@ func (m *SessionManager) SetStream(sid uint64, dataOut, errOut io.Writer) (<-cha
 func (m *SessionManager) Add(
 	sid uint64,
 	isStream bool,
+	ensureOrder bool,
 ) (
 	realSid uint64,
 	ch chan *aranyagopb.Msg,
@@ -403,7 +431,7 @@ func (m *SessionManager) Add(
 			ch = oldSession.msgCh
 		} else {
 			// create new channel if invalid
-			session := newSession(m.epoch, isStream)
+			session := newSession(m.epoch, isStream, ensureOrder)
 
 			ch = session.msgCh
 			realSid = m.nextSid()
@@ -417,11 +445,11 @@ func (m *SessionManager) Add(
 					}).Marshal()
 
 					m.Dispatch(&aranyagopb.Msg{
-						Kind:      aranyagopb.MSG_ERROR,
-						Sid:       sid,
-						Seq:       0,
-						Completed: true,
-						Payload:   data,
+						Kind:     aranyagopb.MSG_ERROR,
+						Sid:      sid,
+						Seq:      0,
+						Complete: true,
+						Payload:  data,
 					})
 
 					m.Delete(sid)

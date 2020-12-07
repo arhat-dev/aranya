@@ -25,11 +25,11 @@ func createStateMessages(id string) (onlineMsgBytes, offlineMsgBytes []byte) {
 	}).Marshal()
 
 	onlineMsgBytes, _ = (&aranyagopb.Msg{
-		Kind:      aranyagopb.MSG_STATE,
-		Sid:       0,
-		Seq:       0,
-		Completed: true,
-		Payload:   onlineMsgBytes,
+		Kind:     aranyagopb.MSG_STATE,
+		Sid:      0,
+		Seq:      0,
+		Complete: true,
+		Payload:  onlineMsgBytes,
 	}).Marshal()
 
 	offlineMsgBytes, _ = (&aranyagopb.StateMsg{
@@ -38,11 +38,11 @@ func createStateMessages(id string) (onlineMsgBytes, offlineMsgBytes []byte) {
 	}).Marshal()
 
 	offlineMsgBytes, _ = (&aranyagopb.Msg{
-		Kind:      aranyagopb.MSG_STATE,
-		Sid:       0,
-		Seq:       0,
-		Completed: true,
-		Payload:   offlineMsgBytes,
+		Kind:     aranyagopb.MSG_STATE,
+		Sid:      0,
+		Seq:      0,
+		Complete: true,
+		Payload:  offlineMsgBytes,
 	}).Marshal()
 
 	return onlineMsgBytes, offlineMsgBytes

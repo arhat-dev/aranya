@@ -26,11 +26,11 @@ var (
 
 func init() {
 	emptyCmd := &Cmd{
-		Kind:      math.MaxInt32,
-		Sid:       math.MaxUint64,
-		Seq:       math.MaxUint64,
-		Completed: true,
-		Payload:   nil,
+		Kind:     math.MaxInt32,
+		Sid:      math.MaxUint64,
+		Seq:      math.MaxUint64,
+		Complete: true,
+		Payload:  nil,
 	}
 
 	EmptyCmdSize = emptyCmd.Size()

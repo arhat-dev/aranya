@@ -60,8 +60,11 @@ func NewGRPCManager(parentCtx context.Context, name string, mgrConfig *Options) 
 
 	rpcpb.RegisterEdgeDeviceServer(mgrConfig.GRPCOpts.Server, mgr)
 
-	mgr.sendCmd = func(cmd *aranyagopb.Cmd) error {
+	mgr.sendData = func(cmdData []byte, ensure bool) error {
 		var err error
+		cmd := new(aranyagopb.Cmd)
+		_ = cmd.Unmarshal(cmdData)
+
 		mgr.clientSessions.Range(func(key, value interface{}) bool {
 			err = multierr.Append(err, value.(rpcpb.EdgeDevice_SyncServer).Send(cmd))
 			return true
@@ -94,11 +97,11 @@ func (m *GRPCManager) Reject(reason aranyagopb.RejectionReason, message string) 
 			}).Marshal()
 
 			_ = value.(rpcpb.EdgeDevice_SyncServer).Send(&aranyagopb.Cmd{
-				Kind:      aranyagopb.CMD_REJECT,
-				Sid:       0,
-				Seq:       0,
-				Completed: true,
-				Payload:   data,
+				Kind:     aranyagopb.CMD_REJECT,
+				Sid:      0,
+				Seq:      0,
+				Complete: true,
+				Payload:  data,
 			})
 
 			return true
