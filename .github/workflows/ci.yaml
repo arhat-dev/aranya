@@ -84,61 +84,22 @@ jobs:
       #   token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
       #   fail_ci_if_error: true # optional (default = false)
 
-  build-linux-images:
+  build-test-images:
     if: contains(github.head_ref, 'deps/') == false
     needs:
-    - stylecheck
     - unit-tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Build and Push Images
-      env:
-        DOCKER_CLI_EXPERIMENTAL: enabled
-        DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
-        GITHUB_DOCKER_USERNAME: ${{ github.actor }}
-        GITHUB_DOCKER_PASSWORD: ${{ secrets.GH_PACKAGES_TOKEN }}
-        IMAGE_REPOS: docker.io/arhatdev,ghcr.io/arhat-dev
+    - name: Build Images For Testing
       run: |
-        docker login docker.io -u="${DOCKERHUB_USERNAME}" -p="${DOCKERHUB_PASSWORD}"
-        docker login ghcr.io/arhat-dev -u="${GITHUB_DOCKER_USERNAME}" -p="${GITHUB_DOCKER_PASSWORD}"
-
-        make image.build.linux.all
-        make image.push.linux.all
-
-  # TODO: Add support for windows image build in arhat-dev/dockerfile
-  # build-windows-images:
-  #   if: contains(github.head_ref, 'deps/') == false
-  #   needs:
-  #   - stylecheck
-  #   - unit-tests
-  #   runs-on: windows-latest
-  #   steps:
-  #   - uses: actions/checkout@v2
-  #   - name: Build and Push Images
-  #     env:
-  #       DOCKER_CLI_EXPERIMENTAL: enabled
-  #       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  #       DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
-  #       GITHUB_DOCKER_USERNAME: ${{ github.actor }}
-  #       GITHUB_DOCKER_PASSWORD: ${{ secrets.GH_PACKAGES_TOKEN }}
-  #       IMAGE_REPOS: docker.io/arhatdev,ghcr.io/arhat-dev/arhat-dev
-  #     run: |
-  #       docker login docker.io -u="${DOCKERHUB_USERNAME}" -p="${DOCKERHUB_PASSWORD}"
-  #       docker login ghcr.io/arhat-dev -u="${GITHUB_DOCKER_USERNAME}" -p="${GITHUB_DOCKER_PASSWORD}"
-
-  #       make image.build.windows.all
-  #       make image.push.windows.all
+        make image.build.aranya.linux.amd64
 
   e2e-tests:
     if: contains(github.head_ref, 'deps/') == false
     needs:
-    - stylecheck
-    - unit-tests
-    - build-linux-images
+    - build-test-images
     # TODO: enable this for windows e2e tests once supported
-    # - build-windows-images
     strategy:
       matrix:
         kube:
@@ -170,3 +131,50 @@ jobs:
     # - name: Test on Kubernetes ${{ matrix.kube }}
     #   run: |
     #     make e2e.${{ matrix.kube }}
+
+  build-linux-images:
+    if: contains(github.head_ref, 'deps/') == false
+    needs:
+    - e2e-tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build and Push Images
+      env:
+        DOCKER_CLI_EXPERIMENTAL: enabled
+        DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        GITHUB_DOCKER_USERNAME: ${{ github.actor }}
+        GITHUB_DOCKER_PASSWORD: ${{ secrets.GH_PACKAGES_TOKEN }}
+        IMAGE_REPOS: docker.io/arhatdev,ghcr.io/arhat-dev
+      run: |
+        docker login docker.io -u="${DOCKERHUB_USERNAME}" -p="${DOCKERHUB_PASSWORD}"
+        docker login ghcr.io/arhat-dev -u="${GITHUB_DOCKER_USERNAME}" -p="${GITHUB_DOCKER_PASSWORD}"
+
+        make image.push.aranya.linux.amd64
+
+        make image.build.linux.all
+        make image.push.linux.all
+
+  # TODO: Add support for windows image build in arhat-dev/dockerfile
+  # build-windows-images:
+  #   if: contains(github.head_ref, 'deps/') == false
+  #   needs:
+  #   - e2e-tests
+  #   runs-on: windows-latest
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: Build and Push Images
+  #     env:
+  #       DOCKER_CLI_EXPERIMENTAL: enabled
+  #       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #       DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+  #       GITHUB_DOCKER_USERNAME: ${{ github.actor }}
+  #       GITHUB_DOCKER_PASSWORD: ${{ secrets.GH_PACKAGES_TOKEN }}
+  #       IMAGE_REPOS: docker.io/arhatdev,ghcr.io/arhat-dev/arhat-dev
+  #     run: |
+  #       docker login docker.io -u="${DOCKERHUB_USERNAME}" -p="${DOCKERHUB_PASSWORD}"
+  #       docker login ghcr.io/arhat-dev -u="${GITHUB_DOCKER_USERNAME}" -p="${GITHUB_DOCKER_PASSWORD}"
+
+  #       make image.build.windows.all
+  #       make image.push.windows.all
