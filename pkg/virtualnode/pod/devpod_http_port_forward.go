@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/textproto"
 	"strconv"
 	"sync"
 	"time"
@@ -560,7 +561,7 @@ func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, lo
 	// we are good to go, handle port-forward stream now
 
 	go func() {
-		// wait until session closed
+		// do not close connection until session closed in case data remain unread
 
 		defer func() {
 			_ = conn.Close()
@@ -577,7 +578,7 @@ func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, lo
 		})
 	}()
 
-	// read routine
+	// handle read routine
 
 	var seq uint64
 	defer func() {
@@ -602,11 +603,43 @@ func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, lo
 	// only ensure data sent when forwarded target is stream oriented
 	ensureSend := !opts.Packet
 
+	maxSize := uint64(m.ConnectivityManager.MaxPayloadSize())
 	br := bufio.NewReader(conn)
+
+	// cleanup unread data in conn to start
+	tr := textproto.NewReader(br)
+	ok = false
+	for i := 0; i < 5; i++ {
+		var line string
+		line, err = tr.ReadLine()
+		if err != nil {
+			logger.I("failed to prepare for read routine", log.Error(err))
+			return
+		}
+
+		if line == "port-forward" {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		logger.I("unexpected start message not found", log.Error(err))
+		return
+	}
+
 	for {
 		size, err2 := binary.ReadUvarint(br)
 		if err2 != nil {
 			logger.I("failed to read packet size", log.Error(err2))
+			return
+		}
+
+		if size > maxSize {
+			// invalid packet length, client didn't follow max payload size limit
+			logger.I("invalid too large data chunk",
+				log.Uint64("size", size),
+				log.Uint64("max_size", maxSize),
+			)
 			return
 		}
 
