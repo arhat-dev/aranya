@@ -92,8 +92,20 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build Images For Testing
+      env:
+        DOCKER_CLI_EXPERIMENTAL: enabled
+        DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        GITHUB_DOCKER_USERNAME: ${{ github.actor }}
+        GITHUB_DOCKER_PASSWORD: ${{ secrets.GH_PACKAGES_TOKEN }}
+        IMAGE_REPOS: docker.io/arhatdev,ghcr.io/arhat-dev
+        MANIFEST_TAG: testing
       run: |
+        docker login docker.io -u="${DOCKERHUB_USERNAME}" -p="${DOCKERHUB_PASSWORD}"
+        docker login ghcr.io/arhat-dev -u="${GITHUB_DOCKER_USERNAME}" -p="${GITHUB_DOCKER_PASSWORD}"
+
         make image.build.aranya.linux.amd64
+        make image.push.aranya.linux.amd64
 
   e2e-tests:
     if: contains(github.head_ref, 'deps/') == false
@@ -150,8 +162,6 @@ jobs:
       run: |
         docker login docker.io -u="${DOCKERHUB_USERNAME}" -p="${DOCKERHUB_PASSWORD}"
         docker login ghcr.io/arhat-dev -u="${GITHUB_DOCKER_USERNAME}" -p="${GITHUB_DOCKER_PASSWORD}"
-
-        make image.push.aranya.linux.amd64
 
         make image.build.linux.all
         make image.push.linux.all
