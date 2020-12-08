@@ -20,101 +20,128 @@ package queue
 
 import (
 	"math"
+	"runtime"
 	"sync"
+	"sync/atomic"
 )
 
+type SeqDataHandleFunc func(seq uint64, d interface{})
+
 // NewSeqQueue returns a empty SeqQueue
-func NewSeqQueue() *SeqQueue {
+func NewSeqQueue(handleData SeqDataHandleFunc) *SeqQueue {
 	return &SeqQueue{
 		next: 0,
 		max:  math.MaxUint64,
-		data: make([]*seqData, 0, 16),
-		mu:   new(sync.Mutex),
-	}
-}
 
-type seqData struct {
-	seq  uint64
-	data interface{}
+		handleData:   handleData,
+		_snapshoting: 0,
+
+		m: new(sync.Map),
+	}
 }
 
 // SeqQueue is the sequence queue for unordered data
 type SeqQueue struct {
 	next uint64
 	max  uint64
-	data []*seqData
-	mu   *sync.Mutex
+
+	handleData   SeqDataHandleFunc
+	_snapshoting uint32
+
+	m *sync.Map
+
+	mu sync.Mutex
 }
 
-// Offer an unordered data with its sequence
-func (q *SeqQueue) Offer(seq uint64, data interface{}) (out []interface{}, completed bool) {
+func (q *SeqQueue) handleExpectedNext(seq, max uint64, data interface{}) bool {
 	q.mu.Lock()
-	defer q.mu.Unlock()
+	if !atomic.CompareAndSwapUint64(&q.next, seq, seq+1) {
+		// lost competition, discard
+		q.mu.Unlock()
 
-	switch {
-	case q.next > q.max:
-		// complete, discard
-		return nil, true
-	case seq > q.max, seq < q.next:
-		// exceeded or duplicated, discard
-		return nil, false
-	case seq == q.next:
-		// is expected next chunk, pop it and its following chunks
-		q.next++
-		out = []interface{}{data}
-		for _, d := range q.data {
-			if d.seq != q.next || d.seq > q.max {
-				break
-			}
-			out = append(out, d.data)
-			q.next++
-		}
-		q.data = q.data[len(out)-1:]
-
-		return out, q.next > q.max
+		return seq > max
 	}
 
-	insertAt := 0
-	for i, d := range q.data {
-		if d.seq > seq {
-			insertAt = i
+	q.handleData(seq, data)
+
+	for seq++; ; seq++ {
+		v, ok := q.m.Load(seq)
+		if !ok {
 			break
 		}
 
-		// duplicated
-		if d.seq == seq {
-			return nil, false
+		if !atomic.CompareAndSwapUint64(&q.next, seq, seq+1) {
+			break
 		}
 
-		insertAt = i + 1
+		q.m.Delete(seq)
+
+		q.handleData(seq, v)
 	}
+	q.mu.Unlock()
 
-	q.data = append(q.data[:insertAt], append([]*seqData{{seq: seq, data: data}}, q.data[insertAt:]...)...)
-
-	return nil, false
+	return seq > max
 }
 
-// SetMaxSeq sets when should this queue stop adding data
-func (q *SeqQueue) SetMaxSeq(maxSeq uint64) (completed bool) {
-	q.mu.Lock()
-	defer q.mu.Unlock()
+// Offer an unordered data with its sequence
+func (q *SeqQueue) Offer(seq uint64, data interface{}) (complete bool) {
+	var (
+		next, max uint64
+	)
 
-	if q.next > maxSeq {
+	// take a snapshot of existing values to ensure all concurrent goroutines
+	// have the same values
+	q.doSnapshot(func() {
+		next = atomic.LoadUint64(&q.next)
+		max = atomic.LoadUint64(&q.max)
+	})
+
+	switch {
+	case next > max:
+		// already complete, discard
+		return true
+	case seq < next:
+		// already set, discard
+		return false
+	case seq > max:
+		// exceeded or duplicated, discard
+		return false
+	case seq == next:
+		// is expected next chunk, pop it and its following chunks
+		return q.handleExpectedNext(next, max, data)
+	default:
+		// cache unordered data chunk
+		q.m.Store(seq, data)
+	}
+
+	return false
+}
+
+// SetMaxSeq set when should this queue stop enqueuing data
+func (q *SeqQueue) SetMaxSeq(maxSeq uint64) (complete bool) {
+	if next := atomic.LoadUint64(&q.next); next > maxSeq {
 		// existing seq data already exceeds maxSeq
-		q.max = q.next
+		atomic.StoreUint64(&q.max, next)
 		return true
 	}
 
-	q.max = maxSeq
+	atomic.StoreUint64(&q.max, maxSeq)
 	return false
 }
 
 // Reset the SeqQueue for new sequential data
 func (q *SeqQueue) Reset() {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-
 	q.next = 0
 	q.max = math.MaxUint64
-	q.data = make([]*seqData, 0, 16)
+	q.m = new(sync.Map)
+}
+
+func (q *SeqQueue) doSnapshot(f func()) {
+	for !atomic.CompareAndSwapUint32(&q._snapshoting, 0, 1) {
+		runtime.Gosched()
+	}
+
+	f()
+
+	atomic.StoreUint32(&q._snapshoting, 0)
 }

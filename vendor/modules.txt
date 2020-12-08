@@ -7,7 +7,7 @@ arhat.dev/aranya-proto/aranyagopb
 arhat.dev/aranya-proto/aranyagopb/aranyagoconst
 arhat.dev/aranya-proto/aranyagopb/rpcpb
 arhat.dev/aranya-proto/aranyagopb/runtimepb
-# arhat.dev/pkg v0.5.3
+# arhat.dev/pkg v0.5.4-0.20201208233302-107b8822e93b
 ## explicit
 arhat.dev/pkg/backoff
 arhat.dev/pkg/decodehelper

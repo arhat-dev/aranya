@@ -227,54 +227,52 @@ func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
 		}
 
 		if s.seqQ == nil {
-			s.seqQ = queue.NewSeqQueue()
-		}
+			s.seqQ = queue.NewSeqQueue(func(seq uint64, d interface{}) {
+				data := d.(*data)
 
-		var orderedChunks []interface{}
-		orderedChunks, complete = s.seqQ.Offer(msg.Seq, &data{
-			kind:    msg.Kind,
-			payload: msg.Payload,
-		})
+				switch data.kind {
+				case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
+					// is stream data, send directly
+					err := s.writeToStream(data.kind, data.payload)
+					if err != nil {
+						errMsgData, _ := (&aranyagopb.ErrorMsg{
+							Kind:        aranyagopb.ERR_COMMON,
+							Description: err.Error(),
+						}).Marshal()
+
+						s.msgCh <- &aranyagopb.Msg{
+							Kind:     aranyagopb.MSG_ERROR,
+							Sid:      msg.Sid,
+							Seq:      0,
+							Complete: true,
+							Payload:  errMsgData,
+						}
+
+						return
+					}
+				default:
+					// is message data, collect until complete
+					// message data can be the last several data chunks in a stream
+					// if there are multiple message data chunks with different types
+					// usually will cause unmarshal error, so we don't take care of
+					// it here
+					if s.msgBuffer == nil {
+						s.msgBuffer = new(bytes.Buffer)
+					}
+
+					s.msgBuffer.Write(data.payload)
+				}
+			})
+		}
 
 		if msg.Complete {
 			complete = s.seqQ.SetMaxSeq(msg.Seq)
 		}
 
-		// handle ordered data chunks
-		for _, ck := range orderedChunks {
-			data := ck.(*data)
-
-			switch data.kind {
-			case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
-				// is stream data, send directly
-				err := s.writeToStream(data.kind, data.payload)
-				if err != nil {
-					errMsgData, _ := (&aranyagopb.ErrorMsg{
-						Kind:        aranyagopb.ERR_COMMON,
-						Description: err.Error(),
-					}).Marshal()
-
-					s.msgCh <- &aranyagopb.Msg{
-						Kind:     aranyagopb.MSG_ERROR,
-						Sid:      msg.Sid,
-						Seq:      0,
-						Complete: true,
-						Payload:  errMsgData,
-					}
-				}
-			default:
-				// is message data, collect until complete
-				// message data can be the last several data chunks in a stream
-				// if there are multiple message data chunks with different types
-				// usually will cause unmarshal error, so we don't take care of
-				// it here
-				if s.msgBuffer == nil {
-					s.msgBuffer = new(bytes.Buffer)
-				}
-
-				s.msgBuffer.Write(data.payload)
-			}
-		}
+		complete = s.seqQ.Offer(msg.Seq, &data{
+			kind:    msg.Kind,
+			payload: msg.Payload,
+		})
 
 		if !complete {
 			delivered = true

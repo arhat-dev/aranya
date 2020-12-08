@@ -17,6 +17,7 @@ limitations under the License.
 package iohelper
 
 import (
+	"bufio"
 	"io"
 	"runtime"
 	"sync/atomic"
@@ -160,25 +161,25 @@ func (t *TimeoutReader) doExclusive(f func()) {
 
 type bufferedReader interface {
 	io.Reader
+	io.ByteReader
 	Buffered() int
 }
 
 type fdBufferedReader struct {
 	fd uintptr
 	io.Reader
+
+	oneByteBuf []byte
+}
+
+func (r *fdBufferedReader) ReadByte() (byte, error) {
+	_, err := io.ReadFull(r, r.oneByteBuf[:1])
+	return r.oneByteBuf[0], err
 }
 
 func (r *fdBufferedReader) Buffered() int {
 	n, _ := CheckBytesToRead(r.fd)
 	return n
-}
-
-type fakeBufferedReader struct {
-	io.Reader
-}
-
-func (r *fakeBufferedReader) Buffered() int {
-	return 0
 }
 
 // FallbackReading is a helper routine for data reading/waiting
@@ -292,22 +293,19 @@ loop:
 
 		if hasFd {
 			br = &fdBufferedReader{
-				fd:     fd,
-				Reader: t.r,
+				fd:         fd,
+				Reader:     t.r,
+				oneByteBuf: oneByteBuf[:],
 			}
 		} else {
-			br = &fakeBufferedReader{
-				Reader: t.r,
-			}
+			br = bufio.NewReader(t.r)
 		}
 	}
 
+	var initialByte byte
 	for {
 		// read one byte to avoid being blocked
-		//
-		// use of ReadByte() of bufio.Reader can cause unexpected block due to its fill() function call
-		// so we actually can not use any buffering feature from bufio.Reader
-		n, err = br.Read(oneByteBuf[:1])
+		initialByte, err = br.ReadByte()
 		if err != nil {
 			t.err.Store(err)
 
@@ -320,16 +318,13 @@ loop:
 				}
 			})
 
-			if n == 0 {
-				// no data can be read anymore
-				return
-			}
+			return
 		}
 
 		// avoid unexpected access to t.buf
 		t.doExclusive(func() {
 			// rely on the default slice grow
-			t.buf = append(t.buf, oneByteBuf[0])
+			t.buf = append(t.buf, initialByte)
 
 			// read all buffered data
 			start := len(t.buf)
