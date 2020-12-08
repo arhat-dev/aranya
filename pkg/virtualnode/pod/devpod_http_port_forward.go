@@ -314,7 +314,7 @@ func (m *Manager) doPortForward(ctx context.Context, logger log.Interface, wg *s
 	}
 
 	msgCh, streamReady, sid, err := m.ConnectivityManager.PostStreamCmd(
-		kind, cmd, s.dataStream, s.errorStream, true, nil,
+		kind, cmd, s.dataStream, s.errorStream, false, nil,
 	)
 	if err != nil {
 		logger.D("failed to create session", log.Error(err))
@@ -515,18 +515,20 @@ func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, lo
 
 	canWrite := make(chan struct{})
 	msgCh, streamReady, sid, err := m.ConnectivityManager.PostStreamCmd(
-		aranyagopb.CMD_PORT_FORWARD, &aranyagopb.PortForwardCmd{
-			PodUid:  "",
+		aranyagopb.CMD_PORT_FORWARD,
+		&aranyagopb.PortForwardCmd{
+			PodUid:  "", // always empty since issued for host operation
 			Network: opts.Network,
 			Address: opts.Address,
 			Port:    opts.Port,
-		}, conn, nil, opts.Ordered, canWrite,
+		},
+		conn, nil, opts.Packet, canWrite,
 	)
 	if err != nil {
 		close(canWrite)
 		_ = conn.Close()
 
-		logger.D("failed to create session", log.Error(err))
+		logger.I("failed to create session", log.Error(err))
 		return
 	}
 
@@ -597,6 +599,9 @@ func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, lo
 	case <-streamReady:
 	}
 
+	// only ensure data sent when forwarded target is stream oriented
+	ensureSend := !opts.Packet
+
 	br := bufio.NewReader(conn)
 	for {
 		size, err2 := binary.ReadUvarint(br)
@@ -612,10 +617,10 @@ func (m *Manager) doCustomPortForward(w http.ResponseWriter, r *http.Request, lo
 			return
 		}
 
-		err2 = m.ConnectivityManager.PostEncodedData(data, opts.Ordered)
+		err2 = m.ConnectivityManager.PostEncodedData(data, ensureSend)
 		if err2 != nil {
 			logger.I("failed to post data", log.Error(err2))
-			if opts.Ordered {
+			if ensureSend {
 				// only can happen when this virtual node is exiting
 				return
 			}

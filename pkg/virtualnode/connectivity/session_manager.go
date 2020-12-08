@@ -18,6 +18,7 @@ package connectivity
 
 import (
 	"bytes"
+	"encoding/binary"
 	"io"
 	"io/ioutil"
 	"runtime"
@@ -30,10 +31,7 @@ import (
 	"arhat.dev/pkg/wellknownerrors"
 )
 
-func newSession(epoch uint64, isStream, ensureOrder bool) *session {
-	// TODO: implement unordered stream handling
-	_ = ensureOrder
-
+func newSession(epoch uint64, isStream, keepPacket bool) *session {
 	return &session{
 		epoch: epoch,
 		msgCh: make(chan *aranyagopb.Msg, 1),
@@ -51,7 +49,8 @@ func newSession(epoch uint64, isStream, ensureOrder bool) *session {
 		_working: 0,
 		_closed:  make(chan struct{}),
 
-		isStream: isStream,
+		isStream:    isStream,
+		prependSize: keepPacket,
 	}
 }
 
@@ -75,7 +74,8 @@ type session struct {
 	_working uint32
 	_closed  chan struct{}
 
-	isStream bool
+	isStream    bool
+	prependSize bool
 }
 
 func (s *session) doExclusive(f func()) {
@@ -159,9 +159,20 @@ func (s *session) writeToStream(kind aranyagopb.MsgType, data []byte) error {
 	var (
 		n    int
 		size = len(data)
-		sum  int
 		err  error
 	)
+
+	if s.prependSize {
+		sizeBuf := make([]byte, 10)
+		n = binary.PutUvarint(sizeBuf, uint64(size))
+		_, err = target.Write(sizeBuf[:n])
+		if err != nil {
+			// do not write multiple times for size
+			return err
+		}
+	}
+
+	var sum int
 	for sum != size {
 		n, err = target.Write(data[sum:])
 		if err != nil {
@@ -417,8 +428,8 @@ func (m *SessionManager) SetStream(
 // Add or reuse a session
 func (m *SessionManager) Add(
 	sid uint64,
-	isStream bool,
-	ensureOrder bool,
+	stream bool,
+	keepPacket bool,
 ) (
 	realSid uint64,
 	ch chan *aranyagopb.Msg,
@@ -431,12 +442,12 @@ func (m *SessionManager) Add(
 			ch = oldSession.msgCh
 		} else {
 			// create new channel if invalid
-			session := newSession(m.epoch, isStream, ensureOrder)
+			session := newSession(m.epoch, stream, keepPacket)
 
 			ch = session.msgCh
 			realSid = m.nextSid()
 
-			if !isStream {
+			if !stream {
 				m.addTimedSession(realSid, func() {
 					data, _ := (&aranyagopb.ErrorMsg{
 						Kind:        aranyagopb.ERR_TIMEOUT,

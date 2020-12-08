@@ -130,7 +130,8 @@ type Manager interface {
 	PostData(
 		sid uint64,
 		kind aranyagopb.CmdType,
-		seq uint64, completed bool,
+		seq uint64,
+		complete bool,
 		payload []byte,
 	) (
 		msgCh <-chan *aranyagopb.Msg,
@@ -160,7 +161,7 @@ type Manager interface {
 		kind aranyagopb.CmdType,
 		payloadCmd proto.Marshaler,
 		dataOut, errOut io.Writer,
-		ensureOrder bool,
+		keepPacket bool,
 		canWrite <-chan struct{},
 	) (
 		msgCh <-chan *aranyagopb.Msg,
@@ -291,7 +292,7 @@ func (m *baseManager) PostStreamCmd(
 	kind aranyagopb.CmdType,
 	payloadCmd proto.Marshaler,
 	dataOut, errOut io.Writer,
-	ensureOrder bool,
+	keepPacket bool,
 	canWrite <-chan struct{},
 ) (
 	msgCh <-chan *aranyagopb.Msg,
@@ -327,7 +328,7 @@ func (m *baseManager) PostStreamCmd(
 		return
 	}
 
-	realSID, msgCh = m.sessions.Add(0, true, ensureOrder)
+	realSID, msgCh = m.sessions.Add(0, true, keepPacket)
 	defer func() {
 		if err != nil {
 			m.sessions.Delete(realSID)

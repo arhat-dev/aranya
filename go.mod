@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	arhat.dev/abbot-proto v0.1.1
-	arhat.dev/aranya-proto v0.3.3
+	arhat.dev/aranya-proto v0.3.4-0.20201208110348-80e0beff3693
 	arhat.dev/pkg v0.5.3
 	cloud.google.com/go/pubsub v1.3.1
 	ext.arhat.dev/runtimeutil v0.3.0

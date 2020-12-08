@@ -25,7 +25,6 @@ type CustomPortForwardOptions struct {
 	Network string `json:"network"`
 	Address string `json:"address"`
 	Port    int32  `json:"port"`
-
-	// currently all packet oriented connections are unordered
-	Ordered bool `json:"ordered"`
+	// is packet stream
+	Packet bool `json:"packet"`
 }
