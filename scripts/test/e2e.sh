@@ -45,7 +45,6 @@ _start_e2e_tests() {
 
   kubectl get nodes -o yaml
   kubectl taint nodes --all node-role.kubernetes.io/master- || true
-  kubectl apply -f e2e/manifests
 
   # crd resources may fail at the first time
   helm-stack -c e2e/helm-stack.yaml apply "${kube_version}" || true
