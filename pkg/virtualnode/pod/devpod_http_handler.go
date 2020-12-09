@@ -514,13 +514,6 @@ func (m *Manager) doServeTerminalStream(
 				logger.D("finished terminal input")
 			}()
 
-			bufSize := m.ConnectivityManager.MaxPayloadSize()
-			if bufSize > constant.MaxBufSize {
-				bufSize = constant.MaxBufSize
-			}
-
-			buf := make([]byte, bufSize)
-
 			// wait until stream prepared
 			select {
 			case <-ctx.Done():
@@ -528,6 +521,12 @@ func (m *Manager) doServeTerminalStream(
 			case <-streamReady:
 			}
 
+			bufSize := m.ConnectivityManager.MaxPayloadSize()
+			if bufSize > constant.MaxBufSize {
+				bufSize = constant.MaxBufSize
+			}
+
+			buf := make([]byte, bufSize)
 			if resizeCh == nil {
 				// not a tty, read as many data as possible
 				for {
