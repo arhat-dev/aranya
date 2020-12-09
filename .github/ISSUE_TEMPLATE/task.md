@@ -13,7 +13,7 @@ about: Create a task assignment
 
 <!-- yyyy-mm-dd -->
 
-### Sub-tasks (if any)
+### Sub-tasks
 
 - [ ] Foo
 - [x] Bar

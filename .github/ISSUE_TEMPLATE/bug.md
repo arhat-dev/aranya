@@ -5,20 +5,34 @@ labels: bug
 about: Report a bug
 ---
 
-### Version (for each component)
+### Versions
 
-<!-- output of `/path/to/component version` -->
+<!-- REQUIRED -->
+
+- `aranya`: `VERSION_OR_BRANCH` (commit: arhat-dev/aranya@COMMIT_SHA)
+- `arhat`: `VERSION_OR_BRANCH` (commit: arhat-dev/arhat@COMMIT_SHA)
+- `kubectl`: `VERSION`
+- `kube-apiserver`: `VERSION`
+- `kubelet`: `VERSION`
 
 ### What were you trying to do
 
+<!-- REQUIRED -->
+
 ### Expected behavior
+
+<!-- REQUIRED -->
 
 ### Actual behavior
 
-### Log output (if any)
+<!-- REQUIRED -->
+
+### Log output
 
 ```text
-<!-- here -->
+<!-- REQUIRED -->
 ```
 
-### What you have tried to fix this (if any)
+### What you have tried to fix this
+
+<!-- OPTIONAL -->

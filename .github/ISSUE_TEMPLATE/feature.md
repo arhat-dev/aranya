@@ -9,4 +9,4 @@ about: Request a feature
 
 ### Why should we add this feature
 
-### Expected changes in current components
+### Expected changes in `aranya`
