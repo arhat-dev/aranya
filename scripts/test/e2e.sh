@@ -14,15 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -ex
+
 _start_e2e_tests() {
   kube_version=${1}
 
   rm -rf build/e2e/charts || true
-
   mkdir -p build/e2e/charts/aranya
 
-  cp -r cicd/deploy/charts/aranya \
-    build/e2e/charts/aranya/master
+  cp -r cicd/deploy/charts/aranya build/e2e/charts/aranya/master
 
   helm-stack -c e2e/helm-stack.yaml ensure
 
@@ -35,9 +35,13 @@ _start_e2e_tests() {
   export KUBECONFIG="build/e2e/clusters/${kube_version}/kubeconfig.yaml"
 
   # delete cluster in the end (best effort)
-  trap 'kind -v 100 delete cluster --name "${kube_version}" --kubeconfig "${KUBECONFIG}" || true ' EXIT
+  trap 'kind -v 100 delete cluster --name "${kube_version}" --kubeconfig "${KUBECONFIG}" || true' EXIT
 
-  kind -v 100 create cluster --config "e2e/kind/${kube_version}.yaml" --retain --wait 5m --name "${kube_version}" --kubeconfig "${KUBECONFIG}"
+  kind -v 100 create cluster \
+    --config "e2e/kind/${kube_version}.yaml" \
+    --retain --wait 5m \
+    --name "${kube_version}" \
+    --kubeconfig "${KUBECONFIG}"
 
   kubectl get nodes -o yaml
   kubectl taint nodes --all node-role.kubernetes.io/master- || true
