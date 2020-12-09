@@ -3,64 +3,94 @@ app:
   environmentsDir: build/e2e/clusters
 
 repos:
-- name: bitnami
-  url: https://charts.bitnami.com/bitnami
+- name: prometheus-community
+  url: https://prometheus-community.github.io/helm-charts
 
 charts:
-- name: bitnami/prometheus-operator@0.22.3
-- name: emqx@v4.1.1
+- name: prometheus-community/kube-prometheus-stack@12.7.0
+- name: emqx@v4.2.3
   git:
     url: https://github.com/emqx/emqx-rel
     path: deploy/charts/emqx
-
 - name: aranya@master
   local: {}
   namespaceInTemplate: true
 
 environments:
-- name: v1-16
-  kubeContext: kind-v1-16
+#
+# kubernetes v1.15
+#
+- name: v1-15
+  kubeContext: kind-v1-15
   deployments:
   - name: emqx/emqx
-    chart: emqx@v4.1.1
+    chart: emqx@v4.2.3
+
   - name: monitoring/promop
-    chart: bitnami/prometheus-operator@0.22.3
+    chart: prometheus-community/kube-prometheus-stack@12.7.0
 
   - name: default/aranya
     chart: aranya@master
 
+#
+# kubernetes v1.16
+#
+- name: v1-16
+  kubeContext: kind-v1-16
+  deployments:
+  - name: emqx/emqx
+    chart: emqx@v4.2.3
+
+  - name: monitoring/promop
+    chart: prometheus-community/kube-prometheus-stack@12.7.0
+
+  - name: default/aranya
+    chart: aranya@master
+
+#
+# kubernetes v1.17
+#
 - name: v1-17
   kubeContext: kind-v1-17
 
   deployments:
   - name: emqx/emqx
-    chart: emqx@v4.1.1
+    chart: emqx@v4.2.3
+
   - name: monitoring/promop
-    chart: bitnami/prometheus-operator@0.22.3
+    chart: prometheus-community/kube-prometheus-stack@12.7.0
 
   - name: default/aranya
     chart: aranya@master
 
+#
+# kubernetes v1.18
+#
 - name: v1-18
   kubeContext: kind-v1-18
 
   deployments:
   - name: emqx/emqx
-    chart: emqx@v4.1.1
+    chart: emqx@v4.2.3
+
   - name: monitoring/promop
-    chart: bitnami/prometheus-operator@0.22.3
+    chart: prometheus-community/kube-prometheus-stack@12.7.0
 
   - name: default/aranya
     chart: aranya@master
 
+#
+# kubernetes v1.19
+#
 - name: v1-19
   kubeContext: kind-v1-19
 
   deployments:
   - name: emqx/emqx
-    chart: emqx@v4.1.1
+    chart: emqx@v4.2.3
+
   - name: monitoring/promop
-    chart: bitnami/prometheus-operator@0.22.3
+    chart: prometheus-community/kube-prometheus-stack@12.7.0
 
   - name: default/aranya
     chart: aranya@master

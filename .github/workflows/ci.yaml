@@ -37,15 +37,14 @@ jobs:
       with:
         go-version: 1.15.x
 
-    # # TODO: currently gomod ensure is disabled due to github.com/Azure/go-amqp error
-    # - name: Ensure tidy gomod
-    #   run: |
-    #     make vendor
-    #     if ! git diff --exit-code
-    #     then
-    #       echo "go mod not tidy"
-    #       exit 1
-    #     fi
+    - name: Ensure tidy gomod
+      run: |
+        make vendor
+        if ! git diff --exit-code
+        then
+          echo "go mod not tidy"
+          exit 1
+        fi
 
     - name: Lint
       run: |
@@ -87,10 +86,13 @@ jobs:
   build-test-images:
     if: contains(github.head_ref, 'deps/') == false
     needs:
-    - unit-tests
+    - stylecheck
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Fetch history
+      run: git fetch --prune --unshallow
+
     - name: Build Images For Testing
       env:
         DOCKER_CLI_EXPERIMENTAL: enabled
