@@ -191,112 +191,124 @@ type data struct {
 }
 
 func (s *session) deliverMsg(msg *aranyagopb.Msg) (delivered, complete bool) {
+	if s.closed() {
+		// session closed, no message shall be delivered
+		return false, true
+	}
+
+	if msg.Seq == 0 && msg.Complete {
+		// all in one packet, no need to reassemble packets
+		switch msg.Kind {
+		case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
+			err := s.writeToStream(msg.Kind, msg.Payload)
+			if err != nil {
+				errMsgData, _ := (&aranyagopb.ErrorMsg{
+					Kind:        aranyagopb.ERR_COMMON,
+					Description: err.Error(),
+				}).Marshal()
+
+				select {
+				case <-s._closed:
+				case s.msgCh <- &aranyagopb.Msg{
+					Kind:     aranyagopb.MSG_ERROR,
+					Sid:      msg.Sid,
+					Seq:      0,
+					Complete: true,
+					Payload:  errMsgData,
+				}:
+				}
+			}
+		default:
+			select {
+			case <-s._closed:
+			case s.msgCh <- msg:
+			}
+		}
+
+		s.close()
+		return true, true
+	}
+
 	// deliver message exclusively to ensure data order
 	s.doExclusive(func() {
-		if s.closed() {
-			// session closed, no message shall be delivered
-			delivered, complete = false, true
+		if s.msgBuffer == nil {
+			s.msgBuffer = new(bytes.Buffer)
+		}
+
+		if s.seqQ != nil {
 			return
 		}
 
-		// all in one packet, no need to reassemble packets
-		if msg.Seq == 0 && msg.Complete {
-			switch msg.Kind {
+		s.seqQ = queue.NewSeqQueue(func(seq uint64, d interface{}) {
+			data := d.(*data)
+
+			switch data.kind {
 			case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
-				err := s.writeToStream(msg.Kind, msg.Payload)
+				// is stream data, send directly
+				err := s.writeToStream(data.kind, data.payload)
 				if err != nil {
 					errMsgData, _ := (&aranyagopb.ErrorMsg{
 						Kind:        aranyagopb.ERR_COMMON,
 						Description: err.Error(),
 					}).Marshal()
-					s.msgCh <- &aranyagopb.Msg{
+
+					select {
+					case <-s._closed:
+					case s.msgCh <- &aranyagopb.Msg{
 						Kind:     aranyagopb.MSG_ERROR,
 						Sid:      msg.Sid,
 						Seq:      0,
 						Complete: true,
 						Payload:  errMsgData,
+					}:
 					}
+
+					return
 				}
 			default:
-				s.msgCh <- msg
+				// is message data, collect until complete
+				// message data can be the last several data chunks in a stream
+				// if there are multiple message data chunks with different types
+				// usually will cause unmarshal error, so we don't take care of
+				// it here
+
+				s.msgBuffer.Write(data.payload)
 			}
-
-			s.close()
-			delivered, complete = true, true
-			return
-		}
-
-		if s.seqQ == nil {
-			s.seqQ = queue.NewSeqQueue(func(seq uint64, d interface{}) {
-				data := d.(*data)
-
-				switch data.kind {
-				case aranyagopb.MSG_DATA, aranyagopb.MSG_DATA_STDERR:
-					// is stream data, send directly
-					err := s.writeToStream(data.kind, data.payload)
-					if err != nil {
-						errMsgData, _ := (&aranyagopb.ErrorMsg{
-							Kind:        aranyagopb.ERR_COMMON,
-							Description: err.Error(),
-						}).Marshal()
-
-						s.msgCh <- &aranyagopb.Msg{
-							Kind:     aranyagopb.MSG_ERROR,
-							Sid:      msg.Sid,
-							Seq:      0,
-							Complete: true,
-							Payload:  errMsgData,
-						}
-
-						return
-					}
-				default:
-					// is message data, collect until complete
-					// message data can be the last several data chunks in a stream
-					// if there are multiple message data chunks with different types
-					// usually will cause unmarshal error, so we don't take care of
-					// it here
-					if s.msgBuffer == nil {
-						s.msgBuffer = new(bytes.Buffer)
-					}
-
-					s.msgBuffer.Write(data.payload)
-				}
-			})
-		}
-
-		if msg.Complete {
-			complete = s.seqQ.SetMaxSeq(msg.Seq)
-		}
-
-		complete = s.seqQ.Offer(msg.Seq, &data{
-			kind:    msg.Kind,
-			payload: msg.Payload,
 		})
-
-		if !complete {
-			delivered = true
-			return
-		}
-
-		// session complete, no more message shall be sent through this session
-
-		if s.msgBuffer != nil {
-			s.msgCh <- &aranyagopb.Msg{
-				Kind:     msg.Kind,
-				Sid:      msg.Sid,
-				Seq:      0,
-				Complete: true,
-				Payload:  s.msgBuffer.Bytes(),
-			}
-		}
-
-		s.close()
-
-		delivered = true
 	})
 
-	return delivered, complete
+	if msg.Complete {
+		_ = s.seqQ.SetMaxSeq(msg.Seq)
+	}
+
+	complete = s.seqQ.Offer(msg.Seq, &data{
+		kind:    msg.Kind,
+		payload: msg.Payload,
+	})
+
+	if !complete {
+		return true, false
+	}
+
+	// session complete, no more message shall be sent through this session
+	// check if we have any thing remaining in the message buffer
+
+	s.close()
+
+	s.doExclusive(func() {
+		if s.msgBuffer == nil {
+			return
+		}
+		s.msgCh <- &aranyagopb.Msg{
+			Kind:     msg.Kind,
+			Sid:      msg.Sid,
+			Seq:      0,
+			Complete: true,
+			Payload:  s.msgBuffer.Bytes(),
+		}
+	})
+
+	return true, true
 }
 
 func (s *session) close() {
