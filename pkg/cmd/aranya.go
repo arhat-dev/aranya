@@ -89,9 +89,7 @@ func NewAranyaCmd() *cobra.Command {
 	flags.StringVarP(&configFile, "config", "c", constant.DefaultAranyaConfigFile, "path to the aranya config file")
 
 	flags.AddFlagSet(kubehelper.FlagsForControllerConfig("aranya", "", cliLogConfig, &config.Aranya.ControllerConfig))
-
 	flags.AddFlagSet(conf.FlagsForAranyaAppConfig("", &config.Aranya))
-
 	flags.AddFlagSet(conf.FlagsForVirtualnode("", &config.VirtualNode))
 
 	aranyaCmd.AddCommand(newCheckCmd(&appCtx))
