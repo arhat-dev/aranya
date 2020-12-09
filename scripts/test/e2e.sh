@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-e2e() {
+_start_e2e_tests() {
   kube_version=${1}
 
   rm -rf build/e2e/charts || true
@@ -26,15 +26,15 @@ e2e() {
 
   helm-stack -c e2e/helm-stack.yaml ensure
 
-  # basic override for image pull secrets
-  cp e2e/values/aranya.yaml "build/e2e/clusters/${kube_version}/aranya_master.default_aranya.yaml"
-  cp e2e/values/emqx.yaml "build/e2e/clusters/${kube_version}/emqx_v4.1.1.emqx_emqx.yaml"
+  # override default values
+  cp e2e/values/aranya.yaml "build/e2e/clusters/${kube_version}/default.aranya[aranya@master].yaml"
+  cp e2e/values/emqx.yaml "build/e2e/clusters/${kube_version}/emqx.emqx[emqx@v4.2.3].yaml"
 
   helm-stack -c e2e/helm-stack.yaml gen "${kube_version}"
 
   export KUBECONFIG="build/e2e/clusters/${kube_version}/kubeconfig.yaml"
 
-  # delete cluster (best effort)
+  # delete cluster in the end (best effort)
   trap 'kind -v 100 delete cluster --name "${kube_version}" --kubeconfig "${KUBECONFIG}" || true ' EXIT
 
   kind -v 100 create cluster --config "e2e/kind/${kube_version}.yaml" --retain --wait 5m --name "${kube_version}" --kubeconfig "${KUBECONFIG}"
@@ -43,30 +43,17 @@ e2e() {
   kubectl taint nodes --all node-role.kubernetes.io/master- || true
   kubectl apply -f e2e/manifests
 
-  # crd resources may fail at first time
+  # crd resources may fail at the first time
   helm-stack -c e2e/helm-stack.yaml apply "${kube_version}" || true
   sleep 1
   helm-stack -c e2e/helm-stack.yaml apply "${kube_version}"
 
-  set +ex
-
-  if [ -n "${E2E_IMAGE_REGISTRY_USER}" ]; then
-    for ns in $(kubectl get ns -o jsonpath='{.items[*].metadata.name}'); do
-      kubectl create -n "${ns}" secret \
-        docker-registry \
-        docker-pull-secret \
-        --docker-username "${E2E_IMAGE_REGISTRY_USER}" \
-        --docker-password "${E2E_IMAGE_REGISTRY_PASS}" \
-        --docker-server "${E2E_IMAGE_REGISTRY_SRV}"
-    done
-  fi
-
-  set -ex
-
   # e2e test time limit
-  sleep 3600
+  go test -mod=vendor -v -failfast -race \
+    -covermode=atomic -coverprofile="coverage.e2e.${kube_version}.txt" -coverpkg=./... \
+    ./e2e/tests/...
 }
 
 kube_version="$1"
 
-e2e "${kube_version}"
+_start_e2e_tests "${kube_version}"

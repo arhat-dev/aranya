@@ -23,3 +23,12 @@ e2e.v1-17:
 
 e2e.v1-16:
 	sh scripts/test/e2e.sh v1-16
+
+e2e.v1-15:
+	sh scripts/test/e2e.sh v1-15
+
+e2e.v1-14:
+	sh scripts/test/e2e.sh v1-14
+
+e2e.v1-13:
+	sh scripts/test/e2e.sh v1-13

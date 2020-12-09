@@ -18,6 +18,36 @@ charts:
 
 environments:
 #
+# kubernetes v1.13
+#
+- name: v1-13
+  kubeContext: kind-v1-13
+  deployments:
+  - name: emqx/emqx
+    chart: emqx@v4.2.3
+
+  - name: monitoring/promop
+    chart: prometheus-community/kube-prometheus-stack@12.7.0
+
+  - name: default/aranya
+    chart: aranya@master
+
+#
+# kubernetes v1.14
+#
+- name: v1-14
+  kubeContext: kind-v1-14
+  deployments:
+  - name: emqx/emqx
+    chart: emqx@v4.2.3
+
+  - name: monitoring/promop
+    chart: prometheus-community/kube-prometheus-stack@12.7.0
+
+  - name: default/aranya
+    chart: aranya@master
+
+#
 # kubernetes v1.15
 #
 - name: v1-15

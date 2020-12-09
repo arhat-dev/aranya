@@ -79,9 +79,6 @@ jobs:
 
     - name: Report Test Coverage
       uses: codecov/codecov-action@v1
-      # with:
-      #   token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-      #   fail_ci_if_error: true # optional (default = false)
 
   build-test-images:
     if: contains(github.head_ref, 'deps/') == false
@@ -116,6 +113,9 @@ jobs:
     strategy:
       matrix:
         kube:
+        - v1-13
+        - v1-14
+        - v1-15
         - v1-16
         - v1-17
         - v1-18
@@ -141,12 +141,15 @@ jobs:
           https://github.com/arhat-dev/helm-stack/releases/download/v0.1.1/helm-stack.linux.amd64
         chmod +x "${HOME}/bin/helm-stack"
 
-    # - name: Test on Kubernetes ${{ matrix.kube }}
-    #   run: |
-    #     make e2e.${{ matrix.kube }}
+    - name: Test on Kubernetes ${{ matrix.kube }}
+      run: |
+        make e2e.${{ matrix.kube }}
+
+    - name: Report e2e Coverage
+      uses: codecov/codecov-action@v1
 
   build-linux-images:
-    if: contains(github.head_ref, 'deps/') == false
+    if: github.head_ref == 'master'
     needs:
     - e2e-tests
     runs-on: ubuntu-latest
