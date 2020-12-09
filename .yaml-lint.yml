@@ -8,6 +8,7 @@ ignore: |
   cicd/deploy/charts/**/crds/
   cicd/deploy/kube/
   private
+  build
 
 rules:
   braces:

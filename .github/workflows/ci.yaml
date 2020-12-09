@@ -170,12 +170,15 @@ jobs:
       uses: codecov/codecov-action@v1
 
   build-linux-images:
-    if: github.head_ref == 'master'
+    if: github.event_name == 'push' && (github.head_ref == 'master' || startsWith(github.ref, 'refs/tags/') == true)
     needs:
     - e2e-tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Fetch history
+      run: git fetch --prune --unshallow
+
     - name: Build and Push Images
       env:
         DOCKER_CLI_EXPERIMENTAL: enabled
@@ -213,3 +216,65 @@ jobs:
 
   #       make image.build.windows.all
   #       make image.push.windows.all
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    needs:
+    - build-linux-images
+    # - build-windows-images
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Extract tag name
+      id: extract_tag
+      run: |
+        echo "::set-output name=tag::$(echo ${GITHUB_REF#refs/tags/})"
+
+    - name: Build changelog
+      id: build_changelog
+      uses: mikepenz/release-changelog-builder-action@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ github.ref }}
+        draft: true
+        prerelease: false
+        # yamllint disable rule:line-length
+        body: |
+          # Release Notes
+
+          ## Features
+
+          - Add foo support #issue-ref
+          - Add bar support #issue-ref
+
+          ## Bug fixes
+
+          - Fixed foo #issue-ref
+          - Fixed bar #issue-ref #pr-ref
+
+          ## Breaking Changes
+
+          - Foo ...
+          - Bar ...
+
+          ## Changes since `${{ steps.build_changelog.outputs.fromTag }}`
+
+          ${{ steps.build_changelog.outputs.changelog }}
+
+          ## Images
+
+          - `docker.io/arhatdev/aranya:${{ steps.extract_tag.outputs.tag }}`
+          - `ghcr.io/arhat-dev/aranya:${{ steps.extract_tag.outputs.tag }}`
+
+          ## Helm Charts
+
+          - Have a look at [the chart at ArtifactHub](https://artifacthub.io/packages/helm/arhatdev/aranya)
+          - Checkout chart [source code](https://github.com/arhat-dev/aranya/blob/${{ steps.extract_tag.outputs.tag }}/cicd/deploy/charts/aranya)
