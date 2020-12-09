@@ -175,9 +175,9 @@ __NOTE:__ `k3s` currently not compatible with this controller due to its api rev
       | `{beta.}kubernetes.io/arch` | `GOARCH` derived from `arhat.dev/arch`                                                          | N            |
       | `kubernetes.io/role`        | namespace of the `EdgeDevice`                                                                   | Y            |
 
-## Build
+## Development
 
-see [docs/Build.md](./docs/Build.md)
+see [docs/development](./docs/development/)
 
 ## Special Thanks
 
