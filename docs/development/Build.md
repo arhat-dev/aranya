@@ -6,7 +6,7 @@
   - `go` 1.13+ (for the new `errors` package)
   - `git` (to clone this project and get necessary build info)
   - `make` (to ease you life)
-  - `docker` (to build container images)
+  - `docker` (optional, to build container images)
 - To update `CRD`s
   - __+__ `GOPATH` configured
   - __+__ Kubernetes openapi and deepcopy code generators
@@ -21,21 +21,11 @@
 ```bash
 git clone https://github.com/arhat-dev/aranya
 
-# or if you have to use go get (discouraged)
+# or if you have GOPATH configured
 # $ go get -u arhat.dev/aranya
 ```
 
-## Instructions
-
-__NOTE:__ All binary build targets includes a `.{OS}.{ARCH}` suffix, available `OS` and `ARCH` depends on the component
-
-### Misc
-
-- available build related environment variables
-  - `BUILD_MODE`
-    - values: `default`, `exe`, `pie`
-
-### Build `aranya`
+## Build `aranya`
 
 Available `aranya` targets: `aranya.{os}.{arch}`
 

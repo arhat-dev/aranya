@@ -177,6 +177,8 @@ __NOTE:__ `k3s` currently not compatible with this controller due to its api rev
 
 ## Development
 
+Topics like `Build`, `Design`, `Releasing`
+
 see [docs/development](./docs/development/)
 
 ## Special Thanks
