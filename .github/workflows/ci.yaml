@@ -77,20 +77,12 @@ jobs:
     if: contains(github.head_ref, 'deps/') == false
     needs:
     - stylecheck
-    strategy:
-      matrix:
-        go:
-        # - 1.14.x
-        - 1.15.x
-        os:
-        - ubuntu-latest
-        # - windows-latest
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-go@v2
       with:
-        go-version: ${{ matrix.go }}
+        go-version: 1.15.x
 
     - name: Test Packages
       run: |
@@ -144,6 +136,7 @@ jobs:
         - v1-17
         - v1-18
         - v1-19
+        - v1-20
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2

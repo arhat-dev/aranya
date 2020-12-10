@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+e2e.v1-20:
+	sh e2e/suite.sh v1-20
+
 e2e.v1-19:
 	sh e2e/suite.sh v1-19
 
