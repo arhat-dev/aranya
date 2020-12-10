@@ -35,6 +35,7 @@ environments:
   - name: monitoring/promop
     # for v1beta1 CRD
     chart: bitnami/kube-prometheus@1.1.0
+    state: novalidation
 
   - name: default/aranya
     chart: aranya@master
@@ -51,6 +52,7 @@ environments:
   - name: monitoring/promop
     # for v1beta1 CRD
     chart: bitnami/kube-prometheus@1.1.0
+    state: novalidation
 
   - name: default/aranya
     chart: aranya@master
@@ -67,6 +69,7 @@ environments:
   - name: monitoring/promop
     # for v1beta1 CRD
     chart: bitnami/kube-prometheus@1.1.0
+    state: novalidation
 
   - name: default/aranya
     chart: aranya@master
