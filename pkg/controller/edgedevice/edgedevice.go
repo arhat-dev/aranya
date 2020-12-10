@@ -257,9 +257,9 @@ func (c *Controller) onEdgeDeviceResDeleted(obj interface{}) *reconcile.Result {
 }
 
 // instantiateEdgeDevice create required resources in sequence
-//   - Ensure kubelet certification valid (secret object contains valid certificate for this node)
+//   - Ensure kubelet serving certificate valid (secret object contains valid certificate for this node)
 //   - Create connectivity manager
-//   - Create virtualnode
+//   - Create virtualnode with all options prepared
 //   - Ensure NodeVerbs object
 //	 - Start virtualnode
 // nolint:gocyclo
@@ -302,7 +302,9 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 	}
 
 	logger.D("ensuring kubelet cert for edge device node")
-	kubeletCert, err := c.ensureKubeletServerCert(c.hostNodeName, name, ed.Spec.Node.Cert, c.hostNodeAddresses)
+	kubeletCert, err := c.ensureKubeletServerCert(
+		name, c.hostNodeName, ed.Spec.Node.Cert, c.hostNodeAddresses,
+	)
 	if err != nil {
 		logger.I("failed to get kubelet cert for edge device node", log.Error(err))
 		return err

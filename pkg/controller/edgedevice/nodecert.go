@@ -195,7 +195,7 @@ func parsePEMEncodedPrivateKey(keyPEM, password []byte) (key crypto.Signer, err 
 
 // nolint:gocyclo,lll
 func (c *Controller) ensureKubeletServerCert(
-	hostNodeName, virtualNodeName string,
+	name, hostNodeName string,
 	certInfo aranyaapi.NodeCertSpec,
 	nodeAddresses []corev1.NodeAddress,
 ) (*tls.Certificate, error) {
@@ -216,14 +216,14 @@ func (c *Controller) ensureKubeletServerCert(
 
 	var (
 		// kubernetes secret name
-		secretObjName = fmt.Sprintf("kubelet-tls.%s.%s", hostNodeName, virtualNodeName)
+		secretObjName = fmt.Sprintf("kubelet-tls.%s.%s", hostNodeName, name)
 		// kubernetes csr name
-		csrObjName = fmt.Sprintf("kubelet-tls.%s.%s", hostNodeName, virtualNodeName)
+		csrObjName = fmt.Sprintf("kubelet-tls.%s.%s", hostNodeName, name)
 		logger     = c.Log.WithFields(log.String("name", csrObjName))
 		certReq    = &x509.CertificateRequest{
 			Subject: pkix.Name{
 				// CommonName is the RBAC role name, which must be `system:node:{nodeName}`
-				CommonName: fmt.Sprintf("system:node:%s", virtualNodeName),
+				CommonName: fmt.Sprintf("system:node:%s", name),
 				Country:    []string{certInfo.Country},
 				Province:   []string{certInfo.State},
 				Locality:   []string{certInfo.Locality},
@@ -435,8 +435,8 @@ func (c *Controller) ensureKubeletServerCert(
 		if needToApproveKubeCSR && c.vnConfig.Node.Cert.AutoApprove {
 			csrReq.Status.Conditions = append(csrReq.Status.Conditions, certapi.CertificateSigningRequestCondition{
 				Type:    certapi.CertificateApproved,
-				Reason:  "AutoApproved",
-				Message: "self approved by aranya controller for EdgeDevice",
+				Reason:  "AranyaApprove",
+				Message: fmt.Sprintf("This CSR was self approved by aranya controller for EdgeDevice %q", name),
 			})
 
 			logger.D("approving kubernetes csr automatically")
@@ -445,13 +445,19 @@ func (c *Controller) ensureKubeletServerCert(
 				logger.I("failed to approve kubernetes csr", log.Error(err))
 				return nil, err
 			}
+			logger.V("approved kubernetes csr automatically")
 		}
 
 		certBytes = csrReq.Status.Certificate
 		if len(certBytes) == 0 {
 			// this could happen since certificate won't be issued immediately (especially when autoApprove disabled)
 			// good luck next time :)
-			// TODO: should we watch?
+
+			// Shall we watch to reduce retry times? Never!
+			// CSR contains the cluster wide credential and requires list permission
+			// DO NOT even think about it!
+			//
+			// and we have efficient backoff mechanism to wait for certificate issued
 			return nil, fmt.Errorf("certificate not issued")
 		}
 
