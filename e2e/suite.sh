@@ -97,7 +97,9 @@ _start_e2e_tests() {
 
   helm-stack -c e2e/helm-stack.yaml gen "${kube_version}"
 
-  KUBECONFIG="$(pwd)/build/e2e/clusters/${kube_version}/kubeconfig.yaml"
+  kubeconfig_dir="$(mktemp -d)"
+  KUBECONFIG="${kubeconfig_dir}/kubeconfig.yaml"
+  echo "using KUBECONFIG=${KUBECONFIG}"
 
   # shellcheck disable=SC2139
   alias kind="kind -v 100 --kubeconfig ${KUBECONFIG}"
@@ -144,6 +146,9 @@ _start_e2e_tests() {
 
   # give aranya 10s to create related resources
   sleep 10
+
+  # should find new nodes now (for debugging)
+  kubectl get nodes -o wide
 
   KUBECONFIG_E2E="${KUBECONFIG}" \
     go test -mod=vendor -v -failfast -race \
