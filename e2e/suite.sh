@@ -145,7 +145,7 @@ _start_e2e_tests() {
   # give aranya 10s to create related resources
   sleep 10
 
-  KUBECONFIG_TESTING="${KUBECONFIG}" \
+  KUBECONFIG_E2E="${KUBECONFIG}" \
     go test -mod=vendor -v -failfast -race \
     -covermode=atomic -coverprofile="coverage.e2e.${kube_version}.txt" -coverpkg=./... \
     ./e2e/tests/...
