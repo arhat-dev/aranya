@@ -18,13 +18,13 @@ kubeadmConfigPatchesJSON6902:
       value: docker
 nodes:
 - role: control-plane
-  image: kindest/node:v1.14.10@sha256:ce4355398a704fca68006f8a29f37aafb49f8fc2f64ede3ccd0d9198da910146
+  image: ghcr.io/arhat-dev/kind-node:1.14
 # nodes for arhat daemonset
 - role: worker
-  image: kindest/node:v1.14.10@sha256:ce4355398a704fca68006f8a29f37aafb49f8fc2f64ede3ccd0d9198da910146
+  image: ghcr.io/arhat-dev/kind-node:1.14
 - role: worker
-  image: kindest/node:v1.14.10@sha256:ce4355398a704fca68006f8a29f37aafb49f8fc2f64ede3ccd0d9198da910146
+  image: ghcr.io/arhat-dev/kind-node:1.14
 - role: worker
-  image: kindest/node:v1.14.10@sha256:ce4355398a704fca68006f8a29f37aafb49f8fc2f64ede3ccd0d9198da910146
+  image: ghcr.io/arhat-dev/kind-node:1.14
 - role: worker
-  image: kindest/node:v1.14.10@sha256:ce4355398a704fca68006f8a29f37aafb49f8fc2f64ede3ccd0d9198da910146
+  image: ghcr.io/arhat-dev/kind-node:1.14
