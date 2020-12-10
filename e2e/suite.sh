@@ -120,7 +120,7 @@ _start_e2e_tests() {
   helm-stack -c e2e/helm-stack.yaml apply "${kube_version}" || true
   sleep 1
   helm-stack -c e2e/helm-stack.yaml apply "${kube_version}"
-  
+
   # ensure tenant namespace
   kubectl create namespace tenant
 
