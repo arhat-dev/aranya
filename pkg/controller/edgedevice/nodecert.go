@@ -399,7 +399,8 @@ func (c *Controller) ensureKubeletServerCert(
 					Name: csrObjName,
 				},
 				Spec: certapi.CertificateSigningRequestSpec{
-					Request: csrBytes,
+					Request:    csrBytes,
+					SignerName: certapi.KubeletServingSignerName,
 					Groups: []string{
 						"system:nodes",
 						"system:authenticated",
