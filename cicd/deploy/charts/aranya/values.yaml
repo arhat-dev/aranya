@@ -5,7 +5,7 @@ replicaCount: 1
 
 imagePullSecrets: []
 image:
-  repository: docker.io/arhatdev/aranya
+  repository: ghcr.io/arhat-dev/aranya
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: latest
@@ -367,10 +367,10 @@ config:
 # watch namespace
 abbot:
   # deploy abbot
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
-    repository: docker.io/arhatdev/abbot
+    repository: ghcr.io/arhat-dev/abbot
     pullPolicy: Always
     tag: latest
 
