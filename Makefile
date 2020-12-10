@@ -29,7 +29,7 @@ vendor:
 
 # testing
 include scripts/test/unit.mk
-include scripts/test/e2e.mk
+include e2e/scripts.mk
 
 # binary build
 include scripts/build/aranya.mk

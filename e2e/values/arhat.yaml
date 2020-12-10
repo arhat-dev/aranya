@@ -1,0 +1,71 @@
+image:
+  repository: ghcr.io/arhat-dev/arhat
+  pullPolicy: IfNotPresent
+  tag: latest
+
+extraEnv: []
+# - name: DBUS_SYSTEM_BUS_ADDRESS
+#   value: unix:path=/run/dbus/system_bus_socket
+# - name: XDG_RUNTIME_DIR
+#   value: /run/user/0
+# - name: LANG
+#   value: en_US.UTF-8
+# - name: XDG_DATA_DIRS
+#   value: /usr/local/share:/usr/share:/var/lib/snapd/desktop
+# - name: PATH
+#   value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+
+securityContext:
+  privileged: false
+
+hostIPC: false
+hostPID: false
+hostNetwork: false
+
+config:
+  arhat:
+    log:
+    - level: verbose
+      format: console
+      file: stderr
+
+    host:
+      rootfs: ""
+      allowExec: true
+      allowAttach: true
+      allowPortForward: true
+      allowLog: true
+
+    node:
+      machineIDFrom:
+        text: ${POD_UID}
+    pprof:
+      enabled: true
+      listen: localhost:8080
+      httpPath: /debug/pprof
+      cpuProfileFrequencyHz: 100
+      mutexProfileFraction: 100
+      blockProfileFraction: 1
+  connectivity:
+    dialTimeout: 5s
+    initialBackoff: 1s
+    maxBackoff: 10s
+    backoffFactor: 1.5
+    methods:
+    - name: mqtt
+      priority: 1
+      config:
+        variant: standard
+        endpoint: mqtt.edge:1883
+        transport: tcp
+        topicNamespaceFrom:
+          text: e2e.aranya.arhat.dev/${NODE_NAME}
+        clientID: ${NODE_NAME}
+        username: ${NODE_NAME}
+        password: ${NODE_NAME}-password
+
+  extension:
+    enabled: false
+
+runtime:
+  enabled: false

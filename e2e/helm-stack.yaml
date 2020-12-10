@@ -9,6 +9,9 @@ repos:
 - name: prometheus-community
   url: https://prometheus-community.github.io/helm-charts
 
+- name: arhat-dev
+  url: https://helm-charts.arhat.dev/
+
 charts:
 # prometheus-operator chart using v1beta1 CRD
 - name: bitnami/kube-prometheus@1.1.0
@@ -22,6 +25,8 @@ charts:
   git:
     url: https://github.com/emqx/emqx-rel
     path: deploy/charts/emqx
+
+- name: arhat-dev/arhat@latest
 - name: aranya@master
   local: {}
   namespaceInTemplate: true
@@ -44,6 +49,12 @@ environments:
   - name: default/aranya
     chart: aranya@master
 
+  - name: full/aranya
+    chart: aranya@master
+
+  - name: remote/arhat
+    chart: arhat-dev/arhat@latest
+
 #
 # kubernetes v1.14
 #
@@ -59,6 +70,9 @@ environments:
     state: novalidation
 
   - name: default/aranya
+    chart: aranya@master
+
+  - name: full/aranya
     chart: aranya@master
 
 #
@@ -78,6 +92,9 @@ environments:
   - name: default/aranya
     chart: aranya@master
 
+  - name: full/aranya
+    chart: aranya@master
+
 #
 # kubernetes v1.16
 #
@@ -91,6 +108,9 @@ environments:
     chart: prometheus-community/kube-prometheus-stack@12.7.0
 
   - name: default/aranya
+    chart: aranya@master
+
+  - name: full/aranya
     chart: aranya@master
 
 #
@@ -109,6 +129,9 @@ environments:
   - name: default/aranya
     chart: aranya@master
 
+  - name: full/aranya
+    chart: aranya@master
+
 #
 # kubernetes v1.18
 #
@@ -125,6 +148,9 @@ environments:
   - name: default/aranya
     chart: aranya@master
 
+  - name: full/aranya
+    chart: aranya@master
+
 #
 # kubernetes v1.19
 #
@@ -139,4 +165,7 @@ environments:
     chart: prometheus-community/kube-prometheus-stack@12.7.0
 
   - name: default/aranya
+    chart: aranya@master
+
+  - name: full/aranya
     chart: aranya@master

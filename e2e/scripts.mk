@@ -13,22 +13,22 @@
 # limitations under the License.
 
 e2e.v1-19:
-	sh scripts/test/e2e.sh v1-19
+	sh e2e/suite.sh v1-19
 
 e2e.v1-18:
-	sh scripts/test/e2e.sh v1-18
+	sh e2e/suite.sh v1-18
 
 e2e.v1-17:
-	sh scripts/test/e2e.sh v1-17
+	sh e2e/suite.sh v1-17
 
 e2e.v1-16:
-	sh scripts/test/e2e.sh v1-16
+	sh e2e/suite.sh v1-16
 
 e2e.v1-15:
-	sh scripts/test/e2e.sh v1-15
+	sh e2e/suite.sh v1-15
 
 e2e.v1-14:
-	sh scripts/test/e2e.sh v1-14
+	sh e2e/suite.sh v1-14
 
 e2e.v1-13:
-	sh scripts/test/e2e.sh v1-13
+	sh e2e/suite.sh v1-13
