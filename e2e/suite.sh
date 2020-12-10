@@ -116,13 +116,13 @@ _start_e2e_tests() {
   kubectl get nodes -o yaml
   kubectl taint nodes --all node-role.kubernetes.io/master- || true
 
+  # ensure tenant namespace
+  kubectl create namespace tenant
+
   # crd resources may fail at the first time
   helm-stack -c e2e/helm-stack.yaml apply "${kube_version}" || true
   sleep 1
   helm-stack -c e2e/helm-stack.yaml apply "${kube_version}"
-
-  # ensure tenant namespace
-  kubectl create namespace tenant
 
   # wait until aranya running
   while ! kubectl get po --namespace default | grep aranya | grep Running ; do
