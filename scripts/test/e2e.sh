@@ -51,6 +51,8 @@ _start_e2e_tests() {
   sleep 1
   helm-stack -c e2e/helm-stack.yaml apply "${kube_version}"
 
+  kubectl apply -f e2e/testdata/edgedevices.yaml
+
   # e2e test time limit
   go test -mod=vendor -v -failfast -race \
     -covermode=atomic -coverprofile="coverage.e2e.${kube_version}.txt" -coverpkg=./... \
