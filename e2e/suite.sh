@@ -97,8 +97,7 @@ _start_e2e_tests() {
 
   helm-stack -c e2e/helm-stack.yaml gen "${kube_version}"
 
-  kubeconfig_dir="$(mktemp -d)"
-  KUBECONFIG="${kubeconfig_dir}/kubeconfig.yaml"
+  KUBECONFIG="$(mktemp)"
   echo "using KUBECONFIG=${KUBECONFIG}"
 
   # shellcheck disable=SC2139
@@ -108,15 +107,11 @@ _start_e2e_tests() {
   alias kubectl="kubectl --kubeconfig ${KUBECONFIG}"
 
   # delete cluster in the end (best effort)
-  trap 'kind delete cluster --name "${kube_version}" || true' EXIT
+  # trap 'kind delete cluster --name "${kube_version}" || true' EXIT
 
-  kind create cluster \
+  kind create cluster --name "${kube_version}" \
     --config "e2e/kind/${kube_version}.yaml" \
-    --retain --wait 5m \
-    --name "${kube_version}"
-
-  kubectl get nodes -o yaml
-  kubectl taint nodes --all node-role.kubernetes.io/master- || true
+    --retain --wait 5m
 
   # ensure tenant namespace
   kubectl create namespace tenant
@@ -141,14 +136,16 @@ _start_e2e_tests() {
 
   echo "aranya running in namespace 'full'"
 
-  # create edge devices
+  # create edge devices after aranya is running
   _create_edge_devices "${kube_version}"
 
-  # give aranya 10s to create related resources
-  sleep 10
+  # give aranya 30s to create related resources
+  sleep 30
 
-  # should find new nodes now (for debugging)
+  # should be able to find new virtual nodes now (for debugging)
   kubectl get nodes -o wide
+  kubectl get certificatesigningrequests
+  kubectl get pods --all-namespaces
 
   KUBECONFIG_E2E="${KUBECONFIG}" \
     go test -mod=vendor -v -failfast -race \

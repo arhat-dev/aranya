@@ -17,6 +17,7 @@ limitations under the License.
 package tests
 
 import (
+	"fmt"
 	"os"
 
 	"arhat.dev/pkg/kubehelper"
@@ -42,7 +43,7 @@ const (
 func createClient() kubernetes.Interface {
 	kubeConfigFile := os.Getenv(EnvKeyKubeConfig)
 	if len(kubeConfigFile) == 0 {
-		panic("no e2e kubeconfig provided")
+		panic(fmt.Sprintf("no e2e kubeconfig provided, please set env %q", EnvKeyKubeConfig))
 	}
 
 	config := &kubehelper.KubeClientConfig{
