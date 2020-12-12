@@ -169,3 +169,22 @@ environments:
 
   - name: full/aranya
     chart: aranya@master
+
+#
+# kubernetes v1.20
+#
+- name: v1-20
+  kubeContext: kind-v1-20
+
+  deployments:
+  - name: emqx/emqx
+    chart: emqx@v4.2.3
+
+  - name: monitoring/promop
+    chart: prometheus-community/kube-prometheus-stack@12.7.0
+
+  - name: default/aranya
+    chart: aranya@master
+
+  - name: full/aranya
+    chart: aranya@master
