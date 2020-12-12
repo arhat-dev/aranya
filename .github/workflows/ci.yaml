@@ -182,6 +182,12 @@ jobs:
       run: |
         make e2e.${{ matrix.kube }}
 
+    - name: Upload Log Output
+      uses: actions/upload-artifact@v2
+      with:
+        name: e2e-logs-${{ matrix.kube }}
+        path: build/e2e/results/${{ matrix.kube }}
+
     - name: Report e2e Coverage
       uses: codecov/codecov-action@v1
 
