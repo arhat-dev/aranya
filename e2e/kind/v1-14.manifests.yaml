@@ -46,6 +46,8 @@ spec:
         tier: node
         app: flannel
     spec:
+      tolerations:
+      - operator: Exists
       hostNetwork: true
       nodeSelector:
         beta.kubernetes.io/arch: amd64

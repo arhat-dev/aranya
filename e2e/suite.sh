@@ -100,16 +100,16 @@ _start_e2e_tests() {
   # delete cluster in the end (best effort)
   trap '${kind} delete cluster --name "${kube_version}" || true' EXIT
 
+  # do not set --wait since we are using custom CNI plugins
   ${kind} create cluster --name "${kube_version}" \
     --config "e2e/kind/${kube_version}.yaml" \
-    --retain --wait 5m \
-    --kubeconfig "${KUBECONFIG}"
+    --retain --kubeconfig "${KUBECONFIG}"
 
   # ensure tenant namespace
   ${kubectl} create namespace tenant
 
   if [ -f "e2e/kind/${kube_version}.manifests.yaml" ]; then
-    ${kubectl} -f "e2e/kind/${kube_version}.manifests.yaml"
+    ${kubectl} apply -f "e2e/kind/${kube_version}.manifests.yaml"
   fi
 
   # crd resources may fail at the first time
