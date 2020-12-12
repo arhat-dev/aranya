@@ -146,10 +146,10 @@ _start_e2e_tests() {
 
 kube_version="$1"
 ARANYA_E2E_KUBECONFIG="${ARANYA_E2E_KUBECONFIG:-$(mktemp)}"
-echo "using kubeconfig ${ARANYA_E2E_KUBECONFIG} for e2e"
+echo "using kubeconfig '${ARANYA_E2E_KUBECONFIG}' for e2e"
 
-helm_stack="helm-stack -c e2e/helm-stack"
-kind="kind -v 100 --kubeconfig ${ARANYA_E2E_KUBECONFIG}"
-kubectl="kubectl --kubeconfig ${ARANYA_E2E_KUBECONFIG}"
+helm_stack="KUBECONFIG='${ARANYA_E2E_KUBECONFIG}' helm-stack -c e2e/helm-stack"
+kind="kind -v 100 --kubeconfig '${ARANYA_E2E_KUBECONFIG}'"
+kubectl="kubectl --kubeconfig '${ARANYA_E2E_KUBECONFIG}'"
 
 _start_e2e_tests "${kube_version}"
