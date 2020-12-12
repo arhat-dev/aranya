@@ -56,7 +56,7 @@ func (c *nodeClusterRoleController) init(
 	clusterInformerFactory informers.SharedInformerFactory,
 ) error {
 	// watch cluster roles managed by us
-	if len(config.Aranya.Managed.NodeClusterRoles) > 0 {
+	if len(config.Aranya.Managed.NodeClusterRoles) == 0 {
 		return nil
 	}
 
