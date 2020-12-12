@@ -108,6 +108,10 @@ _start_e2e_tests() {
   # ensure tenant namespace
   ${kubectl} create namespace tenant
 
+  if [ -f "e2e/kind/${kube_version}.manifests.yaml" ]; then
+    ${kubectl} -f "e2e/kind/${kube_version}.manifests.yaml"
+  fi
+
   # crd resources may fail at the first time
   ${helm_stack} apply "${kube_version}" || true
   sleep 1

@@ -2,6 +2,12 @@ environments:
 - name: v1-16
   kubeContext: kind-v1-16
   deployments:
+  - name: kube-system/calico
+    chart: arhat-dev/calico@latest
+
+  - name: kube-system/calico-node
+    chart: arhat-dev/calico-node@latest
+
   - name: emqx/emqx
     chart: emqx@v4.2.3
 
