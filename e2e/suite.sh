@@ -87,7 +87,7 @@ _start_e2e_tests() {
   # copy local charts to chart dir
   cp -r cicd/deploy/charts/aranya build/e2e/charts/aranya/master
 
-  KUBECONFIG="${ARANYA_E2E_KUBECONFIG}" ${helm_stack} ensure
+  ${helm_stack} ensure
 
   # override default values
   cp e2e/values/aranya.yaml "build/e2e/clusters/${kube_version}/default.aranya[aranya@master].yaml"
@@ -95,22 +95,23 @@ _start_e2e_tests() {
   cp e2e/values/emqx.yaml "build/e2e/clusters/${kube_version}/emqx.emqx[emqx@v4.2.3].yaml"
   cp e2e/values/arhat.yaml "build/e2e/clusters/${kube_version}/remote.arhat[arhat-dev.arhat@latest].yaml"
 
-  KUBECONFIG="${ARANYA_E2E_KUBECONFIG}" ${helm_stack} gen "${kube_version}"
+  ${helm_stack} gen "${kube_version}"
 
   # delete cluster in the end (best effort)
   # trap '${kind} delete cluster --name "${kube_version}" || true' EXIT
 
   ${kind} create cluster --name "${kube_version}" \
     --config "e2e/kind/${kube_version}.yaml" \
-    --retain --wait 5m
+    --retain --wait 5m \
+    --kubeconfig "${KUBECONFIG}"
 
   # ensure tenant namespace
   ${kubectl} create namespace tenant
 
   # crd resources may fail at the first time
-  KUBECONFIG="${ARANYA_E2E_KUBECONFIG}" ${helm_stack} apply "${kube_version}" || true
+  ${helm_stack} apply "${kube_version}" || true
   sleep 1
-  KUBECONFIG="${ARANYA_E2E_KUBECONFIG}" ${helm_stack} apply "${kube_version}"
+  ${helm_stack} apply "${kube_version}"
 
   # wait until aranya running
   while ! ${kubectl} get po --namespace default | grep aranya | grep Running ; do
@@ -138,8 +139,7 @@ _start_e2e_tests() {
   ${kubectl} get certificatesigningrequests
   ${kubectl} get pods --all-namespaces
 
-  ARANYA_E2E_KUBECONFIG="${ARANYA_E2E_KUBECONFIG}" \
-    go test -mod=vendor -v -failfast -race \
+  go test -mod=vendor -v -failfast -race \
     -covermode=atomic -coverprofile="coverage.e2e.${kube_version}.txt" -coverpkg=./... \
     ./e2e/tests/...
 }
@@ -148,8 +148,11 @@ kube_version="$1"
 ARANYA_E2E_KUBECONFIG="${ARANYA_E2E_KUBECONFIG:-$(mktemp)}"
 echo "using kubeconfig '${ARANYA_E2E_KUBECONFIG}' for e2e"
 
+export KUBECONFIG="${ARANYA_E2E_KUBECONFIG}"
+export ARANYA_E2E_KUBECONFIG
+
 helm_stack="helm-stack -c e2e/helm-stack"
-kind="kind -v 100 --kubeconfig '${ARANYA_E2E_KUBECONFIG}'"
-kubectl="kubectl --kubeconfig '${ARANYA_E2E_KUBECONFIG}'"
+kind="kind -v 100"
+kubectl="kubectl"
 
 _start_e2e_tests "${kube_version}"
