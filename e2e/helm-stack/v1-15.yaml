@@ -1,0 +1,20 @@
+environments:
+- name: v1-15
+  kubeContext: kind-v1-15
+  deployments:
+  - name: emqx/emqx
+    chart: emqx@v4.2.3
+
+  - name: monitoring/promop
+    # for v1beta1 CRD
+    chart: bitnami/kube-prometheus@1.1.0
+    state: novalidation
+
+  - name: default/aranya
+    chart: aranya@master
+
+  - name: full/aranya
+    chart: aranya@master
+
+  - name: remote/arhat
+    chart: arhat-dev/arhat@latest

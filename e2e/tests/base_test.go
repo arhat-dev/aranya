@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const EnvKeyKubeConfig = "KUBECONFIG_E2E"
+const EnvKeyKubeConfig = "ARANYA_E2E_KUBECONFIG"
 
 const (
 	_namePrefix = "e2e-"
