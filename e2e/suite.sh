@@ -118,6 +118,7 @@ _start_e2e_tests() {
     echo "waiting for aranya running in namespace 'default'"
     sleep 5
     ${kubectl} get po --all-namespaces -o wide
+    ${kubectl} describe pods aranya
   done
 
   echo "aranya running in namespace 'default'"
