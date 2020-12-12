@@ -117,6 +117,12 @@ _start_e2e_tests() {
   sleep 1
   ${helm_stack} apply "${kube_version}"
 
+  while ! ${kubectl} get po --namespace kube-system | grep coredns | grep Running ; do
+    echo "waiting for coredns"
+    sleep 5
+  done
+
+
   # wait until aranya running
   while ! ${kubectl} get po --namespace default | grep aranya | grep Running ; do
     echo "waiting for aranya running in namespace 'default'"
@@ -147,9 +153,30 @@ _start_e2e_tests() {
   ${kubectl} get certificatesigningrequests
   ${kubectl} get pods --all-namespaces
 
+  set +e
+
   go test -mod=vendor -v -failfast -race \
     -covermode=atomic -coverprofile="coverage.e2e.${kube_version}.txt" -coverpkg=./... \
     ./e2e/tests/...
+
+  result_dir="build/e2e/results/${kube_version}"
+  mkdir -p "${result_dir}"
+
+  ${kubectl} --namespace default logs --prefix \
+    --selector app.kubernetes.io/instance=aranya | tee "${result_dir}/aranya-default.log"
+  ${kubectl} --namespace full logs --prefix \
+    --selector app.kubernetes.io/instance=aranya | tee "${result_dir}/aranya-full.log"
+  ${kubectl} --namespace full logs --prefix \
+    --selector app.kubernetes.io/instance=abbot | tee "${result_dir}/abbot.log"
+  ${kubectl} --namespace remote logs --prefix \
+    --selector app.kubernetes.io/instance=arhat | tee "${result_dir}/arhat.log"
+
+  test_exit_code="$?"
+  if [ "${test_exit_code}" != "0" ]; then
+    exit ${test_exit_code}
+  fi
+
+  set -e
 }
 
 kube_version="$1"
