@@ -98,7 +98,7 @@ _start_e2e_tests() {
   ${helm_stack} gen "${kube_version}"
 
   # delete cluster in the end (best effort)
-  # trap '${kind} delete cluster --name "${kube_version}" || true' EXIT
+  trap '${kind} delete cluster --name "${kube_version}" || true' EXIT
 
   ${kind} create cluster --name "${kube_version}" \
     --config "e2e/kind/${kube_version}.yaml" \
@@ -116,7 +116,8 @@ _start_e2e_tests() {
   # wait until aranya running
   while ! ${kubectl} get po --namespace default | grep aranya | grep Running ; do
     echo "waiting for aranya running in namespace 'default'"
-    sleep 1
+    sleep 5
+    ${kubectl} get po --all-namespaces -o wide
   done
 
   echo "aranya running in namespace 'default'"
@@ -124,6 +125,7 @@ _start_e2e_tests() {
   while ! ${kubectl} get po --namespace full | grep aranya | grep Running ; do
     echo "waiting for aranya running in namespace 'full'"
     sleep 1
+    ${kubectl} get po --namespace full -o wide
   done
 
   echo "aranya running in namespace 'full'"
