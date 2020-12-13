@@ -29,7 +29,7 @@ spec:
   connectivity:
     method: mqtt
     mqtt:
-      broker: emqx.edge:1883
+      broker: emqx.emqx:1883
       clientID: aranya.e2e(${kind_cluster_name}-worker)
       topicNamespace: e2e.aranya.arhat.dev/${kind_cluster_name}-worker
       transport: tcp
@@ -43,7 +43,7 @@ spec:
   connectivity:
     method: mqtt
     mqtt:
-      broker: emqx.edge:1883
+      broker: emqx.emqx:1883
       clientID: aranya.e2e(${kind_cluster_name}-worker2)
       topicNamespace: e2e.aranya.arhat.dev/${kind_cluster_name}-worker2
       transport: tcp
@@ -57,7 +57,7 @@ spec:
   connectivity:
     method: mqtt
     mqtt:
-      broker: emqx.edge:1883
+      broker: emqx.emqx:1883
       clientID: aranya.e2e(${kind_cluster_name}-worker3)
       topicNamespace: e2e.aranya.arhat.dev/${kind_cluster_name}-worker3
       transport: tcp
@@ -71,7 +71,7 @@ spec:
   connectivity:
     method: mqtt
     mqtt:
-      broker: emqx.edge:1883
+      broker: emqx.emqx:1883
       clientID: aranya.e2e(${kind_cluster_name}-worker4)
       topicNamespace: e2e.aranya.arhat.dev/${kind_cluster_name}-worker4
       transport: tcp
