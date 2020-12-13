@@ -26,8 +26,8 @@ charts:
     url: https://github.com/emqx/emqx-rel
     path: deploy/charts/emqx
 
-- name: arhat-dev/calico@latest
-- name: arhat-dev/calico-node@latest
+# - name: arhat-dev/calico@latest
+# - name: arhat-dev/calico-node@latest
 - name: arhat-dev/arhat@latest
 - name: aranya@master
   local: {}

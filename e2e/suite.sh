@@ -152,19 +152,22 @@ _start_e2e_tests() {
     sleep 10
   done
 
-  # give aranya 30s to create related resources
-  sleep 30
-
-  # should be able to find new virtual nodes now (for debugging)
-  kubectl get nodes -o wide
-  kubectl get certificatesigningrequests
-  kubectl get pods --all-namespaces
+  # give aranya 120s to create related resources
+  for _ in $(seq 0 1 12); do
+    # should be able to find new virtual nodes now (for debugging)
+    kubectl get certificatesigningrequests
+    kubectl get nodes -o name
+    kubectl get pods --all-namespaces
+    sleep 10
+  done
 
   set +e
 
   go test -mod=vendor -v -failfast -race \
     -covermode=atomic -coverprofile="coverage.e2e.${kube_version}.txt" -coverpkg=./... \
     ./e2e/tests/...
+
+  test_exit_code="$?"
 
   result_dir="build/e2e/results/${kube_version}"
   mkdir -p "${result_dir}"
@@ -178,7 +181,6 @@ _start_e2e_tests() {
   kubectl --namespace remote logs --prefix \
     --selector app.kubernetes.io/instance=arhat | tee "${result_dir}/arhat.log"
 
-  test_exit_code="$?"
   if [ "${test_exit_code}" != "0" ]; then
     exit ${test_exit_code}
   fi
