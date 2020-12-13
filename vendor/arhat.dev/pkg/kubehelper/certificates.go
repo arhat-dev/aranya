@@ -299,7 +299,7 @@ func (c *CertificateSigningRequestClient) UpdateStatus(ctx context.Context, csr 
 			return nil, err
 		}
 
-		out, err = c.V1Client.Update(ctx, out, opts)
+		out, err = c.V1Client.UpdateStatus(ctx, out, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -345,7 +345,7 @@ func (c *CertificateSigningRequestClient) UpdateApproval(ctx context.Context, cs
 			return nil, err
 		}
 
-		out, err = c.V1Client.Update(ctx, out, opts)
+		out, err = c.V1Client.UpdateApproval(ctx, csr.Name, out, opts)
 		if err != nil {
 			return nil, err
 		}
