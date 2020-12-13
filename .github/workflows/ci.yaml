@@ -183,6 +183,7 @@ jobs:
         make e2e.${{ matrix.kube }}
 
     - name: Upload Log Output
+      if: always()
       uses: actions/upload-artifact@v2
       with:
         name: e2e-logs-${{ matrix.kube }}
