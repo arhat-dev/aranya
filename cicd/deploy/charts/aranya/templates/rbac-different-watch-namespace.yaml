@@ -14,8 +14,6 @@ rules:
   - get
   - update
   - patch
-  resourceNames:
-  - {{ .Values.config.aranya.leaderElection.lock.name | default "aranya-leader-election" }}
 {{- end }}
 {{- if (contains .Values.config.aranya.leaderElection.lock.type "endpoints") }}
 - apiGroups: [""]
@@ -26,8 +24,6 @@ rules:
   - get
   - update
   - patch
-  resourceNames:
-  - {{ .Values.config.aranya.leaderElection.lock.name | default "aranya-leader-election" }}
 {{- end }}
 {{- if (contains .Values.config.aranya.leaderElection.lock.type "leases") }}
 - apiGroups: ["coordination.k8s.io"]
@@ -38,8 +34,6 @@ rules:
   - get
   - update
   - patch
-  resourceNames:
-  - {{ .Values.config.aranya.leaderElection.lock.name | default "aranya-leader-election" }}
 {{- end }}
 - apiGroups: [""]
   resources:
