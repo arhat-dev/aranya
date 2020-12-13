@@ -5,7 +5,7 @@ metadata:
   name: {{ include "aranya.fullname" . }}:controller
   namespace: {{ .Release.Namespace }}
 rules:
-{{- if (contains .Values.config.aranya.leaderElection.lock.type "endpoints") }}
+{{- if (.Values.config.aranya.leaderElection.lock.type | toString | contains "endpoints") }}
 - apiGroups: [""]
   resources:
   - endpoints
@@ -15,7 +15,7 @@ rules:
   - update
   - patch
 {{- end }}
-{{- if (contains .Values.config.aranya.leaderElection.lock.type "leases") }}
+{{- if (.Values.config.aranya.leaderElection.lock.type | toString | contains "leases") }}
 - apiGroups: ["coordination.k8s.io"]
   resources:
   - leases
@@ -140,7 +140,7 @@ rules:
   - get
   - list
   - watch
-{{- if (contains .Values.config.aranya.leaderElection.lock.type "configmaps") }}
+{{- if (.Values.config.aranya.leaderElection.lock.type | toString | contains "configmaps") }}
   - create
   - update
   - patch
