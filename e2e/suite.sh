@@ -181,11 +181,9 @@ _start_e2e_tests() {
   kubectl --namespace remote logs --prefix \
     --selector app.kubernetes.io/instance=arhat | tee "${result_dir}/arhat.log"
 
-  if [ "${test_exit_code}" != "0" ]; then
-    exit ${test_exit_code}
-  fi
-
   set -e
+
+  exit ${test_exit_code}
 }
 
 kube_version="$1"
