@@ -73,7 +73,7 @@ config:
       lock:
         # default to aranya-leader-election
         #name:
-        type: configmaps
+        type: configmapsleases
         # default to pod namespace
         #namespace:
 

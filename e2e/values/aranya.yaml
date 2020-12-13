@@ -1,0 +1,6 @@
+config:
+  aranya:
+    leaderElection:
+      lock:
+        # to verify rbac setup in helm chart
+        type: endpointsleases
