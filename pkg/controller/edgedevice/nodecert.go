@@ -42,6 +42,7 @@ import (
 	kubeclient "k8s.io/client-go/kubernetes"
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	certapi "k8s.io/kubernetes/pkg/apis/certificates"
+	coreapi "k8s.io/kubernetes/pkg/apis/core"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/conf"
@@ -435,8 +436,9 @@ func (c *Controller) ensureKubeletServerCert(
 		if needToApproveKubeCSR && c.vnConfig.Node.Cert.AutoApprove {
 			csrReq.Status.Conditions = append(csrReq.Status.Conditions, certapi.CertificateSigningRequestCondition{
 				Type:    certapi.CertificateApproved,
-				Reason:  "AranyaApprove",
-				Message: fmt.Sprintf("This CSR was self approved by aranya controller for EdgeDevice %q", name),
+				Status:  coreapi.ConditionTrue,
+				Reason:  "AranyaAutoApprove",
+				Message: fmt.Sprintf("This CSR was approved by aranya controller for EdgeDevice %q", name),
 			})
 
 			logger.D("approving kubernetes csr automatically")
