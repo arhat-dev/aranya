@@ -87,6 +87,7 @@ _start_e2e_tests() {
   # copy local charts to chart dir
   cp -r cicd/deploy/charts/aranya build/e2e/charts/aranya/master
 
+  helm_stack="helm-stack -c e2e/helm-stack"
   ${helm_stack} ensure
 
   # override default values
@@ -98,18 +99,18 @@ _start_e2e_tests() {
   ${helm_stack} gen "${kube_version}"
 
   # delete cluster in the end (best effort)
-  trap '${kind} delete cluster --name "${kube_version}" || true' EXIT
+  trap 'kind delete cluster --name "${kube_version}" || true' EXIT
 
   # do not set --wait since we are using custom CNI plugins
-  ${kind} create cluster --name "${kube_version}" \
+  kind -v 100 create cluster --name "${kube_version}" \
     --config "e2e/kind/${kube_version}.yaml" \
     --retain --kubeconfig "${KUBECONFIG}"
 
   # ensure tenant namespace
-  ${kubectl} create namespace tenant
+  kubectl create namespace tenant
 
   if [ -f "e2e/kind/${kube_version}.manifests.yaml" ]; then
-    ${kubectl} apply -f "e2e/kind/${kube_version}.manifests.yaml"
+    kubectl apply -f "e2e/kind/${kube_version}.manifests.yaml"
   fi
 
   # crd resources may fail at the first time
@@ -117,27 +118,28 @@ _start_e2e_tests() {
   sleep 1
   ${helm_stack} apply "${kube_version}"
 
-  while ! ${kubectl} get po --namespace kube-system | grep coredns | grep Running ; do
+  while ! kubectl get po --namespace kube-system | grep coredns | grep Running ; do
     echo "waiting for coredns"
-    sleep 5
+    sleep 10
+    kubectl get po --all-namespaces -o wide
+    kubectl describe pods --namespace kube-system coredns
   done
 
-
   # wait until aranya running
-  while ! ${kubectl} get po --namespace default | grep aranya | grep Running ; do
+  while ! kubectl get po --namespace default | grep aranya | grep Running ; do
     echo "waiting for aranya running in namespace 'default'"
-    sleep 5
-    ${kubectl} get po --all-namespaces -o wide
-    ${kubectl} describe pods --namespace default aranya
+    sleep 10
+    kubectl get po --all-namespaces -o wide
+    kubectl describe pods --namespace kube-system aranya
   done
 
   echo "aranya running in namespace 'default'"
 
-  while ! ${kubectl} get po --namespace full | grep aranya | grep Running ; do
+  while ! kubectl get po --namespace full | grep aranya | grep Running ; do
     echo "waiting for aranya running in namespace 'full'"
-    sleep 1
-    ${kubectl} get po --namespace full -o wide
-    ${kubectl} describe pods --namespace full aranya
+    sleep 10
+    kubectl get po --namespace full -o wide
+    kubectl describe pods --namespace full aranya
   done
 
   echo "aranya running in namespace 'full'"
@@ -149,9 +151,9 @@ _start_e2e_tests() {
   sleep 30
 
   # should be able to find new virtual nodes now (for debugging)
-  ${kubectl} get nodes -o wide
-  ${kubectl} get certificatesigningrequests
-  ${kubectl} get pods --all-namespaces
+  kubectl get nodes -o wide
+  kubectl get certificatesigningrequests
+  kubectl get pods --all-namespaces
 
   set +e
 
@@ -162,13 +164,13 @@ _start_e2e_tests() {
   result_dir="build/e2e/results/${kube_version}"
   mkdir -p "${result_dir}"
 
-  ${kubectl} --namespace default logs --prefix \
+  kubectl --namespace default logs --prefix \
     --selector app.kubernetes.io/instance=aranya | tee "${result_dir}/aranya-default.log"
-  ${kubectl} --namespace full logs --prefix \
+  kubectl --namespace full logs --prefix \
     --selector app.kubernetes.io/instance=aranya | tee "${result_dir}/aranya-full.log"
-  ${kubectl} --namespace full logs --prefix \
+  kubectl --namespace full logs --prefix \
     --selector app.kubernetes.io/instance=abbot | tee "${result_dir}/abbot.log"
-  ${kubectl} --namespace remote logs --prefix \
+  kubectl --namespace remote logs --prefix \
     --selector app.kubernetes.io/instance=arhat | tee "${result_dir}/arhat.log"
 
   test_exit_code="$?"
@@ -185,9 +187,5 @@ echo "using kubeconfig '${ARANYA_E2E_KUBECONFIG}' for e2e"
 
 export KUBECONFIG="${ARANYA_E2E_KUBECONFIG}"
 export ARANYA_E2E_KUBECONFIG
-
-helm_stack="helm-stack -c e2e/helm-stack"
-kind="kind -v 100"
-kubectl="kubectl"
 
 _start_e2e_tests "${kube_version}"
