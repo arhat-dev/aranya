@@ -110,27 +110,30 @@ _start_e2e_tests() {
   kubectl create namespace tenant
 
   if [ -f "e2e/kind/${kube_version}.manifests.yaml" ]; then
-    kubectl apply -f "e2e/kind/${kube_version}.manifests.yaml"
+    while ! kubectl apply -f "e2e/kind/${kube_version}.manifests.yaml"; do
+      sleep 10
+    done
   fi
 
-  # crd resources may fail at the first time
-  ${helm_stack} apply "${kube_version}" || true
-  sleep 1
-  ${helm_stack} apply "${kube_version}"
+  # crd resources may fail at the first time, do it indefinitely to tolerate
+  # api server error
+  while ! ${helm_stack} apply "${kube_version}"; do
+    sleep 10
+  done
 
   while ! kubectl get po --namespace kube-system | grep coredns | grep Running ; do
     echo "waiting for coredns"
     sleep 10
-    kubectl get po --all-namespaces -o wide
-    kubectl describe pods --namespace kube-system coredns
+    kubectl get po --all-namespaces -o wide || true
+    kubectl describe pods --namespace kube-system coredns || true
   done
 
   # wait until aranya running
   while ! kubectl get po --namespace default | grep aranya | grep Running ; do
     echo "waiting for aranya running in namespace 'default'"
     sleep 10
-    kubectl get po --all-namespaces -o wide
-    kubectl describe pods --namespace kube-system aranya
+    kubectl get po --namespace default -o wide || true
+    kubectl describe pods --namespace default aranya || true
   done
 
   echo "aranya running in namespace 'default'"
@@ -138,14 +141,16 @@ _start_e2e_tests() {
   while ! kubectl get po --namespace full | grep aranya | grep Running ; do
     echo "waiting for aranya running in namespace 'full'"
     sleep 10
-    kubectl get po --namespace full -o wide
-    kubectl describe pods --namespace full aranya
+    kubectl get po --namespace full -o wide || true
+    kubectl describe pods --namespace full aranya || true
   done
 
   echo "aranya running in namespace 'full'"
 
   # create edge devices after aranya is running
-  _create_edge_devices "${kube_version}"
+  while ! _create_edge_devices "${kube_version}"; do
+    sleep 10
+  done
 
   # give aranya 30s to create related resources
   sleep 30
