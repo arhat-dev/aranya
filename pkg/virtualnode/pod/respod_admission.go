@@ -63,6 +63,20 @@ func isAbbotPod(pod *corev1.Pod) bool {
 	return false
 }
 
+func requireClusterNetwork(pod *corev1.Pod) bool {
+	if !pod.Spec.HostNetwork {
+		return true
+	}
+
+	// using host network
+
+	if pod.Spec.DNSPolicy == corev1.DNSClusterFirstWithHostNet {
+		return true
+	}
+
+	return false
+}
+
 func (m *Manager) admitPodCreation(pod *corev1.Pod) (handled bool, result *reconcile.Result) {
 	var (
 		err    error
@@ -89,7 +103,7 @@ func (m *Manager) admitPodCreation(pod *corev1.Pod) (handled bool, result *recon
 		return true, nil
 	}
 
-	if !pod.Spec.HostNetwork {
+	if requireClusterNetwork(pod) {
 		// cluster network pods require abbot deployment
 		result = &reconcile.Result{
 			Err: fmt.Errorf("cluster network required, but abbot pod not running"),
@@ -176,7 +190,7 @@ func (m *Manager) admitPodDeletion(pod *corev1.Pod) (handled bool, _ *reconcile.
 		err error
 	)
 
-	if !pod.Spec.HostNetwork {
+	if requireClusterNetwork(pod) {
 		// cluster network pods require abbot pod
 		if !m.hasAbbotPod() {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podDeletionDenied,
@@ -208,7 +222,7 @@ func (m *Manager) admitPodDeletion(pod *corev1.Pod) (handled bool, _ *reconcile.
 
 	// abbot pod, check if cluster network pods exists
 	for _, p := range m.podCache.GetAll() {
-		if !p.Spec.HostNetwork {
+		if requireClusterNetwork(p) {
 			m.options.EventRecorder.Event(pod, corev1.EventTypeNormal, podDeletionDenied,
 				"Cluster network pod(s) exists, abbot pod is not going to be deleted")
 			return true, &reconcile.Result{
