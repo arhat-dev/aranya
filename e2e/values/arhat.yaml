@@ -56,7 +56,7 @@ config:
       priority: 1
       config:
         variant: standard
-        endpoint: mqtt.edge:1883
+        endpoint: emqx.edge:1883
         transport: tcp
         topicNamespaceFrom:
           text: e2e.aranya.arhat.dev/${NODE_NAME}
