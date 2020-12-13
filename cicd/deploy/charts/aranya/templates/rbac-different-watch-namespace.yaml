@@ -43,7 +43,7 @@ rules:
 {{- end }}
 - apiGroups: [""]
   resources:
-  # to manage connectivity/sftp service
+  # to manage connectivity & sftp service
   - services
   verbs:
   - get
@@ -83,7 +83,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ include "aranya.fullname" . }}:virtualnode
-  namespace: {{ .Values.watchNamespace | default .Release.Namespace }}
+  namespace: {{ .Values.watchNamespace }}
 rules:
 - apiGroups: [""]
   resources:
@@ -91,6 +91,7 @@ rules:
   - pods
   # to update pods status according to edge devices messages
   - pods/status
+  # required to manage pod roles
   - pods/exec
   - pods/log
   - pods/attach
@@ -168,7 +169,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "aranya.fullname" . }}:virtualnode
-  namespace: {{ .Values.watchNamespace | default .Release.Namespace }}
+  namespace: {{ .Values.watchNamespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
