@@ -8,5 +8,5 @@ config:
   aranya:
     leaderElection:
       lock:
-        # to verify rbac setup in helm chart
-        type: endpointsleases
+        # there is no lease resource in v1.13
+        type: endpoints
