@@ -803,7 +803,7 @@ metadata:
   name: aranya
   namespace: default
   labels:
-    helm.sh/chart: aranya-0.1.8
+    helm.sh/chart: aranya-0.1.9
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"
@@ -816,7 +816,7 @@ metadata:
   name: aranya
   namespace: default
   labels:
-    helm.sh/chart: aranya-0.1.8
+    helm.sh/chart: aranya-0.1.9
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"
@@ -1206,7 +1206,7 @@ metadata:
   namespace: default
   labels:
     app.kubernetes.io/component: metrics
-    helm.sh/chart: aranya-0.1.8
+    helm.sh/chart: aranya-0.1.9
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"
@@ -1228,7 +1228,7 @@ metadata:
   name: aranya
   namespace: default
   labels:
-    helm.sh/chart: aranya-0.1.8
+    helm.sh/chart: aranya-0.1.9
     app.kubernetes.io/name: aranya
     app.kubernetes.io/instance: aranya
     app.kubernetes.io/version: "latest"
