@@ -17,9 +17,8 @@ limitations under the License.
 package conf
 
 import (
-	"github.com/spf13/pflag"
-
 	"arhat.dev/pkg/kubehelper"
+	"github.com/spf13/pflag"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 )
