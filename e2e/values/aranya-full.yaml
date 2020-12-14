@@ -93,26 +93,60 @@ config:
       sftpService:
         name: edgedevice-sftp
 
-      nodeClusterRoles: {}
-        # <cluster-role-name>:
-        #   nodeVerbs: [get, list, watch]
-        #   statusVerbs: [get, list, watch]
-      podRoles: {}
-        # <pod-role-name>:
-        #   podVerbs:
-        #   statusVerbs:
-        #   allowExec: true
-        #   allowAttach: true
-        #   allowPortForward: true
-        #   allowLog: true
-      virtualPodRoles: {}
-        # <pod-role-name>:
-        #   podVerbs: [get, list, watch]
-        #   statusVerbs: [get, list, watch]
-        #   allowExec: true
-        #   allowAttach: true
-        #   allowPortForward: true
-        #   allowLog: true
+      nodeClusterRoles:
+        foo-clusterrole:
+          nodeVerbs: [get]
+          statusVerbs: [list]
+        bar-clusterrole:
+          nodeVerbs: [list]
+          statusVerbs: [get]
+        foobar-clusterrole:
+          nodeVerbs: [get, list]
+          statusVerbs: [get, list]
+      podRoles:
+        foo-role:
+          podVerbs: [get]
+          statusVerbs: [list]
+          allowExec: false
+          allowAttach: false
+          allowPortForward: true
+          allowLog: true
+        bar-role:
+          podVerbs: [list]
+          statusVerbs: [get]
+          allowExec: true
+          allowAttach: true
+          allowPortForward: false
+          allowLog: false
+        foobar-role:
+          podVerbs: [get, list]
+          statusVerbs: [get, list]
+          allowExec: true
+          allowAttach: false
+          allowPortForward: false
+          allowLog: true
+      virtualPodRoles:
+        vfoo-role:
+          podVerbs: [get]
+          statusVerbs: [list]
+          allowExec: false
+          allowAttach: false
+          allowPortForward: true
+          allowLog: true
+        vbar-role:
+          podVerbs: [list]
+          statusVerbs: [get]
+          allowExec: true
+          allowAttach: true
+          allowPortForward: false
+          allowLog: false
+        vfoobar-role:
+          podVerbs: [get, list]
+          statusVerbs: [get, list]
+          allowExec: true
+          allowAttach: false
+          allowPortForward: false
+          allowLog: true
 
   virtualnode:
     kubeClient:
