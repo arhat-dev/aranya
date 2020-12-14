@@ -1,6 +1,6 @@
 # aranya `阿兰若`
 
-[![Build](https://github.com/arhat-dev/aranya/workflows/CI/badge.svg)](https://github.com/arhat-dev/aranya/actions?workflow=CI)
+[![CI](https://github.com/arhat-dev/aranya/workflows/CI/badge.svg)](https://github.com/arhat-dev/aranya/actions?workflow=CI)
 [![PkgGoDev](https://pkg.go.dev/badge/arhat.dev/aranya)](https://pkg.go.dev/arhat.dev/aranya)
 [![GoReportCard](https://goreportcard.com/badge/arhat.dev/aranya)](https://goreportcard.com/report/arhat.dev/aranya)
 [![codecov](https://codecov.io/gh/arhat-dev/aranya/branch/master/graph/badge.svg)](https://codecov.io/gh/arhat-dev/aranya)
@@ -27,8 +27,7 @@ The refernce controller implementation of [`aranya-proto`](https://github.com/ar
   - Deploy and manage cluster network in device host/runtime with [`abbot`][abbot] container
 
 - Standard `CSI` with remote access (experimental, see [Remote CSI](./docs/Remote-CSI.md))
-  - Only mount operation happns in remote devices, everything else is your cloud `Kubernetes` cluster's duty
-  - Dynamic private key generation and deployment for remote devices
+  - Only mount operation happens in remote devices, everything else is your cloud `Kubernetes` cluster's duty
 
 __NOTE:__ For details of the host management, please refer to [Maintenance #Host Management](./docs/Maintenance.md#host-management)
 
@@ -92,13 +91,13 @@ __NOTE:__ This project lacks tests, all kinds of contribution especially tests a
   - [ ] device host/runtime <-> cluster
   - [ ] device host/runtime <-> device host/runtime
 
-__NOTE:__ You __MUST NOT__ use unsupported features in your pod spec for `EdgeDevice` nodes, which could result unexpected behavior!
+__NOTE:__ You __MUST NOT__ use unsupported features in your pod spec (assigned to `EdgeDevice` nodes), which could result unexpected behavior!
 
 ## Deployment Requirements
 
 - `Kubernetes` 1.14+, with `RBAC` and `Node` authorization enabled
 
-__NOTE:__ `k3s` currently not compatible with this controller due to its api reverse-proxy handling
+__NOTE:__ currently not compatible with `k3s` due to its node reverse-proxy
 
 ## Deployment Workflow
 
