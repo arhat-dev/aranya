@@ -91,15 +91,16 @@ _start_e2e_tests() {
   ${helm_stack} ensure
 
   # override default values
-  if [ "${kube_version}" = "v1-13" ]; then
-    cp e2e/values/aranya.v1-13.yaml "build/e2e/clusters/${kube_version}/default.aranya[aranya@master].yaml"
-  else
-    cp e2e/values/aranya.yaml "build/e2e/clusters/${kube_version}/default.aranya[aranya@master].yaml"
-  fi
-
-  cp e2e/values/aranya-full.yaml "build/e2e/clusters/${kube_version}/full.aranya[aranya@master].yaml"
   cp e2e/values/emqx.yaml "build/e2e/clusters/${kube_version}/emqx.emqx[emqx@v4.2.3].yaml"
   cp e2e/values/arhat.yaml "build/e2e/clusters/${kube_version}/remote.arhat[arhat-dev.arhat@latest].yaml"
+
+  if [ "${kube_version}" = "v1-13" ]; then
+    cp e2e/values/aranya.v1-13.yaml "build/e2e/clusters/${kube_version}/default.aranya[aranya@master].yaml"
+    cp e2e/values/aranya-full.v1-13.yaml "build/e2e/clusters/${kube_version}/full.aranya[aranya@master].yaml"
+  else
+    cp e2e/values/aranya.yaml "build/e2e/clusters/${kube_version}/default.aranya[aranya@master].yaml"
+    cp e2e/values/aranya-full.yaml "build/e2e/clusters/${kube_version}/full.aranya[aranya@master].yaml"
+  fi
 
   ${helm_stack} gen "${kube_version}"
 
