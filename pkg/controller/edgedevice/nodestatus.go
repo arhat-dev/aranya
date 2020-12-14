@@ -35,7 +35,7 @@ import (
 )
 
 // nolint:gocyclo
-func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) *reconcile.Result {
+func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *reconcile.Result) {
 	var (
 		err            error
 		node           = newObj.(*corev1.Node).DeepCopy()
@@ -44,12 +44,12 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) *reconcile.
 		updateMetadata = false
 		logger         = c.Log.WithFields(log.String("name", name))
 		now            = metav1.Now()
-		ret            *reconcile.Result
 	)
 
 	vn, ignore := c.doNodeResourcePreCheck(name)
 	if ignore {
-		return nil
+		logger.V("node status updated ignored")
+		return
 	}
 
 	// ensure node status up to date
@@ -275,7 +275,7 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) *reconcile.
 
 	if !updateStatus {
 		logger.V("no node status update requested")
-		return ret
+		return
 	}
 
 	logger.V("updating node status")
@@ -286,7 +286,7 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) *reconcile.
 	}
 	logger.V("node status synced")
 
-	return ret
+	return
 }
 
 func checkNodeResourcesEqual(a, b corev1.ResourceList) bool {

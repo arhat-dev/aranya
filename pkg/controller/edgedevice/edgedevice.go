@@ -330,7 +330,8 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 	}
 
 	opts.KubeletServerListener = tls.NewListener(
-		httpListener, &tls.Config{Certificates: []tls.Certificate{*kubeletCert}})
+		httpListener, &tls.Config{Certificates: []tls.Certificate{*kubeletCert}},
+	)
 	defer func() {
 		if err != nil {
 			logger.V("closing kubelet server listener due to error")

@@ -246,8 +246,8 @@ func (c *nodeController) init(
 	// start a standalone node status reconciler in addition to node reconciler to make it clear for node
 	c.nodeStatusRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
 		Logger: ctrl.Log.WithName("rec:nodestatus"),
-		// no backoff
-		BackoffStrategy: backoff.NewStrategy(0, 0, 1, 0),
+		// no backoff, always wait for 1s
+		BackoffStrategy: backoff.NewStrategy(time.Second, time.Second, 1, 0),
 		Workers:         1,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
