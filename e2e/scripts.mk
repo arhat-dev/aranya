@@ -32,6 +32,3 @@ e2e.v1-15:
 
 e2e.v1-14:
 	sh e2e/suite.sh v1-14
-
-e2e.v1-13:
-	sh e2e/suite.sh v1-13

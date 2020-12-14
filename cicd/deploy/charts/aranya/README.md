@@ -9,7 +9,7 @@ This is the official helm chart for [aranya](https://github.com/arhat-dev/aranya
 ## Prerequisites
 
 - `helm` v3
-- `Kubernetes` 1.15+
+- `Kubernetes` 1.14+
 
 ## Installing the Chart
 

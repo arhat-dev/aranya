@@ -96,7 +96,7 @@ __NOTE:__ You __MUST NOT__ use unsupported features in your pod spec for `EdgeDe
 
 ## Deployment Requirements
 
-- `Kubernetes` cluster with `RBAC` enabled
+- `Kubernetes` 1.14+, with `RBAC` and `Node` authorization enabled
 
 __NOTE:__ `k3s` currently not compatible with this controller due to its api reverse-proxy handling
 
