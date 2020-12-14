@@ -37,6 +37,12 @@ rules:
 {{- end }}
 - apiGroups: [""]
   resources:
+  # to find aranya pod itself
+  - pods
+  verbs:
+  - get
+- apiGroups: [""]
+  resources:
   # to manage connectivity & sftp service
   - services
   verbs:
@@ -105,6 +111,18 @@ rules:
   - get
   - list
   - watch
+{{- if .Values.config.virtualnode.network.enabled }}
+- apiGroups: [""]
+  resources:
+  # manage mesh network service and endpoints
+  - endpoints
+  - services
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+{{- end }}
 {{- if or .Values.config.aranya.managed.podRoles .Values.config.aranya.managed.virtualPodRoles }}
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources:
