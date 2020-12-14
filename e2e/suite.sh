@@ -52,7 +52,7 @@ apiVersion: aranya.arhat.dev/v1alpha1
 kind: EdgeDevice
 metadata:
   name: e2e-foo
-  namespace: full
+  namespace: tenant
 spec:
   connectivity:
     method: mqtt
@@ -66,7 +66,7 @@ apiVersion: aranya.arhat.dev/v1alpha1
 kind: EdgeDevice
 metadata:
   name: e2e-bar
-  namespace: full
+  namespace: tenant
 spec:
   connectivity:
     method: mqtt
@@ -172,13 +172,13 @@ _start_e2e_tests() {
   result_dir="build/e2e/results/${kube_version}"
   mkdir -p "${result_dir}"
 
-  kubectl --namespace default logs --prefix \
+  kubectl --namespace default logs --prefix --tail=-1 \
     --selector app.kubernetes.io/instance=aranya | tee "${result_dir}/aranya-default.log"
-  kubectl --namespace full logs --prefix \
+  kubectl --namespace full logs --prefix --tail=-1 \
     --selector app.kubernetes.io/instance=aranya | tee "${result_dir}/aranya-full.log"
-  kubectl --namespace full logs --prefix \
+  kubectl --namespace full logs --prefix --tail=-1 \
     --selector app.kubernetes.io/instance=abbot | tee "${result_dir}/abbot.log"
-  kubectl --namespace remote logs --prefix \
+  kubectl --namespace remote logs --prefix --tail=-1 \
     --selector app.kubernetes.io/instance=arhat | tee "${result_dir}/arhat.log"
 
   set -e
