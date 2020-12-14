@@ -48,14 +48,13 @@ func TestPodCreated(t *testing.T) {
 				edgeDeviceNameFoo,
 				edgeDeviceNameBar,
 			},
-			// 2 virtual pods
-			podCount: 2,
+			// 2 virtual pods + 3 abbot pods
+			podCount: 5,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.ns, func(t *testing.T) {
-			var names []string
 			pods, err := kubeClient.CoreV1().Pods(test.ns).List(context.TODO(), metav1.ListOptions{})
 			if !assert.NoError(t, err) {
 				return
@@ -64,6 +63,7 @@ func TestPodCreated(t *testing.T) {
 			assert.Len(t, pods.Items, test.podCount)
 
 			expectedPods := sets.NewString(test.expectedPods...)
+			var names []string
 			for _, po := range pods.Items {
 				if !expectedPods.Has(po.Name) {
 					// ignore cluster nodes
