@@ -28,7 +28,7 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func (c *Controller) createDeviceConnector(
+func (c *Controller) createPeripheralConnector(
 	spec aranyaapi.PeripheralConnectivitySpec,
 ) (_ *aranyagopb.Connectivity, _ error) {
 	var tlsConfig *aranyagopb.TLSConfig

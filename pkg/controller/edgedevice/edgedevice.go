@@ -356,10 +356,10 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 			return err
 		}
 
-		logger.D("preparing associated device options")
-		opts.DeviceOptions, err = c.preparePeripheralOptions(ed, vnConfig)
+		logger.D("preparing associated peripheral options")
+		opts.PeripheralOptions, err = c.preparePeripheralOptions(ed, vnConfig)
 		if err != nil {
-			logger.I("failed to prepare associated device options", log.Error(err))
+			logger.I("failed to prepare associated peripheral options", log.Error(err))
 			return err
 		}
 
@@ -755,7 +755,7 @@ func (c *Controller) preparePeripheralOptions(
 		}
 
 		var conn *aranyagopb.Connectivity
-		conn, err = c.createDeviceConnector(mr.Connector)
+		conn, err = c.createPeripheralConnector(mr.Connector)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create peripheral connector: %w", err)
 		}
@@ -825,7 +825,7 @@ func (c *Controller) preparePeripheralOptions(
 			})
 		}
 
-		conn, err := c.createDeviceConnector(d.Connector)
+		conn, err := c.createPeripheralConnector(d.Connector)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create peripheral connector: %w", err)
 		}

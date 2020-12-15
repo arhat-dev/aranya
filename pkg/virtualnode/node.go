@@ -63,7 +63,7 @@ type CreationOptions struct {
 	ConnectivityOptions *connectivity.Options
 	NodeOptions         *Options
 	PodOptions          *pod.Options
-	DeviceOptions       *peripheral.Options
+	PeripheralOptions   *peripheral.Options
 	MetricsOptions      *metrics.Options
 	NetworkOptions      *network.Options
 	StorageOptions      *storage.Options
@@ -93,7 +93,7 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 		opt.NetworkOptions,
 	)
 
-	peripheralManager := peripheral.NewManager(ctx, opt.NodeName, opt.ConnectivityManager, opt.DeviceOptions)
+	peripheralManager := peripheral.NewManager(ctx, opt.NodeName, opt.ConnectivityManager, opt.PeripheralOptions)
 
 	opt.PodOptions.OperateDevice = peripheralManager.Operate
 	opt.PodOptions.CollectDeviceMetrics = peripheralManager.CollectMetrics

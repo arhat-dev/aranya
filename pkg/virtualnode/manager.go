@@ -76,6 +76,7 @@ func NewVirtualNodeManager(
 	}
 }
 
+// Manager of virtualnodes
 type Manager struct {
 	ctx context.Context
 	log log.Interface
@@ -97,7 +98,12 @@ type Manager struct {
 }
 
 func (m *Manager) doPerQueue(do func(q *queue.TimeoutQueue)) {
-	for _, q := range []*queue.TimeoutQueue{m.nodeForceSyncQ, m.podForceSyncQ, m.mirrorUpdateQ, m.leaseUpdateQ} {
+	for _, q := range []*queue.TimeoutQueue{
+		m.nodeForceSyncQ,
+		m.podForceSyncQ,
+		m.mirrorUpdateQ,
+		m.leaseUpdateQ,
+	} {
 		do(q)
 	}
 }
@@ -198,10 +204,11 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 	}
 
 	if m.leaseEnabled {
+		// using node lease, disable node status update
 		m.mirrorUpdateQ.Forbid(vn.name)
 		m.mirrorUpdateQ.Remove(vn.name)
 
-		// using node lease, update lease object periodically
+		// update lease object periodically
 		vn.log.D("scheduling lease update", log.Duration("interval", m.leaseUpdateInterval))
 		err := m.leaseUpdateQ.OfferWithDelay(vn.name, m.leaseUpdateInterval, wait.Jitter(m.leaseUpdateInterval, .2))
 		if err != nil {
@@ -212,10 +219,11 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 
 		vn.log.V("scheduled node lease update")
 	} else {
+		// not using node lease, disable lease object update
 		m.leaseUpdateQ.Forbid(vn.name)
 		m.leaseUpdateQ.Remove(vn.name)
 
-		// not using node lease, we need to update node status periodically
+		// need to update node status periodically
 		vn.log.D("scheduling mirror node update", log.Duration("interval", m.nodeUpdateInterval))
 		err := m.mirrorUpdateQ.OfferWithDelay(vn.name, m.nodeUpdateInterval, wait.Jitter(m.nodeUpdateInterval, .2))
 		if err != nil {
