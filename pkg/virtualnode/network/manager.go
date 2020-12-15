@@ -21,6 +21,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/reconcile"
 
 	"arhat.dev/aranya/pkg/mesh"
@@ -46,7 +47,6 @@ func NewManager(
 	connectivityMgr connectivity.Manager,
 	options *Options,
 ) *Manager {
-
 	mgr := &Manager{
 		BaseManager: manager.NewBaseManager(ctx, nodeName, connectivityMgr),
 
@@ -79,7 +79,7 @@ func NewManager(
 	switch {
 	case options.WireguardOpts != nil:
 		mgr.meshDriver = mesh.NewWireguardMeshDriver(
-			mgr.Log,
+			mgr.Log.WithFields(log.String("driver", "wireguard")),
 			options.InterfaceName,
 			options.MTU,
 			options.Provider,

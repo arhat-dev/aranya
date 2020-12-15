@@ -51,7 +51,7 @@ func NewWireguardMeshDriver(
 	options *WireguardOpts,
 ) Driver {
 	return &WireguardMeshDriver{
-		logger: logger.WithFields(log.String("driver", "wireguard")),
+		logger: logger,
 
 		ifname:          ifname,
 		mtu:             mtu,
