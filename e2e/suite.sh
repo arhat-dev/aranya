@@ -16,7 +16,7 @@
 
 set -ex
 
-_create_edge_devices() {
+create_edge_devices() {
   kind_cluster_name=${1}
 
   cat <<EOF | kubectl apply -f -
@@ -78,7 +78,54 @@ spec:
 EOF
 }
 
-_start_e2e_tests() {
+wait_for_pods() {
+  namespace="${1}"
+  label_selector="${2}"
+
+  for _ in $(seq 0 1 12); do
+    if ! kubectl wait --namespace "${namespace}" --for=condition=Ready \
+            --selector "${label_selector}" pods --all --timeout=30s
+    then
+      kubectl get pods \
+        --all-namespaces -o wide || true
+
+      kubectl describe pods \
+        --namespace "${namespace}" \
+        --selector "${label_selector}" || true
+    else
+      break
+    fi
+  done
+}
+
+log_pods() {
+  namespace="${1}"
+  label_selector="${2}"
+  log_file="${3}"
+
+  kubectl --namespace "${namespace}" logs --prefix --tail=-1 \
+    --selector "${label_selector}" > "${log_file}" 2>&1 || true
+}
+
+log_and_cleanup() {
+  kube_version="${1}"
+
+  result_dir="build/e2e/results/${kube_version}"
+  mkdir -p "${result_dir}/cluster-dump"
+
+  log_pods default "app.kubernetes.io/name=aranya" "${result_dir}/aranya-default.log"
+  log_pods full "app.kubernetes.io/name=aranya" "${result_dir}/aranya-full.log"
+  log_pods tenant "app.kubernetes.io/name=abbot" "${result_dir}/abbot.log"
+  log_pods remote "app.kubernetes.io/name=arhat" "${result_dir}/arhat.log"
+
+  kubectl cluster-info dump --all-namespaces --output-directory="${result_dir}/cluster-dump"
+
+  if [ "${ARANYA_E2E_CLEAN}" = "1" ]; then
+    kind delete cluster --name "${kube_version}"
+  fi
+}
+
+start_e2e_tests() {
   kube_version=${1}
 
   rm -rf build/e2e/charts || true
@@ -91,15 +138,16 @@ _start_e2e_tests() {
   ${helm_stack} ensure
 
   # override default values
-  cp e2e/values/emqx.yaml "build/e2e/clusters/${kube_version}/emqx.emqx[emqx@v4.2.3].yaml"
-  cp e2e/values/arhat.yaml "build/e2e/clusters/${kube_version}/remote.arhat[arhat-dev.arhat@latest].yaml"
-  cp e2e/values/aranya.yaml "build/e2e/clusters/${kube_version}/default.aranya[aranya@master].yaml"
-  cp e2e/values/aranya-full.yaml "build/e2e/clusters/${kube_version}/full.aranya[aranya@master].yaml"
+  chart_values_dir="build/e2e/clusters/${kube_version}"
+  cp e2e/values/emqx.yaml "${chart_values_dir}/emqx.emqx[emqx@v4.2.3].yaml"
+  cp e2e/values/aranya.yaml "${chart_values_dir}/default.aranya[aranya@master].yaml"
+  cp e2e/values/aranya-full.yaml "${chart_values_dir}/full.aranya[aranya@master].yaml"
+  cp e2e/values/arhat.yaml "${chart_values_dir}/remote.arhat[arhat-dev.arhat@latest].yaml"
 
   ${helm_stack} gen "${kube_version}"
 
   # delete cluster in the end (best effort)
-  trap 'kind delete cluster --name "${kube_version}" || true' EXIT
+  trap 'log_and_cleanup "${kube_version}" || true' EXIT
 
   # do not set --wait since we are using custom CNI plugins
   kind -v 100 create cluster --name "${kube_version}" \
@@ -115,34 +163,20 @@ _start_e2e_tests() {
     sleep 10
   done
 
-  while ! kubectl get po --namespace kube-system | grep coredns | grep Running ; do
-    echo "waiting for coredns"
-    sleep 10
-    kubectl get po --all-namespaces -o wide || true
-    kubectl describe pods --namespace kube-system coredns || true
-  done
+  echo "waiting for coredns"
+  wait_for_pods kube-system "k8s-app=kube-dns"
 
-  # wait until aranya running
-  while ! kubectl get po --namespace default | grep aranya | grep Running ; do
-    echo "waiting for aranya running in namespace 'default'"
-    sleep 10
-    kubectl get po --namespace default -o wide || true
-    kubectl describe pods --namespace default aranya || true
-  done
+  echo "waiting for aranya running in namespace 'default'"
+  wait_for_pods default "app.kubernetes.io/name=aranya"
 
-  echo "aranya running in namespace 'default'"
+  echo "waiting for aranya running in namespace 'full'"
+  wait_for_pods full "app.kubernetes.io/name=aranya"
 
-  while ! kubectl get po --namespace full | grep aranya | grep Running ; do
-    echo "waiting for aranya running in namespace 'full'"
-    sleep 10
-    kubectl get po --namespace full -o wide || true
-    kubectl describe pods --namespace full aranya || true
-  done
-
-  echo "aranya running in namespace 'full'"
+  echo "waiting for abbot running in namespace 'tenant'"
+  wait_for_pods tenant "app.kubernetes.io/name=abbot"
 
   # create edge devices after aranya is running
-  while ! _create_edge_devices "${kube_version}"; do
+  while ! create_edge_devices "${kube_version}"; do
     sleep 10
   done
 
@@ -150,41 +184,22 @@ _start_e2e_tests() {
   for _ in $(seq 0 1 12); do
     # should be able to find new virtual nodes now (for debugging)
     kubectl get certificatesigningrequests
-    kubectl get nodes -o name
+    kubectl get nodes -o wide
     kubectl get pods --all-namespaces
     sleep 10
   done
 
-  set +e
-
   go test -mod=vendor -v -failfast -race \
     -covermode=atomic -coverprofile="coverage.e2e.${kube_version}.txt" -coverpkg=./... \
     ./e2e/tests/...
-
-  test_exit_code="$?"
-
-  result_dir="build/e2e/results/${kube_version}"
-  mkdir -p "${result_dir}"
-
-  kubectl --namespace default logs --prefix --tail=-1 \
-    --selector app.kubernetes.io/instance=aranya | tee "${result_dir}/aranya-default.log"
-  kubectl --namespace full logs --prefix --tail=-1 \
-    --selector app.kubernetes.io/instance=aranya | tee "${result_dir}/aranya-full.log"
-  kubectl --namespace full logs --prefix --tail=-1 \
-    --selector app.kubernetes.io/instance=abbot | tee "${result_dir}/abbot.log"
-  kubectl --namespace remote logs --prefix --tail=-1 \
-    --selector app.kubernetes.io/instance=arhat | tee "${result_dir}/arhat.log"
-
-  set -e
-
-  exit ${test_exit_code}
 }
 
 kube_version="$1"
+ARANYA_E2E_CLEAN="${ARANYA_E2E_CLEAN:-"1"}"
 ARANYA_E2E_KUBECONFIG="${ARANYA_E2E_KUBECONFIG:-$(mktemp)}"
 echo "using kubeconfig '${ARANYA_E2E_KUBECONFIG}' for e2e"
 
 export KUBECONFIG="${ARANYA_E2E_KUBECONFIG}"
 export ARANYA_E2E_KUBECONFIG
 
-_start_e2e_tests "${kube_version}"
+start_e2e_tests "${kube_version}"
