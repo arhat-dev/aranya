@@ -225,7 +225,7 @@ func (c *Controller) checkPodRoleUpToDate(obj *rbacv1.Role) bool {
 			} else {
 				// check edgedevice specific roles
 				spec, ok := podRoles[obj.Name]
-				if !ok {
+				if ok {
 					if len(spec.PodVerbs) != 0 {
 						podVerbs = spec.PodVerbs
 					}
