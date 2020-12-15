@@ -31,6 +31,26 @@ The refernce controller implementation of [`aranya-proto`](https://github.com/ar
 
 __NOTE:__ For details of the host management, please refer to [Maintenance #Host Management](./docs/Maintenance.md#host-management)
 
+## Goals
+
+- Make every nodes in a single Kubernetes cluster absolutely distributed
+  - Everywhere with all kinds of network reachability, regardless of IP Address, NAT, Firewall ...
+- Extend Kubernetes to be a universal control plane for everything
+  - Not only powerful servers, single-board computers, but also embedded devices, micro controllers
+- Serve thousands of devices in a Kubernetes cluster at reasonable cost
+  - No direct requests to apiserver from nodes
+- More secure Kubernetes deployment
+  - No cluster credentials will be stored in nodes
+- Offer a more developer friendly way to create custom runtimes using message oriented protocols
+  - [`aranya-proto`][aranya-proto] (aranya <-> arhat)
+  - [`abbot-proto`][abbot-proto] (aranya <-> abbot)
+  - [`arhat-proto`][arhat-proto] (arhat <-> runtime)
+
+## Non-Goals
+
+- Simplify Kubernetes
+- Create a new Cloud/IoT ecosystem
+
 ## FAQ
 
 You may have a lot of questions regarding this project, such as `Why not k3s?`:
@@ -207,3 +227,6 @@ limitations under the License.
 
 [arhat]: https://github.com/arhat-dev/arhat
 [abbot]: https://github.com/arhat-dev/abbot
+[aranya-proto]: https://github.com/arhat-dev/aranya-proto
+[abbot-proto]: https://github.com/arhat-dev/abbot-proto
+[arhat-proto]: https://github.com/arhat-dev/arhat-proto
