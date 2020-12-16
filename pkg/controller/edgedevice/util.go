@@ -21,7 +21,6 @@ import (
 	"net"
 	"strconv"
 
-	"arhat.dev/pkg/envhelper"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -34,10 +33,10 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func (c *Controller) listWatchServiceObjects() []*corev1.Service {
+func (c *Controller) listTenantServiceObjects() []*corev1.Service {
 	var ret []*corev1.Service
 
-	for _, obj := range c.watchSvcInformer.GetStore().List() {
+	for _, obj := range c.tenantSvcInformer.GetStore().List() {
 		svc, ok := obj.(*corev1.Service)
 		if !ok {
 			continue
@@ -49,8 +48,8 @@ func (c *Controller) listWatchServiceObjects() []*corev1.Service {
 	return ret
 }
 
-func (c *Controller) getWatchSecretObject(name string) (*corev1.Secret, bool) {
-	obj, found, err := c.watchSecretInformer.GetIndexer().GetByKey(constant.WatchNS() + "/" + name)
+func (c *Controller) getTenantSecretObject(name string) (*corev1.Secret, bool) {
+	obj, found, err := c.tenantSecretInformer.GetIndexer().GetByKey(constant.TenantNS() + "/" + name)
 	if err != nil || !found {
 		return nil, false
 	}
@@ -63,8 +62,8 @@ func (c *Controller) getWatchSecretObject(name string) (*corev1.Secret, bool) {
 	return secret, true
 }
 
-func (c *Controller) getWatchConfigMapObject(name string) (*corev1.ConfigMap, bool) {
-	obj, found, err := c.watchCMInformer.GetIndexer().GetByKey(constant.WatchNS() + "/" + name)
+func (c *Controller) getTenantConfigMapObject(name string) (*corev1.ConfigMap, bool) {
+	obj, found, err := c.tenantCMInformer.GetIndexer().GetByKey(constant.TenantNS() + "/" + name)
 	if err != nil || !found {
 		return nil, false
 	}
@@ -77,8 +76,8 @@ func (c *Controller) getWatchConfigMapObject(name string) (*corev1.ConfigMap, bo
 	return cm, true
 }
 
-func (c *Controller) getSysRoleObject(name string) (*rbacv1.Role, bool) {
-	obj, found, err := c.roleInformer.GetIndexer().GetByKey(envhelper.ThisPodNS() + "/" + name)
+func (c *Controller) getTenantRoleObject(name string) (*rbacv1.Role, bool) {
+	obj, found, err := c.roleInformer.GetIndexer().GetByKey(constant.SysNS() + "/" + name)
 	if err != nil || !found {
 		role, err := c.roleClient.Get(c.Context(), name, metav1.GetOptions{})
 		if err != nil {
@@ -115,7 +114,7 @@ func (c *Controller) getClusterRoleObject(name string) (*rbacv1.ClusterRole, boo
 	return cr, true
 }
 
-func (c *Controller) getWatchPodsForNode(name string) []*corev1.Pod {
+func (c *Controller) getTenantPodsForNode(name string) []*corev1.Pod {
 	var result []*corev1.Pod
 	for _, obj := range c.podInformer.GetStore().List() {
 		po, ok := obj.(*corev1.Pod)
@@ -169,8 +168,8 @@ func (c *Controller) getNodeLeaseObject(name string) (*coordinationv1.Lease, boo
 	return lease, true
 }
 
-func (c *Controller) getWatchPodObject(name string) (*corev1.Pod, bool) {
-	obj, found, err := c.podInformer.GetIndexer().GetByKey(constant.WatchNS() + "/" + name)
+func (c *Controller) getTenantPodObject(name string) (*corev1.Pod, bool) {
+	obj, found, err := c.podInformer.GetIndexer().GetByKey(constant.SysNS() + "/" + name)
 	if err != nil || !found {
 		return nil, false
 	}
@@ -184,7 +183,7 @@ func (c *Controller) getWatchPodObject(name string) (*corev1.Pod, bool) {
 }
 
 func (c *Controller) getEdgeDeviceObject(name string) (*aranyaapi.EdgeDevice, bool) {
-	obj, found, err := c.edgeDeviceInformer.GetStore().GetByKey(constant.WatchNS() + "/" + name)
+	obj, found, err := c.edgeDeviceInformer.GetStore().GetByKey(constant.SysNS() + "/" + name)
 	if err != nil || !found {
 		return nil, false
 	}

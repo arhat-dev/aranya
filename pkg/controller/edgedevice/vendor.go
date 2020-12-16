@@ -37,7 +37,7 @@ func (c *Controller) generateAzureIoTHubOpts(config aranyaapi.AzureIoTHubSpec) (
 		return nil, fmt.Errorf("invalid config: iot hub or event hub ref has empty field")
 	}
 
-	iotSecret, ok := c.getWatchSecretObject(iotRef.Name)
+	iotSecret, ok := c.getTenantSecretObject(iotRef.Name)
 	if !ok {
 		return nil, fmt.Errorf("failed to get referenced iot hub secret %q", iotRef.Name)
 	}
@@ -45,7 +45,7 @@ func (c *Controller) generateAzureIoTHubOpts(config aranyaapi.AzureIoTHubSpec) (
 	if iotRef.Name == eventRef.Name {
 		eventSecret = iotSecret
 	} else {
-		eventSecret, ok = c.getWatchSecretObject(eventRef.Name)
+		eventSecret, ok = c.getTenantSecretObject(eventRef.Name)
 		if !ok {
 			return nil, fmt.Errorf("failed to get referenced event hub secret %q", eventRef.Name)
 		}
@@ -82,7 +82,7 @@ func (c *Controller) generateGCPPubSubOpts(config aranyaapi.GCPIoTCoreSpec) (*co
 		return nil, fmt.Errorf("invalid config: pubsub or cloud iot ref has empty field")
 	}
 
-	psSecret, ok := c.getWatchSecretObject(psRef.Name)
+	psSecret, ok := c.getTenantSecretObject(psRef.Name)
 	if !ok {
 		return nil, fmt.Errorf("failed to get referenced pub sub secret %q", psRef.Name)
 	}
@@ -90,7 +90,7 @@ func (c *Controller) generateGCPPubSubOpts(config aranyaapi.GCPIoTCoreSpec) (*co
 	if psRef.Name == iotRef.Name {
 		iotSecret = psSecret
 	} else {
-		iotSecret, ok = c.getWatchSecretObject(iotRef.Name)
+		iotSecret, ok = c.getTenantSecretObject(iotRef.Name)
 		if !ok {
 			return nil, fmt.Errorf("failed to get referenced iot hub secret %q", iotRef.Name)
 		}

@@ -66,7 +66,7 @@ func (c *Controller) checkNodeLeaseUpToDate(
 	case lease.Spec.LeaseDurationSeconds == nil ||
 		*lease.Spec.LeaseDurationSeconds != int32(c.vnConfig.Node.Lease.Duration.Seconds()):
 	case lease.Labels[constant.LabelRole] != constant.LabelRoleValueNodeLease:
-	case lease.Labels[constant.LabelNamespace] != constant.WatchNS():
+	case lease.Labels[constant.LabelNamespace] != constant.SysNS():
 	default:
 		generalOk = true
 	}
@@ -273,7 +273,7 @@ func (c *Controller) newLeaseForNode(nodeMeta metav1.ObjectMeta) *coordinationv1
 			Namespace: corev1.NamespaceNodeLease,
 			Labels: map[string]string{
 				constant.LabelRole:      constant.LabelRoleValueNodeLease,
-				constant.LabelNamespace: constant.WatchNS(),
+				constant.LabelNamespace: constant.SysNS(),
 			},
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: "v1",

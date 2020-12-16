@@ -116,7 +116,7 @@ func (m *Manager) getPodUIDInCache(name string, podUID types.UID) types.UID {
 		return podUID
 	}
 
-	pod, ok := m.podCache.GetByName(constant.WatchNS(), name)
+	pod, ok := m.podCache.GetByName(constant.TenantNS(), name)
 	if ok {
 		return pod.UID
 	}

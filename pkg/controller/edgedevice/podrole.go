@@ -55,7 +55,7 @@ func (c *podRoleController) init(
 	ctrl *Controller,
 	config *conf.Config,
 	kubeClient kubeclient.Interface,
-	watchInformerFactory informers.SharedInformerFactory,
+	tenantInformerFactory informers.SharedInformerFactory,
 ) error {
 	if len(config.Aranya.Managed.PodRoles) == 0 && len(config.Aranya.Managed.VirtualPodRoles) == 0 {
 		return nil
@@ -76,9 +76,9 @@ func (c *podRoleController) init(
 		c.virtualPodRoles = make(map[string]aranyaapi.PodRolePermissions)
 	}
 
-	c.roleClient = kubeClient.RbacV1().Roles(constant.WatchNS())
+	c.roleClient = kubeClient.RbacV1().Roles(constant.TenantNS())
 
-	c.roleInformer = informersrbacv1.New(watchInformerFactory, constant.WatchNS(),
+	c.roleInformer = informersrbacv1.New(tenantInformerFactory, constant.TenantNS(),
 		newTweakListOptionsFunc(
 			labels.SelectorFromSet(map[string]string{
 				constant.LabelRole: constant.LabelRoleValuePodRole,
@@ -90,7 +90,7 @@ func (c *podRoleController) init(
 	ctrl.listActions = append(ctrl.listActions, func() error {
 		_, err2 := listersrbacv1.NewRoleLister(c.roleInformer.GetIndexer()).List(labels.Everything())
 		if err2 != nil {
-			return fmt.Errorf("failed to list watched roles: %w", err2)
+			return fmt.Errorf("failed to list tenant roles: %w", err2)
 		}
 
 		return nil
@@ -150,7 +150,7 @@ func (c *Controller) checkPodRoleUpToDate(obj *rbacv1.Role) bool {
 	switch {
 	case len(obj.Labels) == 0 || obj.Labels[constant.LabelRole] != constant.LabelRoleValuePodRole:
 		return false
-	case len(obj.Labels) == 0 || obj.Labels[constant.LabelNamespace] != constant.WatchNS():
+	case len(obj.Labels) == 0 || obj.Labels[constant.LabelNamespace] != constant.TenantNS():
 		return false
 	}
 
@@ -197,7 +197,7 @@ func (c *Controller) checkPodRoleUpToDate(obj *rbacv1.Role) bool {
 				}
 
 				// retrieve real edge device from pod spec, so get pod spec first
-				pod, ok := c.getWatchPodObject(podName)
+				pod, ok := c.getTenantPodObject(podName)
 				if !ok {
 					// no pod with this resource name
 					return false
@@ -372,7 +372,7 @@ func (c *Controller) ensurePodRole(name string) error {
 		role   = c.newPodRoleForAllEdgeDevices(name, roleSpec, isVirtualPodRole)
 	)
 
-	oldRole, found := c.getSysRoleObject(name)
+	oldRole, found := c.getTenantRoleObject(name)
 	if found {
 		if c.checkPodRoleUpToDate(oldRole) {
 			return nil

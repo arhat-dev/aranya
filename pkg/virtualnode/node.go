@@ -188,7 +188,7 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 			logger.I(fmt.Sprintf(format, args...), log.String("source", "event"))
 		}),
 		eventRecordingWatch: opt.EventBroadcaster.StartRecordingToSink(&clientcorev1.EventSinkImpl{
-			Interface: opt.KubeClient.CoreV1().Events(constant.WatchNS()),
+			Interface: opt.KubeClient.CoreV1().Events(constant.SysNS()),
 		}),
 	}
 

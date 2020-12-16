@@ -147,7 +147,7 @@ func (m *Manager) doHandleLogs(
 		podLog := containerLogFile(
 			podLogDir(
 				m.options.Config.LogDir,
-				constant.WatchNS(),
+				constant.TenantNS(),
 				podName,
 				string(uid),
 			),

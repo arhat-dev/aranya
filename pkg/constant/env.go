@@ -23,22 +23,33 @@ import (
 )
 
 const (
-	EnvKeyWatchNamespace = "WATCH_NAMESPACE"
+	EnvKeySysNamespace    = "SYS_NAMESPACE"
+	EnvKeyTenantNamespace = "TENANT_NAMESPACE"
 )
 
 var (
-	watchNS string
+	sysNS    string
+	tenantNS string
 )
 
 func init() {
 	var ok bool
 
-	watchNS, ok = os.LookupEnv(EnvKeyWatchNamespace)
+	sysNS, ok = os.LookupEnv(EnvKeySysNamespace)
 	if !ok {
-		watchNS = envhelper.ThisPodNS()
+		sysNS = envhelper.ThisPodNS()
+	}
+
+	tenantNS, ok = os.LookupEnv(EnvKeyTenantNamespace)
+	if !ok {
+		tenantNS = sysNS
 	}
 }
 
-func WatchNS() string {
-	return watchNS
+func SysNS() string {
+	return sysNS
+}
+
+func TenantNS() string {
+	return tenantNS
 }

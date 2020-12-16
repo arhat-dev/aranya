@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 
-	"arhat.dev/pkg/envhelper"
 	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
@@ -64,14 +63,14 @@ func (c *networkController) init(
 	ctrl *Controller,
 	config *conf.Config,
 	kubeClient kubeclient.Interface,
-	watchInformerFactory informers.SharedInformerFactory,
+	tenantInformerFactory informers.SharedInformerFactory,
 ) error {
 	netConf := config.VirtualNode.Network
 	if !netConf.Enabled {
 		return nil
 	}
 
-	c.meshSecretClient = kubeClient.CoreV1().Secrets(envhelper.ThisPodNS())
+	c.meshSecretClient = kubeClient.CoreV1().Secrets(constant.TenantNS())
 
 	if blocks := netConf.Mesh.IPv4Blocks; len(blocks) != 0 {
 		c.meshIPAMv4 = ipam.NewIPAddressManager()
@@ -94,7 +93,7 @@ func (c *networkController) init(
 	}
 
 	// watch abbot endpoints
-	c.abbotEndpointsInformer = informerscorev1.New(watchInformerFactory, constant.WatchNS(),
+	c.abbotEndpointsInformer = informerscorev1.New(tenantInformerFactory, constant.TenantNS(),
 		func(options *metav1.ListOptions) {
 			options.FieldSelector = fields.OneTermEqualSelector(
 				"metadata.name", config.VirtualNode.Network.AbbotService.Name,
@@ -119,7 +118,7 @@ func (c *networkController) init(
 	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.abbotEndpointsRec.ReconcileUntil)
 
 	// monitor managed network service
-	c.netSvcInformer = informerscorev1.New(watchInformerFactory, constant.WatchNS(),
+	c.netSvcInformer = informerscorev1.New(tenantInformerFactory, constant.TenantNS(),
 		func(options *metav1.ListOptions) {
 			options.FieldSelector = fields.OneTermEqualSelector(
 				"metadata.name", config.VirtualNode.Network.NetworkService.Name,
@@ -144,7 +143,7 @@ func (c *networkController) init(
 	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.netSvcRec.ReconcileUntil)
 
 	// monitor managed network service endpoints
-	c.netEndpointsInformer = informerscorev1.New(watchInformerFactory, constant.WatchNS(),
+	c.netEndpointsInformer = informerscorev1.New(tenantInformerFactory, constant.TenantNS(),
 		func(options *metav1.ListOptions) {
 			options.FieldSelector = fields.OneTermEqualSelector(
 				"metadata.name", config.VirtualNode.Network.NetworkService.Name,
@@ -296,7 +295,7 @@ func newSecretForMesh(secretName string) (*corev1.Secret, error) {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
-			Namespace: envhelper.ThisPodNS(),
+			Namespace: constant.TenantNS(),
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{

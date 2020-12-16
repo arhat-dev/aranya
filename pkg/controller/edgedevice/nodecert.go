@@ -505,7 +505,7 @@ func (c *Controller) createTLSConfigFromSecret(tlsSecretRef *corev1.LocalObjectR
 		return &tls.Config{}, nil
 	}
 
-	tlsSecret, ok := c.getWatchSecretObject(tlsSecretRef.Name)
+	tlsSecret, ok := c.getTenantSecretObject(tlsSecretRef.Name)
 	if !ok {
 		return nil, fmt.Errorf("failed to get secret %q", tlsSecretRef.Name)
 	}
@@ -552,7 +552,7 @@ func (c *Controller) createTLSConfigFromSecret(tlsSecretRef *corev1.LocalObjectR
 }
 
 func (c *Controller) getUserPassFromSecret(name string) (username, password []byte, err error) {
-	secret, ok := c.getWatchSecretObject(name)
+	secret, ok := c.getTenantSecretObject(name)
 	if !ok {
 		return nil, nil, fmt.Errorf("failed to get secret %q", name)
 	}

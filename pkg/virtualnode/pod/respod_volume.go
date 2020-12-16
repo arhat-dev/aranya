@@ -58,7 +58,7 @@ func (m *Manager) getUniqueVolumeNamesAndPaths(
 				path: "",
 			}
 		case vol.PersistentVolumeClaim != nil:
-			pvc, err := m.kubeClient.CoreV1().PersistentVolumeClaims(constant.WatchNS()).
+			pvc, err := m.kubeClient.CoreV1().PersistentVolumeClaims(constant.TenantNS()).
 				Get(m.Context(), vol.PersistentVolumeClaim.ClaimName, metav1.GetOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("failed to get pvc spec: %w", err)

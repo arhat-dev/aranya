@@ -160,7 +160,7 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 			}
 		}
 
-		actualStatus.Allocatable = getAllocatable(actualStatus.Capacity, c.getWatchPodsForNode(name))
+		actualStatus.Allocatable = getAllocatable(actualStatus.Capacity, c.getTenantPodsForNode(name))
 
 		if !checkNodeResourcesEqual(actualStatus.Capacity, clone.Status.Capacity) {
 			updateStatus = true

@@ -106,7 +106,7 @@ func NewController(
 	}
 
 	// informer factory for all managed Service, Secret
-	sysInformerFactory := informers.NewSharedInformerFactoryWithOptions(
+	thisPodNSInformerFactory := informers.NewSharedInformerFactoryWithOptions(
 		kubeClient, 0, informers.WithNamespace(envhelper.ThisPodNS()))
 
 	// informer factory for all managed NodeClusterRoles, NodeVerbs
@@ -115,14 +115,14 @@ func NewController(
 		newTweakListOptionsFunc(
 			labels.SelectorFromSet(map[string]string{
 				constant.LabelRole:      constant.LabelRoleValueNode,
-				constant.LabelNamespace: constant.WatchNS(),
+				constant.LabelNamespace: constant.SysNS(),
 			}),
 		),
 	).Nodes()
 
-	// informer factory for all watched pods
-	watchInformerFactory := informers.NewSharedInformerFactoryWithOptions(
-		kubeClient, 0, informers.WithNamespace(constant.WatchNS()))
+	// informer factory for all tenant pods
+	tenantInformerFactory := informers.NewSharedInformerFactoryWithOptions(
+		kubeClient, 0, informers.WithNamespace(constant.TenantNS()))
 
 	// informer factory for EdgeDevices
 
@@ -138,8 +138,8 @@ func NewController(
 
 		informerFactoryStart: []func(<-chan struct{}){
 			clusterInformerFactory.Start,
-			sysInformerFactory.Start,
-			watchInformerFactory.Start,
+			thisPodNSInformerFactory.Start,
+			tenantInformerFactory.Start,
 		},
 	}
 
@@ -148,7 +148,7 @@ func NewController(
 		return nil, fmt.Errorf("failed to create edgedevice controller: %w", err)
 	}
 
-	err = ctrl.connectivityServiceController.init(ctrl, config, kubeClient, sysInformerFactory)
+	err = ctrl.connectivityServiceController.init(ctrl, config, kubeClient, thisPodNSInformerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create connectivity service controller: %w", err)
 	}
@@ -163,12 +163,12 @@ func NewController(
 		return nil, fmt.Errorf("failed to create node cert controller: %w", err)
 	}
 
-	err = ctrl.podController.init(ctrl, config, kubeClient, watchInformerFactory)
+	err = ctrl.podController.init(ctrl, config, kubeClient, tenantInformerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pod controller: %w", err)
 	}
 
-	err = ctrl.podRoleController.init(ctrl, config, kubeClient, watchInformerFactory)
+	err = ctrl.podRoleController.init(ctrl, config, kubeClient, tenantInformerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pod role controller: %w", err)
 	}
@@ -178,7 +178,7 @@ func NewController(
 		return nil, fmt.Errorf("failed to create node cluster role controller: %w", err)
 	}
 
-	err = ctrl.networkController.init(ctrl, config, kubeClient, watchInformerFactory)
+	err = ctrl.networkController.init(ctrl, config, kubeClient, tenantInformerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create network controller: %w", err)
 	}

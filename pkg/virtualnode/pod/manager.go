@@ -80,7 +80,7 @@ func NewManager(
 
 		kubeClient: client,
 		nodeClient: client.CoreV1().Nodes(),
-		podClient:  client.CoreV1().Pods(constant.WatchNS()),
+		podClient:  client.CoreV1().Pods(constant.TenantNS()),
 		options:    options,
 
 		netMgr:   networkManager,

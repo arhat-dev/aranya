@@ -116,7 +116,7 @@ func (c *nodeController) init(
 				newTweakListOptionsFunc(
 					labels.SelectorFromSet(map[string]string{
 						constant.LabelRole:      constant.LabelRoleValueNodeLease,
-						constant.LabelNamespace: constant.WatchNS(),
+						constant.LabelNamespace: constant.SysNS(),
 					}),
 				),
 			),
@@ -290,7 +290,7 @@ func (c *Controller) checkNodeQualified(node *corev1.Node, kubeletListener net.L
 	hasRequiredTaint := false
 	for _, t := range node.Spec.Taints {
 		if t.Key == constant.TaintKeyNamespace &&
-			t.Value == constant.WatchNS() &&
+			t.Value == constant.SysNS() &&
 			t.Effect == corev1.TaintEffectNoSchedule {
 			hasRequiredTaint = true
 		}
@@ -694,7 +694,7 @@ func (c *Controller) ensureNodeObject(name string, kubeletListener net.Listener)
 func (c *Controller) newNodeForEdgeDevice(edgeDevice *aranyaapi.EdgeDevice, kubeletPort int32) *corev1.Node {
 	labels := map[string]string{
 		// this label can be overridden
-		constant.LabelKubeRole: constant.WatchNS(),
+		constant.LabelKubeRole: constant.SysNS(),
 	}
 
 	for k, v := range edgeDevice.Spec.Node.Labels {
@@ -704,7 +704,7 @@ func (c *Controller) newNodeForEdgeDevice(edgeDevice *aranyaapi.EdgeDevice, kube
 	// ensure following labels not overridden by user, they are special labels
 	labels[constant.LabelName] = edgeDevice.Name
 	labels[constant.LabelRole] = constant.LabelRoleValueNode
-	labels[constant.LabelNamespace] = constant.WatchNS()
+	labels[constant.LabelNamespace] = constant.SysNS()
 	labels[corev1.LabelHostname] = c.hostname
 
 	// ensure taints

@@ -33,7 +33,7 @@ func (m *Manager) resolveDNSSettings(pod *corev1.Pod) (_ *aranyaapi.PodDNSConfig
 	bareDefaults := m.options.Config.DNS
 	clusterDomain := bareDefaults.ClusterDomain
 	searches := append([]string{
-		constant.WatchNS() + ".svc." + clusterDomain,
+		constant.TenantNS() + ".svc." + clusterDomain,
 		"svc." + clusterDomain,
 		clusterDomain,
 	}, bareDefaults.Searches...)

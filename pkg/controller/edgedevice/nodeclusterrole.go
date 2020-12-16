@@ -69,7 +69,7 @@ func (c *nodeClusterRoleController) init(
 		newTweakListOptionsFunc(
 			labels.SelectorFromSet(map[string]string{
 				constant.LabelRole:      constant.LabelRoleValueNodeClusterRole,
-				constant.LabelNamespace: constant.WatchNS(),
+				constant.LabelNamespace: constant.SysNS(),
 			}),
 		),
 	).ClusterRoles().Informer()
@@ -127,7 +127,7 @@ func (c *Controller) checkNodeClusterRoleUpToDate(obj *rbacv1.ClusterRole) bool 
 	switch {
 	case len(obj.Labels) == 0 || obj.Labels[constant.LabelRole] != constant.LabelRoleValueNodeClusterRole:
 		return false
-	case len(obj.Labels) == 0 || obj.Labels[constant.LabelNamespace] != constant.WatchNS():
+	case len(obj.Labels) == 0 || obj.Labels[constant.LabelNamespace] != constant.SysNS():
 		return false
 	}
 
@@ -420,7 +420,7 @@ func (c *Controller) newNodeClusterRoleForAllEdgeDevices(
 			Name: crName,
 			Labels: map[string]string{
 				constant.LabelRole:      constant.LabelRoleValueNodeClusterRole,
-				constant.LabelNamespace: constant.WatchNS(),
+				constant.LabelNamespace: constant.SysNS(),
 			},
 		},
 		Rules: policies,

@@ -98,7 +98,7 @@ func (d *WireguardMeshDriver) GenerateEnsureRequest(
 
 		var managedIfaces []*abbotgopb.HostNetworkInterface
 		for i, iface := range memberIfaces {
-			if iface.Provider == constant.PrefixMeshInterfaceProviderAranya+constant.WatchNS() {
+			if iface.Provider == constant.PrefixMeshInterfaceProviderAranya+constant.TenantNS() {
 				// managed interfaces don't have ip address accessible from outside
 				managedIfaces = append(managedIfaces, memberIfaces[i])
 				continue

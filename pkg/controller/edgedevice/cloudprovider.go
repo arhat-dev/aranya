@@ -394,7 +394,7 @@ func (c *Controller) getEdgeDeviceNameFromProviderID(providerID string) (string,
 		return "", fmt.Errorf("invalid aranya providerID %q", parts[1])
 	}
 
-	if namespacedName[0] != constant.WatchNS() {
+	if namespacedName[0] != constant.SysNS() {
 		return "", fmt.Errorf("not managed by this aranya provider")
 	}
 

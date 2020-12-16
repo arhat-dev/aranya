@@ -51,54 +51,55 @@ type podController struct {
 	podsMu      *sync.RWMutex
 	vpReqRec    *reconcile.Core
 
-	watchSecretInformer kubecache.SharedIndexInformer
-	watchCMInformer     kubecache.SharedIndexInformer
-	watchSvcInformer    kubecache.SharedIndexInformer
+	tenantSecretInformer kubecache.SharedIndexInformer
+	tenantCMInformer     kubecache.SharedIndexInformer
+	tenantSvcInformer    kubecache.SharedIndexInformer
 }
 
 func (c *podController) init(
 	ctrl *Controller,
 	config *conf.Config,
 	kubeClient kubeclient.Interface,
-	watchInformerFactory informers.SharedInformerFactory,
+	tenantInformerFactory informers.SharedInformerFactory,
 ) error {
 	c.managedPods = sets.NewString()
 	c.podsMu = new(sync.RWMutex)
 
-	c.podClient = kubeClient.CoreV1().Pods(constant.WatchNS())
+	c.podClient = kubeClient.CoreV1().Pods(constant.TenantNS())
 
-	c.podInformer = watchInformerFactory.Core().V1().Pods().Informer()
-	c.watchSecretInformer = watchInformerFactory.Core().V1().Secrets().Informer()
-	c.watchCMInformer = watchInformerFactory.Core().V1().ConfigMaps().Informer()
-	c.watchSvcInformer = watchInformerFactory.Core().V1().Services().Informer()
+	c.podInformer = tenantInformerFactory.Core().V1().Pods().Informer()
+	c.tenantSecretInformer = tenantInformerFactory.Core().V1().Secrets().Informer()
+	c.tenantCMInformer = tenantInformerFactory.Core().V1().ConfigMaps().Informer()
+	c.tenantSvcInformer = tenantInformerFactory.Core().V1().Services().Informer()
 
 	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs,
 		c.podInformer.HasSynced,
-		c.watchCMInformer.HasSynced,
-		c.watchSecretInformer.HasSynced,
-		c.watchSvcInformer.HasSynced,
+		c.tenantCMInformer.HasSynced,
+		c.tenantSecretInformer.HasSynced,
+		c.tenantSvcInformer.HasSynced,
 	)
 
 	ctrl.listActions = append(ctrl.listActions, func() error {
 		_, err := listerscorev1.NewPodLister(c.podInformer.GetIndexer()).List(labels.Everything())
 		if err != nil {
-			return fmt.Errorf("failed to list pods in namespace %q: %w", constant.WatchNS(), err)
+			return fmt.Errorf("failed to list pods in namespace %q: %w", constant.TenantNS(), err)
 		}
 
-		_, err = listerscorev1.NewConfigMapLister(c.watchCMInformer.GetIndexer()).List(labels.Everything())
+		_, err = listerscorev1.NewConfigMapLister(c.tenantCMInformer.GetIndexer()).List(labels.Everything())
 		if err != nil {
-			return fmt.Errorf("failed to list configmaps in namespace %q: %w", constant.WatchNS(), err)
+			return fmt.Errorf("failed to list configmaps in namespace %q: %w", constant.TenantNS(), err)
 		}
 
-		_, err = listerscorev1.NewSecretLister(c.watchSecretInformer.GetIndexer()).List(labels.Everything())
+		_, err = listerscorev1.NewSecretLister(c.tenantSecretInformer.GetIndexer()).List(labels.Everything())
 		if err != nil {
-			return fmt.Errorf("failed to list secrets in namespace %q: %w", constant.WatchNS(), err)
+			return fmt.Errorf("failed to list secrets in namespace %q: %w", constant.TenantNS(), err)
 		}
 
-		_, err = listerscorev1.NewServiceLister(c.watchSvcInformer.GetIndexer()).List(labels.Everything())
+		_, err = listerscorev1.NewServiceLister(c.tenantSvcInformer.GetIndexer()).List(labels.Everything())
 		if err != nil {
-			return fmt.Errorf("failed to list services in namespace %q: %w", constant.WatchNS(), err)
+			return fmt.Errorf("failed to list services in namespace %q: %w", constant.TenantNS(), err)
 		}
+
 		return nil
 	})
 
@@ -475,7 +476,7 @@ func (c *Controller) ensureVirtualPod(edgeDevice *aranyaapi.EdgeDevice) error {
 		return fmt.Errorf("failed to generate virtual pod object: %w", err)
 	}
 
-	oldPod, found := c.getWatchPodObject(name)
+	oldPod, found := c.getTenantPodObject(name)
 	if found {
 		if c.checkVirtualPodUpToDate(pod, oldPod) {
 			return nil
@@ -538,7 +539,7 @@ func (c *Controller) newVirtualPodForEdgeDevice(device *aranyaapi.EdgeDevice) (*
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      device.Name,
-			Namespace: constant.WatchNS(),
+			Namespace: constant.TenantNS(),
 		},
 		Spec: corev1.PodSpec{
 			Containers: append([]corev1.Container{{

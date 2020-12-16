@@ -54,7 +54,7 @@ func (c *connectivityServiceController) init(
 	ctrl *Controller,
 	config *conf.Config,
 	kubeClient kubeclient.Interface,
-	sysInformerFactory informers.SharedInformerFactory,
+	thisPodNSInformerFactory informers.SharedInformerFactory,
 ) error {
 	c.connectivityService = config.Aranya.Managed.ConnectivityService.Name
 	if c.connectivityService == "" {
@@ -72,7 +72,7 @@ func (c *connectivityServiceController) init(
 	)
 
 	fieldSelector := fields.OneTermEqualSelector("metadata.name", c.connectivityService).String()
-	informer := informerscorev1.New(sysInformerFactory, envhelper.ThisPodNS(), func(options *metav1.ListOptions) {
+	informer := informerscorev1.New(thisPodNSInformerFactory, envhelper.ThisPodNS(), func(options *metav1.ListOptions) {
 		setLabelSelector(options)
 		options.FieldSelector = fieldSelector
 	}).Services().Informer()

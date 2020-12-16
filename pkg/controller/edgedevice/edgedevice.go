@@ -107,20 +107,20 @@ func (c *edgeDeviceController) init(
 	}()
 
 	edgeDeviceInformerFactory := aranyainformers.NewSharedInformerFactoryWithOptions(
-		aranyaClient, 0, aranyainformers.WithNamespace(constant.WatchNS()))
+		aranyaClient, 0, aranyainformers.WithNamespace(constant.SysNS()),
+	)
 
 	ctrl.informerFactoryStart = append(ctrl.informerFactoryStart, edgeDeviceInformerFactory.Start)
 
-	c.edgeDeviceClient = aranyaClient.AranyaV1alpha1().EdgeDevices(constant.WatchNS())
+	c.edgeDeviceClient = aranyaClient.AranyaV1alpha1().EdgeDevices(constant.SysNS())
 	c.edgeDeviceInformer = edgeDeviceInformerFactory.Aranya().V1alpha1().EdgeDevices().Informer()
 
 	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.edgeDeviceInformer.HasSynced)
 
 	ctrl.listActions = append(ctrl.listActions, func() error {
-		_, err := listersaranyav1a1.
-			NewEdgeDeviceLister(c.edgeDeviceInformer.GetIndexer()).List(labels.Everything())
+		_, err := listersaranyav1a1.NewEdgeDeviceLister(c.edgeDeviceInformer.GetIndexer()).List(labels.Everything())
 		if err != nil {
-			return fmt.Errorf("failed to list edgedevice in namespace %q: %w", constant.WatchNS(), err)
+			return fmt.Errorf("failed to list edgedevice in namespace %q: %w", constant.SysNS(), err)
 		}
 
 		return nil
@@ -699,7 +699,7 @@ func (c *Controller) preparePodOptions(
 			return node
 		},
 		GetPod: func(name string) *corev1.Pod {
-			po, ok := c.getWatchPodObject(name)
+			po, ok := c.getTenantPodObject(name)
 			if !ok {
 				return nil
 			}
@@ -707,7 +707,7 @@ func (c *Controller) preparePodOptions(
 			return po
 		},
 		GetConfigMap: func(name string) *corev1.ConfigMap {
-			cm, ok := c.getWatchConfigMapObject(name)
+			cm, ok := c.getTenantConfigMapObject(name)
 			if !ok {
 				return nil
 			}
@@ -715,14 +715,14 @@ func (c *Controller) preparePodOptions(
 			return cm
 		},
 		GetSecret: func(name string) *corev1.Secret {
-			secret, ok := c.getWatchSecretObject(name)
+			secret, ok := c.getTenantSecretObject(name)
 			if !ok {
 				return nil
 			}
 
 			return secret
 		},
-		ListServices: c.listWatchServiceObjects,
+		ListServices: c.listTenantServiceObjects,
 		EventRecorder: evb.NewRecorder(
 			scheme.Scheme,
 			corev1.EventSource{Component: fmt.Sprintf("aranya-pod-manager,%s", edgeDevice.Name)},
