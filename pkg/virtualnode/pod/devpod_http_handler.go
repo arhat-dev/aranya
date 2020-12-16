@@ -329,7 +329,7 @@ func (m *Manager) doHandleExec(ctx context.Context) kubeletrc.Executor {
 				}
 			}
 
-			err := m.options.OperateDevice(container, cmd[0], data, stdout)
+			err := m.options.OperatePeripheral(container, cmd[0], data, stdout)
 			if err != nil {
 				return fmt.Errorf("manual peripheral operation failed: %w", err)
 			}
@@ -388,7 +388,7 @@ func (m *Manager) doHandleAttach(ctx context.Context) kubeletrc.Attacher {
 			return m.doServeTerminalStream(ctx, aranyagopb.CMD_ATTACH, attachCmd, stdin, stdout, stderr, resize)
 		default:
 			// is peripheral metrics collection
-			err := m.options.CollectDeviceMetrics(container)
+			err := m.options.CollectPeripheralMetrics(container)
 			if err != nil {
 				return fmt.Errorf("manual device metrics collection failed: %w", err)
 			}

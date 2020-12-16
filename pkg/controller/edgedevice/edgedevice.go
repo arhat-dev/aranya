@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/kubehelper"
@@ -35,6 +36,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	corev1 "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -727,6 +729,33 @@ func (c *Controller) preparePodOptions(
 			scheme.Scheme,
 			corev1.EventSource{Component: fmt.Sprintf("aranya-pod-manager,%s", edgeDevice.Name)},
 		),
+
+		GetVirtualPod: func() *corev1.Pod {
+			po, ok := c.getSysPodObject(edgeDevice.Name)
+			if !ok {
+				// should not happen
+				return new(corev1.Pod)
+			}
+
+			return po
+		},
+		UpdateVirtualPodStatus: func(po *corev1.Pod) {
+			_, err := c.sysPodClient.UpdateStatus(c.Context(), po, metav1.UpdateOptions{})
+			for err != nil {
+				time.Sleep(time.Second)
+
+				var ok bool
+				po, ok = c.getSysPodObject(edgeDevice.Name)
+				if !ok {
+					return
+				}
+
+				_, err = c.sysPodClient.UpdateStatus(c.Context(), po, metav1.UpdateOptions{})
+				if kubeerrors.IsNotFound(err) {
+					return
+				}
+			}
+		},
 	}
 
 	return opts, nil

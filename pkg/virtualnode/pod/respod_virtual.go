@@ -34,7 +34,7 @@ import (
 )
 
 func (m *Manager) updateVirtualPodToRunningPhase() error {
-	pod := m.options.GetPod(m.nodeName)
+	pod := m.options.GetVirtualPod()
 	if pod == nil {
 		return fmt.Errorf("failed to get virtual pod")
 	}
@@ -96,12 +96,7 @@ func (m *Manager) updateVirtualPodToRunningPhase() error {
 	}}
 
 	pod.Status = *status
-
-	_, err := m.UpdatePodStatus(pod)
-	if err != nil {
-		return fmt.Errorf("failed to update virtual pod status: %w", err)
-	}
-
+	m.options.UpdateVirtualPodStatus(pod)
 	return nil
 }
 

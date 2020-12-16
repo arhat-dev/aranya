@@ -58,9 +58,12 @@ type Options struct {
 	ListServices  func() []*corev1.Service
 	EventRecorder record.EventRecorder
 
+	GetVirtualPod          func() *corev1.Pod
+	UpdateVirtualPodStatus func(*corev1.Pod)
+
 	// device interaction
-	OperateDevice        func(deviceName, operationName string, data []byte, out io.Writer) error
-	CollectDeviceMetrics func(deviceName string) error
+	OperatePeripheral        func(peripheralName, operationName string, data []byte, out io.Writer) error
+	CollectPeripheralMetrics func(peripheralName string) error
 }
 
 // NewManager creates a new pod manager for virtual node

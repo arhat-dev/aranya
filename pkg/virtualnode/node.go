@@ -95,8 +95,8 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 
 	peripheralManager := peripheral.NewManager(ctx, opt.NodeName, opt.ConnectivityManager, opt.PeripheralOptions)
 
-	opt.PodOptions.OperateDevice = peripheralManager.Operate
-	opt.PodOptions.CollectDeviceMetrics = peripheralManager.CollectMetrics
+	opt.PodOptions.OperatePeripheral = peripheralManager.Operate
+	opt.PodOptions.CollectPeripheralMetrics = peripheralManager.CollectMetrics
 	podManager := pod.NewManager(
 		ctx,
 		opt.NodeName,
