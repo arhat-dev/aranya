@@ -286,6 +286,7 @@ config:
         port: 30000
 
       abbotService:
+        # yamllint disable-line rule:quoted-strings
         name: '{{ include "abbot.fullname" $ }}'
         portName: abbot
 
