@@ -50,7 +50,6 @@ type sysPodController struct {
 	vpReqRec       *reconcile.Core
 
 	sysSecretInformer kubecache.SharedIndexInformer
-	sysCMInformer     kubecache.SharedIndexInformer
 }
 
 func (c *sysPodController) init(
@@ -65,11 +64,9 @@ func (c *sysPodController) init(
 
 	c.sysPodInformer = sysInformerFactory.Core().V1().Pods().Informer()
 	c.sysSecretInformer = sysInformerFactory.Core().V1().Secrets().Informer()
-	c.sysCMInformer = sysInformerFactory.Core().V1().ConfigMaps().Informer()
 
 	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs,
 		c.sysPodInformer.HasSynced,
-		c.sysCMInformer.HasSynced,
 		c.sysSecretInformer.HasSynced,
 	)
 
@@ -77,11 +74,6 @@ func (c *sysPodController) init(
 		_, err := listerscorev1.NewPodLister(c.sysPodInformer.GetIndexer()).List(labels.Everything())
 		if err != nil {
 			return fmt.Errorf("failed to list pods in namespace %q: %w", constant.SysNS(), err)
-		}
-
-		_, err = listerscorev1.NewConfigMapLister(c.sysCMInformer.GetIndexer()).List(labels.Everything())
-		if err != nil {
-			return fmt.Errorf("failed to list configmaps in namespace %q: %w", constant.SysNS(), err)
 		}
 
 		_, err = listerscorev1.NewSecretLister(c.sysSecretInformer.GetIndexer()).List(labels.Everything())
