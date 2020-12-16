@@ -43,13 +43,13 @@ func TestPodCreated(t *testing.T) {
 			podCount: 3,
 		},
 		{
-			ns: virtualPodNamespaceTenant,
+			ns: virtualPodNamespaceSys,
 			expectedPods: []string{
 				edgeDeviceNameFoo,
 				edgeDeviceNameBar,
 			},
-			// 2 virtual pods + 3 abbot pods
-			podCount: 5,
+			// 2 virtual pods
+			podCount: 2,
 		},
 	}
 

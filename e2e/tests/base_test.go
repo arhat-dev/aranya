@@ -29,15 +29,15 @@ const EnvKeyKubeConfig = "ARANYA_E2E_KUBECONFIG"
 const (
 	_namePrefix = "e2e-"
 
-	edgeDeviceNamespaceDefault = "default"
 	edgeDeviceNameAlice        = _namePrefix + "alice"
 	edgeDeviceNameBob          = _namePrefix + "bob"
+	edgeDeviceNamespaceDefault = "default"
 	virtualPodNamespaceDefault = edgeDeviceNamespaceDefault
 
-	// edgeDeviceNamespaceFull   = "full"
-	edgeDeviceNameFoo         = _namePrefix + "foo"
-	edgeDeviceNameBar         = _namePrefix + "bar"
-	virtualPodNamespaceTenant = "tenant"
+	edgeDeviceNameFoo      = _namePrefix + "foo"
+	edgeDeviceNameBar      = _namePrefix + "bar"
+	edgeDeviceNamespaceSys = "sys"
+	virtualPodNamespaceSys = edgeDeviceNamespaceSys
 )
 
 func createClient() kubernetes.Interface {
