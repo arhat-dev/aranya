@@ -62,9 +62,10 @@ rules:
   - patch
 - apiGroups: [""]
   resources:
-  # to fetch resouces required by pods for edge devices
+  # to fetch resouces required by tenant pods for edge devices
   - secrets
   - configmaps
+  - services
   verbs:
   - get
   - list
