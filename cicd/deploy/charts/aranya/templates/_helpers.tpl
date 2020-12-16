@@ -96,8 +96,14 @@ Create the name of the service account to use
 {{- end -}}
 {{- end }}
 
-{{- define "managePodRoles" -}}
-{{- if or (ne (len .Values.config.aranya.managed.podRoles) 0) (ne (len .Values.config.aranya.managed.virtualPodRoles) 0) -}}
+{{- define "manageTenantPodRoles" -}}
+{{- if ne (len .Values.config.aranya.managed.podRoles) 0 -}}
+"yes"
+{{- end -}}
+{{- end }}
+
+{{- define "manageVirtualPodRoles" -}}
+{{- if ne (len .Values.config.aranya.managed.virtualPodRoles) 0 -}}
 "yes"
 {{- end -}}
 {{- end }}

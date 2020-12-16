@@ -10,14 +10,17 @@ rules:
   - pods
   # to update pods status according to edge devices messages
   - pods/status
-{{- if (include "managePodRoles" .) }}
+{{- if (include "manageTenantPodRoles" .) }}
+  # required verbs to manage pod roles
   - pods/exec
   - pods/log
   - pods/attach
   - pods/portforward
 {{- end }}
   verbs:
+{{- if eq (include "tenantNamespace" .) (include "sysNamespace" .) }}
   - create # create virtual pod
+{{- end }}
   - get
   - list
   - watch
@@ -31,10 +34,10 @@ rules:
   - get
   - list
   - watch
-{{- if (include "managePodRoles" .) }}
+{{- if (include "manageTenantPodRoles" .) }}
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources:
-  # to manage pod roles
+  # to manage tenant pod roles
   - roles
   verbs:
   - create
@@ -134,6 +137,40 @@ rules:
   - get
   - list
   - watch
+# manage virtual pods
+- apiGroups: [""]
+  resources:
+  - pods
+  - pods/status
+  - pods/ephemeralcontainers
+{{- if (include "manageVirtualPodRoles" .) }}
+  # required verbs to manage pod roles
+  - pods/exec
+  - pods/log
+  - pods/attach
+  - pods/portforward
+{{- end }}
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+{{- if (include "manageVirtualPodRoles" .) }}
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources:
+  # to manage virtual pod roles
+  - roles
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
