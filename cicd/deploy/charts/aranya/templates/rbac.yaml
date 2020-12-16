@@ -60,6 +60,8 @@ rules:
   verbs:
   - create
   - get
+  # delete invalid/completed csr
+  - delete
 {{- if .Values.config.virtualnode.node.cert.autoApprove }}
 - apiGroups:
   - certificates.k8s.io
