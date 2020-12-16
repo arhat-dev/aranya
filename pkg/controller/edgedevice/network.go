@@ -70,7 +70,7 @@ func (c *networkController) init(
 		return nil
 	}
 
-	c.meshSecretClient = kubeClient.CoreV1().Secrets(constant.TenantNS())
+	c.meshSecretClient = kubeClient.CoreV1().Secrets(constant.SysNS())
 
 	if blocks := netConf.Mesh.IPv4Blocks; len(blocks) != 0 {
 		c.meshIPAMv4 = ipam.NewIPAddressManager()
@@ -211,7 +211,7 @@ func (c *Controller) onMeshMemberDeleteRequested(obj interface{}) *reconcile.Res
 	return nil
 }
 
-func (c *Controller) requestNetworkEnsure(name string) error {
+func (c *networkController) requestNetworkEnsure(name string) error {
 	if c.netReqRec == nil {
 		return fmt.Errorf("network ensure not supported")
 	}
@@ -295,7 +295,7 @@ func newSecretForMesh(secretName string) (*corev1.Secret, error) {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
-			Namespace: constant.TenantNS(),
+			Namespace: constant.SysNS(),
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
