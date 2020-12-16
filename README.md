@@ -33,17 +33,17 @@ __NOTE:__ For details of the host management, please refer to [Maintenance #Host
 
 ## Goals
 
-- Make every nodes in a single Kubernetes cluster absolutely distributed
-  - Everywhere with all kinds of network reachability, regardless of IP Address, NAT, Firewall ...
+- Make it possible to build absolutely distributed cluster with a single Kubernetes control plane
+  - Deploy nodes to anywhere with any kind of network reachability, regardless of IP Address, NAT, Firewall ...
 - Extend Kubernetes to be a universal control plane for everything
   - Not only powerful servers, single-board computers, but also embedded devices, micro controllers
 - Serve thousands of devices in a Kubernetes cluster at reasonable cost
   - No direct requests to apiserver from nodes
-- More secure Kubernetes deployment
+- More secure node deployment
   - No cluster credentials will be stored in nodes
 - Offer a more developer friendly way to create custom runtimes using message oriented protocols
   - [`aranya-proto`][aranya-proto] (aranya <-> arhat)
-  - [`abbot-proto`][abbot-proto] (aranya <-> abbot)
+  - [`abbot-proto`][abbot-proto] (aranya <-> arhat (<-> runtime) <-> abbot)
   - [`arhat-proto`][arhat-proto] (arhat <-> runtime)
 
 ## Non-Goals
