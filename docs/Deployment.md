@@ -18,16 +18,16 @@ __NOTE:__ This will deploy aranya to the `aranya` namespace only
 
 1. Create `EdgeDevice` CRD definition used by aranya
 
-  ```bash
-  kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/deploy/charts/aranya/crds/aranya.arhat.dev_edgedevices.yaml
-  ```
+   ```bash
+   kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/deploy/charts/aranya/crds/aranya.arhat.dev_edgedevices.yaml
+   ```
 
 1. Deploy aranya to the `aranya` namespace
 
-  ```bash
-  kubectl create namespace aranya
-  kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/cicd/deploy/kube/aranya.yaml
-  ```
+   ```bash
+   kubectl create namespace aranya
+   kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/cicd/deploy/kube/aranya.yaml
+   ```
 
 ## Deploy aranya for Production (using helm v3)
 
@@ -39,10 +39,10 @@ __NOTE:__ This will deploy aranya to the `aranya` namespace only
 
 1. Install the aranya chart with custom values
 
-  ```bash
-  kubectl create namespace ${MY_NAMESPACE}
-  helm install ${MY_RELEASE_NAME} arhat-dev/aranya --namespace ${MY_NAMESPACE} -f my-values.yaml
-  ```
+   ```bash
+   kubectl create namespace ${MY_NAMESPACE}
+   helm install ${MY_RELEASE_NAME} arhat-dev/aranya --namespace ${MY_NAMESPACE} -f my-values.yaml
+   ```
 
 ## Deploy your devices
 
