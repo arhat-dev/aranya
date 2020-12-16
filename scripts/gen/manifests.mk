@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-NS ?= default
-
 gen.manifests.aranya:
 	helm template \
 		aranya \
 		cicd/deploy/charts/aranya \
-		--include-crds --namespace ${NS} --debug \
+		--include-crds --namespace aranya --debug \
 		| tee cicd/deploy/kube/aranya.yaml

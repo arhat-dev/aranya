@@ -113,99 +113,13 @@ __NOTE:__ This project lacks tests, all kinds of contribution especially tests a
 
 __NOTE:__ You __MUST NOT__ use unsupported features in your pod spec (assigned to `EdgeDevice` nodes), which could result unexpected behavior!
 
-## Deployment Requirements
+## Deployment
 
-- `Kubernetes` 1.14+, with `RBAC` and `Node` authorization enabled
-
-__NOTE:__ currently not compatible with `k3s` due to its node reverse-proxy
-
-## Deployment Workflow
-
-1. Deploy `aranya` to your `Kubernetes` cluster for evaluation with following commands (see [docs/Maintenance.md](./docs/Maintenance.md) for more deployment tips)
-
-   - Create `EdgeDevice` CRD definition used by `aranya`
-
-    ```bash
-    kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/deploy/charts/aranya/crds/aranya.arhat.dev_edgedevices.yaml
-    ```
-
-   - Select a `namespace` to deploy `aranya`
-
-    ```bash
-    export NS=edge
-    ```
-
-   - Deploy `aranya` to the `edge` namespace
-
-      - Method 1: `kubectl` + YAML manifests (unable to customize anything with this method, so only default settings applied and the deployment namespace will always be `edge`)
-
-      ```bash
-      # create the namespace
-      $ kubectl create namespace edge
-
-      # deploy
-      $ kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/cicd/deploy/kube/aranya.yaml
-      ```
-
-      - Method 2: `helm` (v3+), add chart repo `arhat-dev` as noted in [`helm-charts`](https://github.com/arhat-dev/helm-charts)
-
-      ```bash
-      # customize chart values (edit `values.yaml`)
-      helm install ${MY_RELEASE_NAME} arhat-dev/aranya --namespace ${NS}
-      ```
-
-2. Create `EdgeDevice` resource objects for each one of your devices (see [docs/EdgeDevice](./docs/EdgeDevice.md))
-
-   - `aranya` will create one kubernetes Node, Pod (`virtualpod`, in watch namespace) for it
-   - `kuebctl logs/exec/cp/attach/port-froward` to the `virtualpod` will work in device host if allowed
-
-3. Deploy [`arhat`][arhat] with proper configuration to your devices
-
-4. [`arhat`][arhat] by default has not pod deployment support, you need to deploy a runtime extension (with proper backend, e.g. `runtime-docker` with `dockerd` running, or `runtime-podman` with `crun` installed) for workload support.
-
-5. [`arhat`][arhat] delegates all network operation to [`abbot`][abbot] by design, if you would like to gain access to cluster network, first you need to deploy `aranya` along with [`abbot`][abbot] with proper configuration to your kubernetes cluster, then
-
-   - To access cluster network from your device host, deploy [`abbot`][abbot] to your device host and configure [`arhat`][arhat] with according options.
-
-   - To access cluster network from your workload runtime, deploy [`abbot`][abbot] as a
-     - privileged pod using:
-       - host network
-       - host pid
-       - special label: `arhat.dev/role: Abbot`
-       - special container name for [`abbot`][abbot] container: [`abbot`][abbot]
-     - to your device runtime
-
-6. Create workloads with tolerations (taints for node objects of edge devices) and use node selectors or node affinity to assign pods to specific device
-
-   - Node Taints
-
-      | Taint Key             | Value                         |
-      | --------------------- | ----------------------------- |
-      | `arhat.dev/namespace` | namespace of the `EdgeDevice` |
-
-   - Node Labels
-
-      | Label Name                  | Value                                                                                           | Customizable |
-      | --------------------------- | ----------------------------------------------------------------------------------------------- | ------------ |
-      | `arhat.dev/role`            | `Node`                                                                                          | N            |
-      | `arhat.dev/name`            | name of the `EdgeDevice`                                                                        | N            |
-      | `arhat.dev/namespace`       | namespace of the `EdgeDevice`                                                                   | N            |
-      | `arhat.dev/arch`            | arch value reported by [arhat][arhat], contains details like `armv5` (revision 5), `mipshf` (hard-float) | N            |
-      | `{beta.}kubernetes.io/arch` | `GOARCH` derived from `arhat.dev/arch`                                                          | N            |
-      | `kubernetes.io/role`        | namespace of the `EdgeDevice`                                                                   | Y            |
+see [docs/Deployment](./docs/Deployment.md) for deployment worklflow of `aranya` and `EdgeDevice`
 
 ## Development
 
-Topics like `Build`, `Design`, `Releasing`
-
-see [docs/development](./docs/development/)
-
-## Special Thanks
-
-- [`Kubernetes`](https://github.com/kubernetes/kubernetes)
-  - Really eased my life with my homelab.
-- [`virtual-kubelet`](https://github.com/virtual-kubelet/virtual-kubelet)
-  - This project was inspired by its idea, which introduced an cloud agent to run containers in network edge.
+see [docs/development](./docs/development/) for topics like `Build`, `Design`, `Releasing`
 
 ## LICENSE
 
@@ -225,7 +139,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-[arhat]: https://github.com/arhat-dev/arhat
 [abbot]: https://github.com/arhat-dev/abbot
 [aranya-proto]: https://github.com/arhat-dev/aranya-proto
 [abbot-proto]: https://github.com/arhat-dev/abbot-proto

@@ -801,7 +801,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: aranya
-  namespace: default
+  namespace: aranya
   labels:
     helm.sh/chart: aranya-0.1.10
     app.kubernetes.io/name: aranya
@@ -814,7 +814,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: aranya
-  namespace: default
+  namespace: aranya
   labels:
     helm.sh/chart: aranya-0.1.10
     app.kubernetes.io/name: aranya
@@ -992,7 +992,7 @@ data:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: aranya:default
+  name: aranya:aranya
 rules:
 - apiGroups: [""]
   resources:
@@ -1038,22 +1038,22 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: aranya:default
+  name: aranya:aranya
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: aranya:default
+  name: aranya:aranya
 subjects:
 - kind: ServiceAccount
   name: aranya
-  namespace: default
+  namespace: aranya
 ---
 # Source: aranya/templates/rbac.yaml
 # bind discovery cluster role so we can create client using correct api versions
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: aranya:default:discovery
+  name: aranya:aranya:discovery
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -1061,14 +1061,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: aranya
-  namespace: default
+  namespace: aranya
 ---
 # Source: aranya/templates/rbac-controller.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: aranya:controller
-  namespace: default
+  namespace: aranya
 rules:
 - apiGroups: [""]
   resources:
@@ -1099,7 +1099,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: aranya:virtualnode
-  namespace: default
+  namespace: aranya
 rules:
 - apiGroups: [""]
   resources:
@@ -1160,7 +1160,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: aranya:controller
-  namespace: default
+  namespace: aranya
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -1168,14 +1168,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: aranya
-  namespace: default
+  namespace: aranya
 ---
 # Source: aranya/templates/rbac-virtualnode.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: aranya:virtualnode
-  namespace: default
+  namespace: aranya
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -1183,14 +1183,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: aranya
-  namespace: default
+  namespace: aranya
 ---
 # Source: aranya/templates/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: aranya
-  namespace: default
+  namespace: aranya
   labels:
     app.kubernetes.io/component: metrics
     helm.sh/chart: aranya-0.1.10
@@ -1213,7 +1213,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: aranya
-  namespace: default
+  namespace: aranya
   labels:
     helm.sh/chart: aranya-0.1.10
     app.kubernetes.io/name: aranya
