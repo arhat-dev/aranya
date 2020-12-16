@@ -12,8 +12,8 @@ rbac:
 serviceMonitor:
   create: true
 
-sysNamespace: tenant
-tenantNamespace: ""
+sysNamespace: sys
+tenantNamespace: tenant
 
 config:
   aranya:

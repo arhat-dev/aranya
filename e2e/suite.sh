@@ -52,7 +52,7 @@ apiVersion: aranya.arhat.dev/v1alpha1
 kind: EdgeDevice
 metadata:
   name: e2e-foo
-  namespace: tenant
+  namespace: sys
 spec:
   connectivity:
     method: mqtt
@@ -66,7 +66,7 @@ apiVersion: aranya.arhat.dev/v1alpha1
 kind: EdgeDevice
 metadata:
   name: e2e-bar
-  namespace: tenant
+  namespace: sys
 spec:
   connectivity:
     method: mqtt
@@ -155,6 +155,7 @@ start_e2e_tests() {
     --retain --kubeconfig "${KUBECONFIG}"
 
   # ensure tenant namespace
+  kubectl create namespace sys
   kubectl create namespace tenant
 
   # crd resources may fail at the first time, do it indefinitely to tolerate
