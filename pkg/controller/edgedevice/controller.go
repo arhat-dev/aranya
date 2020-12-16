@@ -107,7 +107,8 @@ func NewController(
 
 	// informer factory for all managed Service, Secret
 	thisPodNSInformerFactory := informers.NewSharedInformerFactoryWithOptions(
-		kubeClient, 0, informers.WithNamespace(envhelper.ThisPodNS()))
+		kubeClient, 0, informers.WithNamespace(envhelper.ThisPodNS()),
+	)
 
 	// informer factory for all managed NodeClusterRoles, NodeVerbs
 	clusterInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClient, 0)
@@ -120,9 +121,20 @@ func NewController(
 		),
 	).Nodes()
 
-	// informer factory for all tenant pods
-	tenantInformerFactory := informers.NewSharedInformerFactoryWithOptions(
-		kubeClient, 0, informers.WithNamespace(constant.TenantNS()))
+	// informer factory for all sys resouces
+	sysInformerFactory := informers.NewSharedInformerFactoryWithOptions(
+		kubeClient, 0, informers.WithNamespace(constant.SysNS()),
+	)
+
+	// informer factory for all tenant resources (reuse if possible)
+	var tenantInformerFactory informers.SharedInformerFactory
+	if constant.SysNS() == constant.TenantNS() {
+		tenantInformerFactory = sysInformerFactory
+	} else {
+		tenantInformerFactory = informers.NewSharedInformerFactoryWithOptions(
+			kubeClient, 0, informers.WithNamespace(constant.TenantNS()),
+		)
+	}
 
 	// informer factory for EdgeDevices
 
@@ -139,6 +151,7 @@ func NewController(
 		informerFactoryStart: []func(<-chan struct{}){
 			clusterInformerFactory.Start,
 			thisPodNSInformerFactory.Start,
+			sysInformerFactory.Start,
 			tenantInformerFactory.Start,
 		},
 	}
@@ -158,17 +171,27 @@ func NewController(
 		return nil, fmt.Errorf("failed to create node controller: %w", err)
 	}
 
-	err = ctrl.nodeCertController.init(ctrl, config, kubeClient, preferredResources)
+	err = ctrl.nodeCertController.init(ctrl, config, kubeClient, preferredResources, thisPodNSInformerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create node cert controller: %w", err)
 	}
 
-	err = ctrl.podController.init(ctrl, config, kubeClient, tenantInformerFactory)
+	err = ctrl.sysPodController.init(ctrl, config, kubeClient, sysInformerFactory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create sys pod controller: %w", err)
+	}
+
+	err = ctrl.sysPodRoleController.init(ctrl, config, kubeClient, sysInformerFactory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create sys pod role controller: %w", err)
+	}
+
+	err = ctrl.tenantPodController.init(ctrl, config, kubeClient, tenantInformerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pod controller: %w", err)
 	}
 
-	err = ctrl.podRoleController.init(ctrl, config, kubeClient, tenantInformerFactory)
+	err = ctrl.tenantPodRoleController.init(ctrl, config, kubeClient, tenantInformerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pod role controller: %w", err)
 	}
@@ -250,8 +273,11 @@ type Controller struct {
 	nodeCertController
 	nodeClusterRoleController
 
-	podController
-	podRoleController
+	sysPodController
+	sysPodRoleController
+
+	tenantPodController
+	tenantPodRoleController
 
 	networkController
 

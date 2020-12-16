@@ -59,7 +59,7 @@ func (c *Controller) createPeripheralConnector(
 			certBytes, keyBytes, caBytes []byte
 		)
 		if certRef := t.CertSecretRef; certRef != nil {
-			secret, found := c.getTenantSecretObject(certRef.Name)
+			secret, found := c.getSysSecretObject(certRef.Name)
 			if !found {
 				return nil, fmt.Errorf("failed to retrieve connectivity tls cert data from secret %q", secret)
 			}

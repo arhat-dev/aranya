@@ -17,6 +17,7 @@ limitations under the License.
 package edgedevice
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -43,6 +44,8 @@ import (
 )
 
 type nodeClusterRoleController struct {
+	crCtx context.Context
+
 	crInformer       kubecache.SharedIndexInformer
 	crClient         clientrbacv1.ClusterRoleInterface
 	crReqRec         *reconcile.Core
@@ -60,6 +63,7 @@ func (c *nodeClusterRoleController) init(
 		return nil
 	}
 
+	c.crCtx = ctrl.Context()
 	c.nodeClusterRoles = config.Aranya.Managed.NodeClusterRoles
 	// client
 	c.crClient = kubeClient.RbacV1().ClusterRoles()
@@ -425,4 +429,23 @@ func (c *Controller) newNodeClusterRoleForAllEdgeDevices(
 		},
 		Rules: policies,
 	}
+}
+
+func (c *nodeClusterRoleController) getClusterRoleObject(name string) (*rbacv1.ClusterRole, bool) {
+	obj, found, err := c.crInformer.GetIndexer().GetByKey(name)
+	if err != nil || !found {
+		cr, err := c.crClient.Get(c.crCtx, name, metav1.GetOptions{})
+		if err != nil {
+			return nil, false
+		}
+
+		return cr, true
+	}
+
+	cr, ok := obj.(*rbacv1.ClusterRole)
+	if !ok {
+		return nil, false
+	}
+
+	return cr, true
 }

@@ -43,15 +43,14 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-type podRoleController struct {
-	roleInformer    kubecache.SharedIndexInformer
-	roleClient      clientrbacv1.RoleInterface
-	roleReqRec      *reconcile.Core
-	podRoles        map[string]aranyaapi.PodRolePermissions
-	virtualPodRoles map[string]aranyaapi.PodRolePermissions
+type tenantPodRoleController struct {
+	tenantPodRoleInformer kubecache.SharedIndexInformer
+	tenantPodRoleClient   clientrbacv1.RoleInterface
+	tenantPodRoleReqRec   *reconcile.Core
+	tenantPodRoles        map[string]aranyaapi.PodRolePermissions
 }
 
-func (c *podRoleController) init(
+func (c *tenantPodRoleController) init(
 	ctrl *Controller,
 	config *conf.Config,
 	kubeClient kubeclient.Interface,
@@ -61,24 +60,16 @@ func (c *podRoleController) init(
 		return nil
 	}
 
-	c.podRoles = config.Aranya.Managed.PodRoles
-	c.virtualPodRoles = config.Aranya.Managed.VirtualPodRoles
-
-	if len(c.podRoles) != 0 {
-		delete(c.podRoles, "")
+	c.tenantPodRoles = config.Aranya.Managed.PodRoles
+	if len(c.tenantPodRoles) != 0 {
+		delete(c.tenantPodRoles, "")
 	} else {
-		c.podRoles = make(map[string]aranyaapi.PodRolePermissions)
+		c.tenantPodRoles = make(map[string]aranyaapi.PodRolePermissions)
 	}
 
-	if len(c.virtualPodRoles) != 0 {
-		delete(c.virtualPodRoles, "")
-	} else {
-		c.virtualPodRoles = make(map[string]aranyaapi.PodRolePermissions)
-	}
+	c.tenantPodRoleClient = kubeClient.RbacV1().Roles(constant.TenantNS())
 
-	c.roleClient = kubeClient.RbacV1().Roles(constant.TenantNS())
-
-	c.roleInformer = informersrbacv1.New(tenantInformerFactory, constant.TenantNS(),
+	c.tenantPodRoleInformer = informersrbacv1.New(tenantInformerFactory, constant.TenantNS(),
 		newTweakListOptionsFunc(
 			labels.SelectorFromSet(map[string]string{
 				constant.LabelRole: constant.LabelRoleValuePodRole,
@@ -86,9 +77,9 @@ func (c *podRoleController) init(
 		),
 	).Roles().Informer()
 
-	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.roleInformer.HasSynced)
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.tenantPodRoleInformer.HasSynced)
 	ctrl.listActions = append(ctrl.listActions, func() error {
-		_, err2 := listersrbacv1.NewRoleLister(c.roleInformer.GetIndexer()).List(labels.Everything())
+		_, err2 := listersrbacv1.NewRoleLister(c.tenantPodRoleInformer.GetIndexer()).List(labels.Everything())
 		if err2 != nil {
 			return fmt.Errorf("failed to list tenant roles: %w", err2)
 		}
@@ -96,16 +87,16 @@ func (c *podRoleController) init(
 		return nil
 	})
 
-	roleRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.roleInformer, reconcile.Options{
-		Logger:          ctrl.Log.WithName("rec:role"),
+	roleRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.tenantPodRoleInformer, reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:podrole"),
 		BackoffStrategy: nil,
 		Workers:         1,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
 			OnAdded:    nextActionUpdate,
-			OnUpdated:  ctrl.onPodRoleUpdated,
-			OnDeleting: ctrl.onPodRoleDeleting,
-			OnDeleted:  ctrl.onPodRoleDeleted,
+			OnUpdated:  ctrl.onTenantPodRoleUpdated,
+			OnDeleting: ctrl.onTenantPodRoleDeleting,
+			OnDeleted:  ctrl.onTenantPodRoleDeleted,
 		},
 		OnBackoffStart: nil,
 		OnBackoffReset: nil,
@@ -113,33 +104,29 @@ func (c *podRoleController) init(
 	ctrl.recStart = append(ctrl.recStart, roleRec.Start)
 	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, roleRec.ReconcileUntil)
 
-	c.roleReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
-		Logger:          ctrl.Log.WithName("rec:role_req"),
+	c.tenantPodRoleReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+		Logger:          ctrl.Log.WithName("rec:podrole_req"),
 		BackoffStrategy: nil,
 		Workers:         1,
 		RequireCache:    false,
 		Handlers: reconcile.HandleFuncs{
-			OnAdded: ctrl.onPodRoleEnsureRequested,
+			OnAdded: ctrl.onTenantPodRoleEnsureRequested,
 		},
 		OnBackoffStart: nil,
 		OnBackoffReset: nil,
 	}.ResolveNil())
-	ctrl.recStart = append(ctrl.recStart, c.roleReqRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.roleReqRec.ReconcileUntil)
+	ctrl.recStart = append(ctrl.recStart, c.tenantPodRoleReqRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.tenantPodRoleReqRec.ReconcileUntil)
 
 	return nil
 }
 
 // nolint:gocyclo
-func (c *Controller) checkPodRoleUpToDate(obj *rbacv1.Role) bool {
-	var (
-		isVirtualPodRole = false
-	)
-
-	crSpec, ok := c.podRoles[obj.Name]
+func (c *Controller) checkTenantPodRoleUpToDate(obj *rbacv1.Role) bool {
+	crSpec, ok := c.tenantPodRoles[obj.Name]
 	if !ok {
-		isVirtualPodRole = true
-		crSpec, ok = c.virtualPodRoles[obj.Name]
+		// not managed by this controller
+		return true
 	}
 
 	if !ok {
@@ -183,48 +170,35 @@ func (c *Controller) checkPodRoleUpToDate(obj *rbacv1.Role) bool {
 		)
 
 		for _, podName := range p.ResourceNames {
-			// ensure not mixing virtual pod roles with normal pod roles by trying to get edge device with pod name
-			edgeDevice, ok := c.getEdgeDeviceObject(podName)
-			if isVirtualPodRole {
-				if !ok {
-					// no edge device with this name
-					return false
-				}
-			} else {
-				if ok {
-					// roles mixed
-					return false
-				}
-
-				// retrieve real edge device from pod spec, so get pod spec first
-				pod, ok := c.getTenantPodObject(podName)
-				if !ok {
-					// no pod with this resource name
-					return false
-				}
-
-				edgeDevice, ok = c.getEdgeDeviceObject(pod.Spec.NodeName)
-				if !ok {
-					// no edge device is managing this pod, this resource name entry needs to be removed
-					return false
-				}
+			_, ok := c.getEdgeDeviceObject(podName)
+			if ok {
+				// ignore virtual pods
+				return false
 			}
 
-			var podRoles map[string]aranyaapi.PodRolePermissions
-			if isVirtualPodRole {
-				podRoles = edgeDevice.Spec.Pod.RBAC.VirtualPodRolePermissions
-			} else {
-				podRoles = edgeDevice.Spec.Pod.RBAC.RolePermissions
+			// retrieve real edge device from pod spec, so get pod spec first
+			pod, ok := c.getTenantPodObject(podName)
+			if !ok {
+				// no pod with this resource name
+				return false
 			}
+
+			edgeDevice, ok := c.getEdgeDeviceObject(pod.Spec.NodeName)
+			if !ok {
+				// no edge device is managing this pod, this resource name entry needs to be removed
+				return false
+			}
+
+			tenantPodRoles := edgeDevice.Spec.Pod.RBAC.RolePermissions
 
 			// check if verbs matched
 
-			if len(podRoles) == 0 {
+			if len(tenantPodRoles) == 0 {
 				// check default verbs, which is the default option
 				// do nothing
 			} else {
 				// check edgedevice specific roles
-				spec, ok := podRoles[obj.Name]
+				spec, ok := tenantPodRoles[obj.Name]
 				if ok {
 					if len(spec.PodVerbs) != 0 {
 						podVerbs = spec.PodVerbs
@@ -292,15 +266,7 @@ func (c *Controller) checkPodRoleUpToDate(obj *rbacv1.Role) bool {
 		}
 	}
 
-	var requiredResourceNames []string
-	if isVirtualPodRole {
-		// set resource names for virtual pod names (edge device name)
-		requiredResourceNames = c.getVirtualPodNames()
-	} else {
-		// set resource names for all other pod names
-		requiredResourceNames = c.getManagedPodNames()
-	}
-
+	requiredResourceNames := c.getTenantPodNames()
 	if podNames.Len() != len(requiredResourceNames) {
 		return false
 	}
@@ -308,12 +274,12 @@ func (c *Controller) checkPodRoleUpToDate(obj *rbacv1.Role) bool {
 	return podNames.HasAll(requiredResourceNames...)
 }
 
-func (c *Controller) requestPodRoleEnsure() error {
-	if c.roleReqRec == nil {
+func (c *Controller) requestTenantPodRoleEnsure() error {
+	if c.tenantPodRoleReqRec == nil {
 		return nil
 	}
 
-	err := c.roleReqRec.Schedule(queue.Job{Action: queue.ActionAdd, Key: ""}, 0)
+	err := c.tenantPodRoleReqRec.Schedule(queue.Job{Action: queue.ActionAdd, Key: ""}, 0)
 	if err != nil && !errors.Is(err, queue.ErrJobDuplicated) {
 		return fmt.Errorf("failed to schedule pod role update: %w", err)
 	}
@@ -321,44 +287,34 @@ func (c *Controller) requestPodRoleEnsure() error {
 	return nil
 }
 
-func (c *Controller) onPodRoleEnsureRequested(_ interface{}) *reconcile.Result {
-	for n := range c.podRoles {
-		err := c.ensurePodRole(n)
+func (c *Controller) onTenantPodRoleEnsureRequested(_ interface{}) *reconcile.Result {
+	for n := range c.tenantPodRoles {
+		err := c.ensureTenantPodRole(n)
 		if err != nil {
 			c.Log.I("failed to ensure pod role", log.String("name", n), log.Error(err))
 			return &reconcile.Result{Err: err}
 		}
 	}
 
-	for n := range c.virtualPodRoles {
-		err := c.ensurePodRole(n)
-		if err != nil {
-			c.Log.I("failed to ensure virtual pod role", log.String("name", n), log.Error(err))
-			return &reconcile.Result{Err: err}
-		}
-	}
-
 	return nil
 }
 
-func (c *Controller) onPodRoleUpdated(oldObj, newObj interface{}) *reconcile.Result {
+func (c *Controller) onTenantPodRoleUpdated(oldObj, newObj interface{}) *reconcile.Result {
 	return nil
 }
 
-func (c *Controller) onPodRoleDeleting(obj interface{}) *reconcile.Result {
+func (c *Controller) onTenantPodRoleDeleting(obj interface{}) *reconcile.Result {
 	return nil
 }
 
-func (c *Controller) onPodRoleDeleted(obj interface{}) *reconcile.Result {
+func (c *Controller) onTenantPodRoleDeleted(obj interface{}) *reconcile.Result {
 	return nil
 }
 
-func (c *Controller) ensurePodRole(name string) error {
-	isVirtualPodRole := false
-	roleSpec, ok := c.podRoles[name]
+func (c *Controller) ensureTenantPodRole(name string) error {
+	roleSpec, ok := c.tenantPodRoles[name]
 	if !ok {
-		isVirtualPodRole = true
-		roleSpec, ok = c.virtualPodRoles[name]
+		return nil
 	}
 
 	if !ok {
@@ -369,12 +325,12 @@ func (c *Controller) ensurePodRole(name string) error {
 	var (
 		create bool
 		err    error
-		role   = c.newPodRoleForAllEdgeDevices(name, roleSpec, isVirtualPodRole)
+		role   = c.newTenantPodRoleForAllEdgeDevices(name, roleSpec)
 	)
 
 	oldRole, found := c.getTenantRoleObject(name)
 	if found {
-		if c.checkPodRoleUpToDate(oldRole) {
+		if c.checkTenantPodRoleUpToDate(oldRole) {
 			return nil
 		}
 
@@ -390,14 +346,14 @@ func (c *Controller) ensurePodRole(name string) error {
 		clone.Rules = role.Rules
 
 		c.Log.D("updating pod role", log.String("name", name))
-		_, err = c.roleClient.Update(c.Context(), clone, metav1.UpdateOptions{})
+		_, err = c.tenantPodRoleClient.Update(c.Context(), clone, metav1.UpdateOptions{})
 		if err != nil {
 			if kubeerrors.IsConflict(err) {
 				return err
 			}
 
 			c.Log.I("failed to update pod role, deleting", log.Error(err))
-			err = c.roleClient.Delete(c.Context(), name, *deleteAtOnce)
+			err = c.tenantPodRoleClient.Delete(c.Context(), name, *deleteAtOnce)
 			if err != nil && !kubeerrors.IsNotFound(err) {
 				return fmt.Errorf("failed to delete old cluster role: %w", err)
 			}
@@ -411,7 +367,7 @@ func (c *Controller) ensurePodRole(name string) error {
 
 	if create {
 		c.Log.I("creating new managed pod role")
-		_, err = c.roleClient.Create(c.Context(), role, metav1.CreateOptions{})
+		_, err = c.tenantPodRoleClient.Create(c.Context(), role, metav1.CreateOptions{})
 		if err != nil {
 			return err
 		}
@@ -421,10 +377,9 @@ func (c *Controller) ensurePodRole(name string) error {
 }
 
 // nolint:gocyclo
-func (c *Controller) newPodRoleForAllEdgeDevices(
+func (c *Controller) newTenantPodRoleForAllEdgeDevices(
 	roleName string,
 	roleSpec aranyaapi.PodRolePermissions,
-	forVirtualPods bool,
 ) *rbacv1.Role {
 	var (
 		policies []rbacv1.PolicyRule
@@ -443,45 +398,31 @@ func (c *Controller) newPodRoleForAllEdgeDevices(
 		defaultAllowPortForward = (roleSpec.AllowPortForward != nil) && *roleSpec.AllowPortForward
 	)
 
-	for _, obj := range c.podInformer.GetStore().List() {
+	for _, obj := range c.tenantPodInformer.GetStore().List() {
 		pod, ok := obj.(*corev1.Pod)
 		if !ok {
 			continue
 		}
 
-		edgeDevice, ok := c.getEdgeDeviceObject(pod.Name)
+		_, ok = c.getEdgeDeviceObject(pod.Name)
 		if ok {
-			// is virtual pod
-			if !forVirtualPods {
-				// not for this role
-				continue
-			}
-		} else {
-			// is normal pod
-			if forVirtualPods {
-				// not for this role
-				continue
-			}
-
-			edgeDevice, ok = c.getEdgeDeviceObject(pod.Spec.NodeName)
-			if !ok {
-				// not managed by us
-				continue
-			}
+			// ignore virtual pod
+			continue
 		}
 
-		var podRoles map[string]aranyaapi.PodRolePermissions
-		if forVirtualPods {
-			podRoles = edgeDevice.Spec.Pod.RBAC.VirtualPodRolePermissions
-		} else {
-			podRoles = edgeDevice.Spec.Pod.RBAC.RolePermissions
+		// is normal pod
+		edgeDevice, ok := c.getEdgeDeviceObject(pod.Spec.NodeName)
+		if !ok {
+			// not managed by us
+			continue
 		}
 
-		if podRoles == nil {
-			podRoles = make(map[string]aranyaapi.PodRolePermissions)
+		tenantPodRoles := edgeDevice.Spec.Pod.RBAC.RolePermissions
+		if tenantPodRoles == nil {
+			tenantPodRoles = make(map[string]aranyaapi.PodRolePermissions)
 		}
 
-		podPermissions, ok := podRoles[roleName]
+		podPermissions, ok := tenantPodRoles[roleName]
 		if !ok {
 			podsWithDefaultPodVerbs.Insert(pod.Name)
 			podsWithDefaultStatusVerbs.Insert(pod.Name)
@@ -622,4 +563,23 @@ func (c *Controller) newPodRoleForAllEdgeDevices(
 		},
 		Rules: policies,
 	}
+}
+
+func (c *Controller) getTenantRoleObject(name string) (*rbacv1.Role, bool) {
+	obj, found, err := c.tenantPodRoleInformer.GetIndexer().GetByKey(constant.TenantNS() + "/" + name)
+	if err != nil || !found {
+		role, err := c.tenantPodRoleClient.Get(c.Context(), name, metav1.GetOptions{})
+		if err != nil {
+			return nil, false
+		}
+
+		return role, true
+	}
+
+	role, ok := obj.(*rbacv1.Role)
+	if !ok {
+		return nil, false
+	}
+
+	return role, true
 }

@@ -39,8 +39,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/informers"
 	kubeclient "k8s.io/client-go/kubernetes"
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	listerscorev1 "k8s.io/client-go/listers/core/v1"
+	kubecache "k8s.io/client-go/tools/cache"
 	certapi "k8s.io/kubernetes/pkg/apis/certificates"
 	coreapi "k8s.io/kubernetes/pkg/apis/core"
 
@@ -52,6 +56,8 @@ import (
 type nodeCertController struct {
 	certSecretClient clientcorev1.SecretInterface
 	csrClient        *kubehelper.CertificateSigningRequestClient
+
+	certSecretInformer kubecache.SharedIndexInformer
 }
 
 func (c *nodeCertController) init(
@@ -59,9 +65,25 @@ func (c *nodeCertController) init(
 	config *conf.Config,
 	kubeClient kubeclient.Interface,
 	preferredResources []*metav1.APIResourceList,
+	thisPodNSInformerFactory informers.SharedInformerFactory,
 ) error {
 	c.certSecretClient = kubeClient.CoreV1().Secrets(envhelper.ThisPodNS())
 	c.csrClient = kubehelper.CreateCertificateSigningRequestClient(preferredResources, kubeClient)
+
+	c.certSecretInformer = thisPodNSInformerFactory.Core().V1().Secrets().Informer()
+
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs,
+		c.certSecretInformer.HasSynced,
+	)
+
+	ctrl.listActions = append(ctrl.listActions, func() error {
+		_, err := listerscorev1.NewSecretLister(c.certSecretInformer.GetIndexer()).List(labels.Everything())
+		if err != nil {
+			return fmt.Errorf("failed to list secrets in namespace %q: %w", envhelper.ThisPodNS(), err)
+		}
+
+		return nil
+	})
 
 	return nil
 }
@@ -505,7 +527,7 @@ func (c *Controller) createTLSConfigFromSecret(tlsSecretRef *corev1.LocalObjectR
 		return &tls.Config{}, nil
 	}
 
-	tlsSecret, ok := c.getTenantSecretObject(tlsSecretRef.Name)
+	tlsSecret, ok := c.getCertSecretObject(tlsSecretRef.Name)
 	if !ok {
 		return nil, fmt.Errorf("failed to get secret %q", tlsSecretRef.Name)
 	}
@@ -551,15 +573,16 @@ func (c *Controller) createTLSConfigFromSecret(tlsSecretRef *corev1.LocalObjectR
 	return tlsConfig, nil
 }
 
-func (c *Controller) getUserPassFromSecret(name string) (username, password []byte, err error) {
-	secret, ok := c.getTenantSecretObject(name)
+func (c *nodeCertController) getCertSecretObject(name string) (*corev1.Secret, bool) {
+	obj, found, err := c.certSecretInformer.GetIndexer().GetByKey(envhelper.ThisPodNS() + "/" + name)
+	if err != nil || !found {
+		return nil, false
+	}
+
+	secret, ok := obj.(*corev1.Secret)
 	if !ok {
-		return nil, nil, fmt.Errorf("failed to get secret %q", name)
+		return nil, false
 	}
 
-	if secret.Type != corev1.SecretTypeBasicAuth {
-		return nil, nil, fmt.Errorf("non basic auth secret found by userPassRef")
-	}
-
-	return secret.Data[corev1.BasicAuthUsernameKey], secret.Data[corev1.BasicAuthPasswordKey], nil
+	return secret, true
 }

@@ -25,110 +25,12 @@ import (
 	"arhat.dev/pkg/reconcile"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 )
-
-func (c *Controller) listTenantServiceObjects() []*corev1.Service {
-	var ret []*corev1.Service
-
-	for _, obj := range c.tenantSvcInformer.GetStore().List() {
-		svc, ok := obj.(*corev1.Service)
-		if !ok {
-			continue
-		}
-
-		ret = append(ret, svc)
-	}
-
-	return ret
-}
-
-func (c *Controller) getTenantSecretObject(name string) (*corev1.Secret, bool) {
-	obj, found, err := c.tenantSecretInformer.GetIndexer().GetByKey(constant.TenantNS() + "/" + name)
-	if err != nil || !found {
-		return nil, false
-	}
-
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		return nil, false
-	}
-
-	return secret, true
-}
-
-func (c *Controller) getTenantConfigMapObject(name string) (*corev1.ConfigMap, bool) {
-	obj, found, err := c.tenantCMInformer.GetIndexer().GetByKey(constant.TenantNS() + "/" + name)
-	if err != nil || !found {
-		return nil, false
-	}
-
-	cm, ok := obj.(*corev1.ConfigMap)
-	if !ok {
-		return nil, false
-	}
-
-	return cm, true
-}
-
-func (c *Controller) getTenantRoleObject(name string) (*rbacv1.Role, bool) {
-	obj, found, err := c.roleInformer.GetIndexer().GetByKey(constant.SysNS() + "/" + name)
-	if err != nil || !found {
-		role, err := c.roleClient.Get(c.Context(), name, metav1.GetOptions{})
-		if err != nil {
-			return nil, false
-		}
-
-		return role, true
-	}
-
-	role, ok := obj.(*rbacv1.Role)
-	if !ok {
-		return nil, false
-	}
-
-	return role, true
-}
-
-func (c *Controller) getClusterRoleObject(name string) (*rbacv1.ClusterRole, bool) {
-	obj, found, err := c.crInformer.GetIndexer().GetByKey(name)
-	if err != nil || !found {
-		cr, err := c.crClient.Get(c.Context(), name, metav1.GetOptions{})
-		if err != nil {
-			return nil, false
-		}
-
-		return cr, true
-	}
-
-	cr, ok := obj.(*rbacv1.ClusterRole)
-	if !ok {
-		return nil, false
-	}
-
-	return cr, true
-}
-
-func (c *Controller) getTenantPodsForNode(name string) []*corev1.Pod {
-	var result []*corev1.Pod
-	for _, obj := range c.podInformer.GetStore().List() {
-		po, ok := obj.(*corev1.Pod)
-		if !ok {
-			continue
-		}
-
-		if po.Spec.NodeName == name {
-			result = append(result, po)
-		}
-	}
-
-	return result
-}
 
 func (c *Controller) getNodeObject(name string) (*corev1.Node, bool) {
 	obj, found, err := c.nodeInformer.GetIndexer().GetByKey(name)
@@ -166,20 +68,6 @@ func (c *Controller) getNodeLeaseObject(name string) (*coordinationv1.Lease, boo
 	}
 
 	return lease, true
-}
-
-func (c *Controller) getTenantPodObject(name string) (*corev1.Pod, bool) {
-	obj, found, err := c.podInformer.GetIndexer().GetByKey(constant.SysNS() + "/" + name)
-	if err != nil || !found {
-		return nil, false
-	}
-
-	pod, ok := obj.(*corev1.Pod)
-	if !ok {
-		return nil, false
-	}
-
-	return pod, true
 }
 
 func (c *Controller) getEdgeDeviceObject(name string) (*aranyaapi.EdgeDevice, bool) {
