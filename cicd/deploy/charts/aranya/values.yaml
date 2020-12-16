@@ -53,8 +53,10 @@ rbac:
 serviceMonitor:
   create: false
 
-# choose namespace to watch, default to the deployment namespace
-watchNamespace: ""
+# choose namespace to deploy EdgeDevice, if not set will fallback to the release namespace
+sysNamespace: ""
+# choose namespace to manage tenant pods and virtual pods, if not set, will fallback to the sysNamespace
+tenantNamespace: ""
 
 config:
   aranya:
@@ -177,12 +179,16 @@ config:
         factor: 1.5
 
     node:
+      # delete node object and create a new one when node patch failed
       recreateIfPatchFailed: false
 
       cert:
+        # approve CertificateSigningRequest automatically in aranya when create kubelet
+        # server certificates
         autoApprove: true
 
       lease:
+        # use node lease
         enabled: false
         duration: 40s
         updateInterval: 10s
@@ -301,7 +307,7 @@ config:
         hostKey: /etc/ssh/ssh_host_ed25519_key
 
     network:
-      # enabled mesh network among nodes in the watch namespace
+      # enabled mesh network among EdgeDevices in the sys namespace
       #
       # this will instruct aranya to interact with abbot pods found by looking up
       # abbot service, and aranya will create a managed service to allow external
@@ -353,18 +359,17 @@ config:
         port: 30000
 
       abbotService:
-        # abbot service name in the watch namespace, if abbot is not enabled in this chart, you should
+        # abbot service name in the tenant namespace, if abbot is not enabled in this chart, you should
         # specify the service name manually
         #
         # NOTE: the `abbotService` is only the service name, NOT including namespace, and the service
-        #       MUST be in the `.Values.watchNamespace` if .Values.watchNamespace is specified
+        #       MUST be in the `.Values.tenantNamespace`
         # yamllint disable-line rule:quoted-strings
         name: '{{ include "abbot.fullname" $ }}'
         # port name of the port used the abbot service
         portName: abbot
 
-# if you have network enabled for virtualnode, an abbot is deployed to the
-# watch namespace
+# if you have network enabled for virtualnode, an abbot deployment is deployed to the tenant namespace
 abbot:
   # deploy abbot
   enabled: false

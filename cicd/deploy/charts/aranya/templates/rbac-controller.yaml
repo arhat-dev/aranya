@@ -1,0 +1,84 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "aranya.fullname" . }}:controller
+  namespace: {{ .Release.Namespace }}
+rules:
+{{- if ne (include "sysNamespace" .) .Release.Namespace }}
+# sysNamespace not in the same namespace
+{{- if (include "lock.configmaps" .) }}
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - get
+  - update
+  - patch
+{{- end }}
+- apiGroups: [""]
+  resources:
+  # to find aranya pod itself
+  - pods
+  verbs:
+  - get
+{{- end }}
+{{- if (include "lock.endpoints" .) }}
+- apiGroups: [""]
+  resources:
+  - endpoints
+  verbs:
+  - create
+  - get
+  - update
+  - patch
+{{- end }}
+{{- if (include "lock.leases" .) }}
+- apiGroups: ["coordination.k8s.io"]
+  resources:
+  - leases
+  verbs:
+  - create
+  - get
+  - update
+  - patch
+{{- end }}
+- apiGroups: [""]
+  resources:
+  # to manage connectivity/sftp service
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - create
+  - patch
+  - delete
+- apiGroups: [""]
+  resources:
+  # to manage kubernetes node certificates
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "aranya.fullname" . }}:controller
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "aranya.fullname" . }}:controller
+subjects:
+- kind: ServiceAccount
+  name: {{ include "aranya.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}

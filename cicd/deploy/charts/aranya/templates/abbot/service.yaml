@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ tpl (toYaml .Values.config.virtualnode.network.abbotService.name) $ }}
-  namespace: {{ .Values.watchNamespace | default .Release.Namespace }}
+  namespace: {{ include "tenantNamespace" . }}
   labels:
     {{- include "abbot.labels" . | nindent 4 }}
 spec:

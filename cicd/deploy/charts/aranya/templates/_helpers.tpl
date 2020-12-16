@@ -35,7 +35,7 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "aranya.labels" -}}
-helm.sh/chart: {{ include "aranya.chart" . }}
+helm.sh/chart: {{ include "aranya.chart" $ }}
 {{ include "aranya.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
@@ -47,7 +47,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 Selector labels
 */}}
 {{- define "aranya.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "aranya.name" . }}
+app.kubernetes.io/name: {{ include "aranya.name" $ }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
@@ -56,7 +56,7 @@ Create the name of the service account to use
 */}}
 {{- define "aranya.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "aranya.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "aranya.fullname" $) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -68,4 +68,36 @@ Create the name of the service account to use
 
 {{- define "aranya.pprofPort" -}}
 {{- index (split ":" (default ":0" .Values.config.aranya.pprof.listen)) "_1" -}}
+{{- end }}
+
+{{- define "sysNamespace" -}}
+{{- .Values.sysNamespace | default .Release.Namespace | toString -}}
+{{- end }}
+
+{{- define "tenantNamespace" -}}
+{{- .Values.tenantNamespace | default (include "sysNamespace" $) | toString -}}
+{{- end }}
+
+{{- define "lock.endpoints" -}}
+{{- if .Values.config.aranya.leaderElection.lock.type | toString | contains "endpoints" -}}
+"yes"
+{{- end -}}
+{{- end }}
+
+{{- define "lock.configmaps" -}}
+{{- if .Values.config.aranya.leaderElection.lock.type | toString | contains "configmaps" -}}
+"yes"
+{{- end -}}
+{{- end }}
+
+{{- define "lock.leases" -}}
+{{- if .Values.config.aranya.leaderElection.lock.type | toString | contains "leases" -}}
+"yes"
+{{- end -}}
+{{- end }}
+
+{{- define "managePodRoles" -}}
+{{- if or (ne (len .Values.config.aranya.managed.podRoles) 0) (ne (len .Values.config.aranya.managed.virtualPodRoles) 0) -}}
+"yes"
+{{- end -}}
 {{- end }}

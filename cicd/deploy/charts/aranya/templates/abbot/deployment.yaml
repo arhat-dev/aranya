@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "abbot.fullname" . }}
-  namespace: {{ .Values.watchNamespace | default .Release.Namespace }}
+  namespace: {{ include "tenantNamespace" . }}
   labels:
     {{- include "abbot.labels" . | nindent 4 }}
 spec:

@@ -11,6 +11,13 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 {{- end }}
+
+{{/*
+
+RBAC for aranya controller
+
+*/}}
+
 {{- if .Values.rbac.create }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -18,10 +25,10 @@ kind: ClusterRole
 metadata:
   name: {{ include "aranya.fullname" . }}:{{ .Release.Namespace }}
 rules:
-{{- if .Values.config.aranya.managed.nodeClusterRoles }}
+{{- if ne (len .Values.config.aranya.managed.nodeClusterRoles) 0 }}
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources:
-  # to manage cluster role auto generated for nodes belong to the watch namespace
+  # to manage cluster role permissions auto generated for nodes belong to the sys namespace
   - clusterroles
   verbs:
   - create
@@ -34,7 +41,7 @@ rules:
   resources:
   # to create virtual node and get node object aranya lives in
   - nodes
-  # to update virtual node status according to edge devices messages
+  # to update virtual node status according to edge device messages
   - nodes/status
   verbs: ["*"]
 - apiGroups: [""]
@@ -53,7 +60,6 @@ rules:
   verbs:
   - create
   - get
-  - delete # delete after been approved
 {{- if .Values.config.virtualnode.node.cert.autoApprove }}
 - apiGroups:
   - certificates.k8s.io
@@ -96,6 +102,7 @@ subjects:
   name: {{ include "aranya.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
 ---
+# bind discovery cluster role so we can create client using correct api versions
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -108,8 +115,9 @@ subjects:
 - kind: ServiceAccount
   name: {{ include "aranya.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
----
+
 {{- if .Values.config.virtualnode.node.lease.enabled }}
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -135,6 +143,6 @@ subjects:
 - kind: ServiceAccount
   name: {{ include "aranya.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
----
 {{- end }}
+
 {{- end }}

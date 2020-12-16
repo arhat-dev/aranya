@@ -73,9 +73,17 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: WATCH_NAMESPACE
-              {{- if .Values.watchNamespace }}
-              value: {{ .Values.watchNamespace }}
+            - name: SYS_NAMESPACE
+              {{- if ne .Release.Namespace (include "sysNamespace" .) }}
+              value: {{ include "sysNamespace" . }}
+              {{- else }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+              {{- end }}
+            - name: TENANT_NAMESPACE
+              {{- if ne .Release.Namespace (include "tenantNamespace" .) }}
+              value: {{ include "tenantNamespace" . }}
               {{- else }}
               valueFrom:
                 fieldRef:

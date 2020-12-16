@@ -998,7 +998,7 @@ rules:
   resources:
   # to create virtual node and get node object aranya lives in
   - nodes
-  # to update virtual node status according to edge devices messages
+  # to update virtual node status according to edge device messages
   - nodes/status
   verbs: ["*"]
 - apiGroups: [""]
@@ -1017,7 +1017,6 @@ rules:
   verbs:
   - create
   - get
-  - delete # delete after been approved
 - apiGroups:
   - certificates.k8s.io
   resources:
@@ -1048,6 +1047,7 @@ subjects:
   namespace: default
 ---
 # Source: aranya/templates/rbac.yaml
+# bind discovery cluster role so we can create client using correct api versions
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -1061,7 +1061,7 @@ subjects:
   name: aranya
   namespace: default
 ---
-# Source: aranya/templates/rbac-same-watch-namespace.yaml
+# Source: aranya/templates/rbac-controller.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -1092,7 +1092,7 @@ rules:
   - create
   - patch
 ---
-# Source: aranya/templates/rbac-same-watch-namespace.yaml
+# Source: aranya/templates/rbac-virtualnode.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -1105,10 +1105,6 @@ rules:
   - pods
   # to update pods status according to edge devices messages
   - pods/status
-  - pods/exec
-  - pods/log
-  - pods/attach
-  - pods/portforward
   verbs:
   - create # create virtual pod
   - get
@@ -1133,26 +1129,14 @@ rules:
   - patch
 - apiGroups: [""]
   resources:
-  # to manage kubernetes node certificates and fetch secrets required by pods for edge devices
+  # to fetch resouces required by pods for edge devices
   - secrets
-  verbs:
-  - get
-  - list
-  - watch
-  - update
-  - create
-  - patch
-- apiGroups: [""]
-  resources:
   - configmaps
   verbs:
   - get
   - list
   - watch
-  - create
-  - update
-  - patch
-# control EdgeDevices
+# reconcile EdgeDevices
 - apiGroups: ["aranya.arhat.dev"]
   resources:
   - edgedevices
@@ -1168,7 +1152,7 @@ rules:
   - update
   - patch
 ---
-# Source: aranya/templates/rbac-same-watch-namespace.yaml
+# Source: aranya/templates/rbac-controller.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -1183,7 +1167,7 @@ subjects:
   name: aranya
   namespace: default
 ---
-# Source: aranya/templates/rbac-same-watch-namespace.yaml
+# Source: aranya/templates/rbac-virtualnode.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -1276,7 +1260,11 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: WATCH_NAMESPACE
+            - name: SYS_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: TENANT_NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace

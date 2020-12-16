@@ -1,7 +1,6 @@
 image:
   repository: ghcr.io/arhat-dev/aranya
   pullPolicy: Always
-  # this tag will be updated before e2e test
   tag: amd64-latest
 
 serviceAccount:
@@ -13,8 +12,8 @@ rbac:
 serviceMonitor:
   create: true
 
-# choose namespace to watch, default to the deployment namespace
-watchNamespace: tenant
+sysNamespace: tenant
+tenantNamespace: ""
 
 config:
   aranya:
@@ -25,22 +24,15 @@ config:
 
     metrics:
       enabled: true
-      # one of [prometheus, otlp]
       format: prometheus
-      # metrics http server listen address and port (prometheus)
-      # set to :0 to listen on a dynamic port if you would like to deploy multiple
-      # instances on the same node, aranya will handle the service port
       endpoint: :0
-      # used by prometheus
       httpPath: /metrics
       tls:
         enabled: false
 
     tracing:
       enabled: false
-      # one of [otlp, zipkin, jaeger]
       format: jaeger
-      # used by jaeger, can be one of [agent, collector]
       endpointType: agent
       endpoint: ""
       sampleRate: 100
@@ -59,26 +51,18 @@ config:
         enabled: false
 
     leaderElection:
-      # default to the pod name
       #identity: ""
-
-      # lease options
       lease:
         expiration: 30s
         renewDeadline: 29s
         renewInterval: 5s
         expiryToleration: 10s
-
-      # lock options
       lock:
-        # default to aranya-leader-election
         #name:
         type: configmapsleases
-        # default to pod namespace
         #namespace:
 
     kubeClient:
-      # kubeconfig file path, will fallback to in cluster config if not specified
       #kubeconfig: ""
       rateLimit:
         enabled: false
@@ -150,18 +134,13 @@ config:
 
   virtualnode:
     kubeClient:
-      # kubeconfig file path, will fallback to in cluster config if not specified
       #kubeconfig: ""
       rateLimit:
         enabled: true
         qps: 5
         burst: 10
-    # connectivity defaults for EdgeDevice
     connectivity:
-      # this is the virtual node behavior definition for all EdgeDevices
-      # EdgeDevice's spec can override some of these fields
       timers:
-        # force close session in server after
         unarySessionTimeout: 10m
       backoff:
         initialDelay: 1s
@@ -180,14 +159,11 @@ config:
         updateInterval: 10s
 
       timers:
-        # should be consistent with your cluster config
         mirrorSyncInterval: 10s
-        # force sync node status from edge device after
         forceSyncInterval: 10m
 
       metrics:
       - os: linux
-        # enable node metrics collection by default for all devices connected
         enabled: true
         collect:
         - arp,bcache,bonding,conntrack,cpu,cpufreq,diskstats,edac,entropy,filefd
@@ -260,16 +236,10 @@ config:
         # - firefox.+
 
     pod:
-      # default allocatable pods
       allocatable: 10
       timers:
-        # force sync pod status from edge device after
         forceSyncInterval: 10m
-        # close stream when no traffic has been sent/recv for
-        # (kubelet default is 4h)
         streamIdleTimeout: 30m
-        # cancel stream creation after
-        # (kubelet default is 30s)
         streamCreationTimeout: 30s
       dns:
         servers:
@@ -293,14 +263,8 @@ config:
         hostKey: /etc/ssh/ssh_host_ed25519_key
 
     network:
-      # enabled mesh network among nodes in the watch namespace
-      #
-      # this will instruct aranya to interact with abbot pods found by looking up
-      # abbot service, and aranya will create a managed service to allow external
-      # traffic
       enabled: true
       mesh:
-        # set ip cidrs for mesh devices, if not set, will disable according ip network
         ipv4Blocks: []
         # - cidr: 100.64.0.0/10
         #   start: "100.64.0.1" # yamllint disable-line rule:quoted-strings
@@ -309,56 +273,23 @@ config:
       backend:
         driver: wireguard
         wireguard:
-          # name of the wireguard device, if not set, will use tun0 to allocate one
           name: ""
-          # mtu of the wireguard device, if not set, will use 1400
           mtu: 1400
-          # port of wireguard service, if not set (<= 0), will choose a random port
           listenPort: 0
-          # base64 encoded wireguard private key, if not set, will generate a random private key
-          #
-          # NOTE: if you deploy abbot with multiple replicas and this options is set
-          #       all of them will share the same private key
-          #       otherwise, if this option is not set, all of them have independent private keys
           privateKey: ""
 
-      # managed network service for external access
       networkService:
-        # name of the network service, if not set, will use `abbot-network` as name
         name: abbot-network
-        # service type of the managed service for network mesh
-        # - NodePort
-        # - Local  (e.g. used for calico BGP single route advertise)
-        # - LoadBalancer
-        #
-        # NOTE: ClusterIP in this case is not useful
         type: NodePort
-        # ip address accessible from external network environment, MUST be specified
-        # manually
-        #
-        # for LoadBalancer, it is the loadbalancer ip
-        # for NodePort, it is a node ip
-        # for Local, it is a lan ip
         addresses: []
         #- "mesh.example.com"
-        # for NodePort, it is a port in allowed port range
         port: 30000
 
       abbotService:
-        # abbot service name in the watch namespace, if abbot is not enabled in this chart, you should
-        # specify the service name manually
-        #
-        # NOTE: the `abbotService` is only the service name, NOT including namespace, and the service
-        #       MUST be in the `.Values.watchNamespace` if .Values.watchNamespace is specified
-        # yamllint disable-line rule:quoted-strings
         name: '{{ include "abbot.fullname" $ }}'
-        # port name of the port used the abbot service
         portName: abbot
 
-# if you have network enabled for virtualnode, an abbot is deployed to the
-# watch namespace
 abbot:
-  # deploy abbot
   enabled: true
   replicaCount: 3
   image:
@@ -369,27 +300,13 @@ abbot:
   podAnnotations: {}
   podSecurityContext: {}
   securityContext: {}
-    # capabilities:
-    #   drop:
-    #   - ALL
-    # readOnlyRootFilesystem: true
-    # runAsNonRoot: true
-    # runAsUser: 1000
-
   resources: {}
-    # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
-    # requests:
-    #   cpu: 100m
-    #   memory: 128Mi
 
   nodeSelector: {}
   tolerations: []
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
-      # spread pods to different nodes
       - weight: 100
         podAffinityTerm:
           topologyKey: kubernetes.io/hostname
