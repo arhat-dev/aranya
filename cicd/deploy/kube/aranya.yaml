@@ -1017,6 +1017,8 @@ rules:
   verbs:
   - create
   - get
+  # delete invalid/completed csr
+  - delete
 - apiGroups:
   - certificates.k8s.io
   resources:
