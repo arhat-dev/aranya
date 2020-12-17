@@ -22,17 +22,19 @@ if [ -z "${IMAGE_REPOS}" ]; then
     exit 1
 fi
 
-MANIFEST_TAG=""
-if [ -n "${GIT_TAG}" ]; then
-  # use tag
-  MANIFEST_TAG="${GIT_TAG}"
-elif [ "${GIT_BRANCH}" = "master" ]; then
-  # use default manifest tag for master branch
-  MANIFEST_TAG="${DEFAULT_IMAGE_MANIFEST_TAG:-latest}"
-elif [ -n "${GIT_BRANCH}" ]; then
-  MANIFEST_TAG="$(printf "%s" "${GIT_BRANCH}" | tr '/' '-')"
-elif [ -n "${GIT_COMMIT}" ]; then
-  MANIFEST_TAG="${GIT_COMMIT}"
+MANIFEST_TAG="${MANIFEST_TAG}"
+if [ -z "${MANIFEST_TAG}" ]; then
+  if [ -n "${GIT_TAG}" ]; then
+    # use tag
+    MANIFEST_TAG="${GIT_TAG}"
+  elif [ "${GIT_BRANCH}" = "master" ]; then
+    # use default manifest tag for master branch
+    MANIFEST_TAG="${DEFAULT_IMAGE_MANIFEST_TAG:-latest}"
+  elif [ -n "${GIT_BRANCH}" ]; then
+    MANIFEST_TAG="$(printf "%s" "${GIT_BRANCH}" | tr '/' '-')"
+  elif [ -n "${GIT_COMMIT}" ]; then
+    MANIFEST_TAG="${GIT_COMMIT}"
+  fi
 fi
 
 _get_docker_manifest_arch() {
@@ -51,6 +53,9 @@ _get_docker_manifest_arch() {
     ;;
   amd64 | mips64le | ppc64le | s390x)
     printf "%s" "${arch}"
+    ;;
+  test)
+    printf "%s" "$(go env GOHOSTARCH)"
     ;;
   esac
 }

@@ -13,6 +13,9 @@
 # limitations under the License.
 
 # build
+image.build.aranya.linux.test:
+	sh scripts/image/build.sh $@
+
 image.build.aranya.linux.x86:
 	sh scripts/image/build.sh $@
 
@@ -62,6 +65,9 @@ image.build.aranya.windows.all: \
 	image.build.aranya.windows.armv7
 
 # push
+image.push.aranya.linux.test:
+	sh scripts/image/push.sh $@
+
 image.push.aranya.linux.x86:
 	sh scripts/image/push.sh $@
 
