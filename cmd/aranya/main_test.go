@@ -17,10 +17,18 @@ limitations under the License.
 package main
 
 import (
+	"os"
 	"testing"
 )
 
 func TestMain(t *testing.T) {
 	_ = t
+	for i, arg := range os.Args {
+		if arg == "--" {
+			os.Args = append([]string{os.Args[0]}, os.Args[i+1:]...)
+			break
+		}
+	}
+
 	main()
 }
