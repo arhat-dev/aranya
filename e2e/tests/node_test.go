@@ -26,8 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-
-	"arhat.dev/aranya/pkg/constant"
 )
 
 const (
@@ -148,15 +146,20 @@ func TestNodeSpec(t *testing.T) {
 		{
 			name: edgeDeviceNameAlice,
 			labels: map[string]string{
+				"arhat.dev/arch":          "amd64",
+				"arhat.dev/role":          "Node",
+				"beta.kubernetes.io/arch": "amd64",
+				"beta.kubernetes.io/os":   "linux",
+				"kubernetes.io/arch":      "amd64",
+				"kubernetes.io/os":        "linux",
+
 				// override should not work on these labels
-				constant.LabelName:      edgeDeviceNameAlice,
-				constant.LabelRole:      constant.LabelRoleValueNode,
-				constant.LabelNamespace: edgeDeviceNamespaceDefault,
-				constant.LabelArch:      "amd64",
-				corev1.LabelHostname:    nodeDefault.Name,
+				"kubernetes.io/hostname": nodeDefault.Name,
+				"arhat.dev/name":         edgeDeviceNameAlice,
+				"arhat.dev/namespace":    edgeDeviceNamespaceDefault,
 
 				// can override kubernetes.io/role
-				constant.LabelKubeRole: testOverrideValue,
+				"kubernetes.io/role": testOverrideValue,
 
 				// custom labels
 				testLabel1: "1",
@@ -172,7 +175,7 @@ func TestNodeSpec(t *testing.T) {
 				Unschedulable: false,
 				Taints: []corev1.Taint{
 					{
-						Key:    constant.TaintKeyNamespace,
+						Key:    "arhat.dev/namespace",
 						Value:  edgeDeviceNamespaceDefault,
 						Effect: corev1.TaintEffectNoSchedule,
 					},
@@ -212,15 +215,20 @@ func TestNodeSpec(t *testing.T) {
 		{
 			name: edgeDeviceNameBob,
 			labels: map[string]string{
+				"arhat.dev/arch":          "amd64",
+				"arhat.dev/role":          "Node",
+				"beta.kubernetes.io/arch": "amd64",
+				"beta.kubernetes.io/os":   "linux",
+				"kubernetes.io/arch":      "amd64",
+				"kubernetes.io/os":        "linux",
+
 				// no override and should present
-				constant.LabelName:      edgeDeviceNameBob,
-				constant.LabelRole:      constant.LabelRoleValueNode,
-				constant.LabelNamespace: edgeDeviceNamespaceDefault,
-				constant.LabelArch:      "amd64",
-				corev1.LabelHostname:    nodeDefault.Name,
+				"kubernetes.io/hostname": nodeDefault.Name,
+				"arhat.dev/name":         edgeDeviceNameBob,
+				"arhat.dev/namespace":    edgeDeviceNamespaceDefault,
 
 				// can override kubernetes.io/role
-				constant.LabelKubeRole: testOverrideValue,
+				"kubernetes.io/role": testOverrideValue,
 
 				// custom labels
 				testLabel1: "1",
@@ -236,7 +244,7 @@ func TestNodeSpec(t *testing.T) {
 				Unschedulable: false,
 				Taints: []corev1.Taint{
 					{
-						Key:    constant.TaintKeyNamespace,
+						Key:    "arhat.dev/namespace",
 						Value:  edgeDeviceNamespaceDefault,
 						Effect: corev1.TaintEffectNoSchedule,
 					},
@@ -276,15 +284,20 @@ func TestNodeSpec(t *testing.T) {
 		{
 			name: edgeDeviceNameFoo,
 			labels: map[string]string{
+				"arhat.dev/arch":          "amd64",
+				"arhat.dev/role":          "Node",
+				"beta.kubernetes.io/arch": "amd64",
+				"beta.kubernetes.io/os":   "linux",
+				"kubernetes.io/arch":      "amd64",
+				"kubernetes.io/os":        "linux",
+
 				// no override and should present
-				constant.LabelName:      edgeDeviceNameFoo,
-				constant.LabelRole:      constant.LabelRoleValueNode,
-				constant.LabelNamespace: edgeDeviceNamespaceSys,
-				constant.LabelArch:      "amd64",
-				corev1.LabelHostname:    nodeFull.Name,
+				"kubernetes.io/hostname": nodeFull.Name,
+				"arhat.dev/name":         edgeDeviceNameFoo,
+				"arhat.dev/namespace":    edgeDeviceNamespaceSys,
 
 				// no override to kubernetes.io/role and the value should be the namespace
-				constant.LabelKubeRole: edgeDeviceNamespaceSys,
+				"kubernetes.io/role": edgeDeviceNamespaceSys,
 
 				// custom labels
 				testLabel1: "1",
@@ -301,7 +314,7 @@ func TestNodeSpec(t *testing.T) {
 				Unschedulable: false,
 				Taints: []corev1.Taint{
 					{
-						Key:    constant.TaintKeyNamespace,
+						Key:    "arhat.dev/namespace",
 						Value:  edgeDeviceNamespaceSys,
 						Effect: corev1.TaintEffectNoSchedule,
 					},
@@ -341,15 +354,20 @@ func TestNodeSpec(t *testing.T) {
 		{
 			name: edgeDeviceNameBar,
 			labels: map[string]string{
-				// no override and should present
-				constant.LabelName:      edgeDeviceNameBar,
-				constant.LabelRole:      constant.LabelRoleValueNode,
-				constant.LabelNamespace: edgeDeviceNamespaceSys,
-				constant.LabelArch:      "amd64",
-				corev1.LabelHostname:    nodeFull.Name,
+				"arhat.dev/arch":          "amd64",
+				"arhat.dev/role":          "Node",
+				"beta.kubernetes.io/arch": "amd64",
+				"beta.kubernetes.io/os":   "linux",
+				"kubernetes.io/arch":      "amd64",
+				"kubernetes.io/os":        "linux",
 
-				// no override to kubernetes.io/role and should be the namespace
-				constant.LabelKubeRole: edgeDeviceNamespaceSys,
+				// no override and should present
+				"kubernetes.io/hostname": nodeFull.Name,
+				"arhat.dev/name":         edgeDeviceNameBar,
+				"arhat.dev/namespace":    edgeDeviceNamespaceSys,
+
+				// no override to kubernetes.io/role and the value should be the namespace
+				"kubernetes.io/role": edgeDeviceNamespaceSys,
 
 				// no custom labels
 				// testLabel1: "1",
@@ -367,7 +385,7 @@ func TestNodeSpec(t *testing.T) {
 				Unschedulable: false,
 				Taints: []corev1.Taint{
 					{
-						Key:    constant.TaintKeyNamespace,
+						Key:    "arhat.dev/namespace",
 						Value:  edgeDeviceNamespaceSys,
 						Effect: corev1.TaintEffectNoSchedule,
 					},
