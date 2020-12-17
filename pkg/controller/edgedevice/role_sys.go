@@ -311,7 +311,7 @@ func (c *Controller) ensureVirtualPodRole(name string) error {
 	var (
 		create bool
 		err    error
-		role   = c.newVirtualPodRoleForAllEdgeDevices(name, roleSpec)
+		role   = c.newVirtualPodRole(name, roleSpec)
 	)
 
 	oldRole, found := c.getSysRoleObject(name)
@@ -363,7 +363,7 @@ func (c *Controller) ensureVirtualPodRole(name string) error {
 }
 
 // nolint:gocyclo
-func (c *Controller) newVirtualPodRoleForAllEdgeDevices(
+func (c *Controller) newVirtualPodRole(
 	roleName string,
 	roleSpec aranyaapi.PodRolePermissions,
 ) *rbacv1.Role {
