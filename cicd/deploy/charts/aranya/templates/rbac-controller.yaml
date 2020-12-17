@@ -19,10 +19,18 @@ rules:
 {{- end }}
 - apiGroups: [""]
   resources:
-  # to find aranya pod itself
+  # to record leader election events
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups: [""]
+  resources:
+  # to find and update aranya pod itself
   - pods
   verbs:
   - get
+  - update
 {{- end }}
 {{- if (include "lock.endpoints" .) }}
 - apiGroups: [""]
