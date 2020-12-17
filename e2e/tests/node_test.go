@@ -77,7 +77,7 @@ func TestNodeSpec(t *testing.T) {
 		return
 	}
 
-	aranyaFull, err := getAranyaLeaderPod(kubeClient, aranyaNamespaceDefault)
+	aranyaFull, err := getAranyaLeaderPod(kubeClient, aranyaNamespaceFull)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -433,6 +433,9 @@ func TestNodeSpec(t *testing.T) {
 
 			// check node metadata
 			assert.EqualValues(t, test.labels, node.Labels)
+
+			// remove kubernetes managed annotations
+			delete(node.Annotations, "node.alpha.kubernetes.io/ttl")
 			assert.EqualValues(t, test.annotations, node.Annotations)
 
 			// check node spec

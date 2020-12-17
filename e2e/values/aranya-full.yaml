@@ -1,3 +1,5 @@
+replicaCount: 3
+
 image:
   repository: localhost:5000/aranya
   pullPolicy: Always

@@ -1,3 +1,5 @@
+replicaCount: 3
+
 image:
   repository: localhost:5000/aranya
   pullPolicy: Always
@@ -9,3 +11,10 @@ config:
       lock:
         # to verify rbac setup in helm chart
         type: endpointsleases
+
+config:
+  aranya:
+    log:
+    - level: verbose
+      format: console
+      file: stderr

@@ -41,9 +41,9 @@ const (
 	edgeDeviceNamespaceDefault = aranyaNamespaceDefault
 	virtualPodNamespaceDefault = edgeDeviceNamespaceDefault
 
-	edgeDeviceNameFoo = _namePrefix + "foo"
-	edgeDeviceNameBar = _namePrefix + "bar"
-	// aranyaNamespaceFull    = "full"
+	edgeDeviceNameFoo      = _namePrefix + "foo"
+	edgeDeviceNameBar      = _namePrefix + "bar"
+	aranyaNamespaceFull    = "full"
 	edgeDeviceNamespaceSys = "sys"
 	virtualPodNamespaceSys = edgeDeviceNamespaceSys
 )
