@@ -16,6 +16,9 @@
 aranya:
 	sh scripts/build/build.sh $@
 
+aranya.linux.test:
+	sh scripts/build/build.sh $@
+
 # linux
 aranya.linux.amd64:
 	sh scripts/build/build.sh $@

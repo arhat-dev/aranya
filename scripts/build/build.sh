@@ -31,132 +31,42 @@ _build() {
 }
 
 aranya() {
-  _build "CGO_ENABLED=0 ${GOBUILD} -tags='netgo ${PREDEFINED_BUILD_TAGS}' ./cmd/aranya"
+  _build "CGO_ENABLED=${CGO_ENABLED} ${GOBUILD} -tags='netgo ${PREDEFINED_BUILD_TAGS}' ./cmd/aranya"
 }
 
 COMP=$(printf "%s" "$@" | cut -d. -f1)
-CMD=$(printf "%s" "$@" | tr '-' '_' | tr '.'  ' ')
+CMD=$(printf "%s" "$@" | tr '-' '_' | tr '.' ' ')
 
 # CMD format: {comp} {os} {arch}
 
 GOOS="$(printf "%s" "$@" | cut -d. -f2 || true)"
 ARCH="$(printf "%s" "$@" | cut -d. -f3 || true)"
 
-if [ -z "${GOOS}" ] || [ "${GOOS}" = "$(printf "%s" "${COMP}")" ]; then
-  # fallback to goos and goarch values
+GOBUILD="go build"
+CGO_ENABLED="0"
+case ${GOOS} in
+"${COMP}" | "")
   GOOS="$(go env GOHOSTOS)"
   ARCH="$(go env GOHOSTARCH)"
-fi
+  ;;
+esac
+
+case ${ARCH} in
+"test")
+  GOOS="$(go env GOHOSTOS)"
+  ARCH="$(go env GOHOSTARCH)"
+  CGO_ENABLED="1"
+  GOBUILD="go test -c -race -covermode=atomic -coverpkg='./pkg/...'"
+  ;;
+esac
 
 GOEXE=""
 PREDEFINED_BUILD_TAGS=""
 case "${GOOS}" in
-  darwin)
-    PREDEFINED_BUILD_TAGS=""
-  ;;
-  openbsd)
-    PREDEFINED_BUILD_TAGS=""
-  ;;
-  netbsd)
-    PREDEFINED_BUILD_TAGS=""
-  ;;
-  freebsd)
-    PREDEFINED_BUILD_TAGS=""
-  ;;
-  plan9)
-    PREDEFINED_BUILD_TAGS=""
-  ;;
-  aix)
-    PREDEFINED_BUILD_TAGS=""
-  ;;
-  solaris)
-    PREDEFINED_BUILD_TAGS=""
-  ;;
-  linux)
-    case "${ARCH}" in
-      mips64* | mipsle*)
-        PREDEFINED_BUILD_TAGS=""
-      ;;
-      riscv64)
-        PREDEFINED_BUILD_TAGS=""
-      ;;
-    esac
-  ;;
-  windows)
-    GOEXE=".exe"
-    case "${ARCH}" in
-      arm*)
-        PREDEFINED_BUILD_TAGS=""
-      ;;
-    esac
+windows)
+  GOEXE=".exe"
   ;;
 esac
-
-CC="gcc"
-# STRIP="strip"
-CXX="g++"
-CFLAGS="-I/usr/include/glib-2.0 -I/usr/include"
-LDFLAGS=""
-
-PM_DEB=$(command -v apt-get || printf "")
-PM_APK=$(command -v apk || printf "")
-
-if [ -n "${PM_DEB}" ]; then
-  TRIPLE="$(_get_debian_triple "${ARCH}")"
-  if [ -n "${TRIPLE}" ]; then
-    # PKG_CONFIG_PATH="/usr/lib/${TRIPLE}/pkgconfig"
-    CFLAGS="-I/usr/include/${TRIPLE} -I/usr/${TRIPLE}/include -I/usr/lib/${TRIPLE}/glib-2.0/include ${CFLAGS}"
-    LDFLAGS="-L/lib/${TRIPLE} -L/usr/lib/${TRIPLE}"
-  fi
-
-  # TODO: Add required deb packages
-  deb_packages=""
-
-  # TODO: inspect why install packages directly will not setup pkgconfig files
-  INSTALL="apt-get install -y ${deb_packages}"
-  debian_arch="$(_get_debian_arch "${ARCH}")"
-  if [ -n "${debian_arch}" ]; then
-    packages_with_arch=""
-    for pkg in ${deb_packages}; do
-      packages_with_arch="${pkg}:${debian_arch} ${packages_with_arch}"
-    done
-    # TODO: fix install command here
-    # INSTALL="${INSTALL} python3-distutils=3.7.3-1 python3-lib2to3=3.7.3-1 python3=3.7.3-1 && apt-get install -y ${packages_with_arch}"
-  fi
-fi
-
-if [ -n "${PM_APK}" ]; then
-  TRIPLE="$(_get_alpine_triple "${ARCH}")"
-  if [ -n "${TRIPLE}" ]; then
-    # PKG_CONFIG_PATH="/${TRIPLE}/usr/lib/pkgconfig"
-    CFLAGS="-I/${TRIPLE}/include -I/${TRIPLE}/usr/include -I/${TRIPLE}/usr/lib/glib-2.0/include ${CFLAGS}"
-    LDFLAGS="-L/${TRIPLE}/lib -L/${TRIPLE}/usr/lib"
-  fi
-
-  # TODO: Add required apk packages
-  apk_packages=""
-
-  INSTALL="apk add ${apk_packages}"
-  alpine_arch="$(_get_alpine_arch "${ARCH}")"
-  if [ -n "${alpine_arch}" ]; then
-    apk_dirs_for_triple=""
-
-    apk_dirs="/var/lib/apk /var/cache/apk /usr/share/apk /etc/apk"
-    for d in ${apk_dirs}; do
-      apk_dirs_for_triple="/${TRIPLE}${d} ${apk_dirs_for_triple}"
-    done
-
-    INSTALL="mkdir -p ${apk_dirs_for_triple} && apk add --root /${TRIPLE} --arch ${alpine_arch} ${apk_packages}"
-  fi
-fi
-
-if [ -n "${TRIPLE}" ]; then
-  CC="${TRIPLE}-gcc"
-  CXX="${TRIPLE}-g++"
-  # STRIP="${TRIPLE}-strip"
-fi
-
-CGO_FLAGS="CC=${CC} CXX=${CXX} CC_FOR_TARGET=${CC} CXX_FOR_TARGET=${CXX} CGO_CFLAGS_ALLOW='-W' CGO_CFLAGS='${CFLAGS}' CGO_LDFLAGS='${LDFLAGS}'"
 
 GO_LDFLAGS="-s -w \
   -X arhat.dev/aranya/pkg/version.branch=${GIT_BRANCH} \
@@ -179,8 +89,7 @@ fi
 
 GOBUILD="GO111MODULE=on GOOS=${GOOS} GOARCH=$(_get_goarch "${ARCH}") \
   GOARM=${GOARM} GOMIPS=${GOMIPS} GOWASM=satconv,signext \
-  ${CGO_FLAGS} \
-  go build -trimpath -buildmode=${BUILD_MODE:-default} \
+  ${GOBUILD} -trimpath -buildmode=${BUILD_MODE:-default} \
   -mod=vendor -ldflags='${GO_LDFLAGS}' -o build/$*${GOEXE}"
 
 $CMD
