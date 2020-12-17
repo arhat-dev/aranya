@@ -88,10 +88,6 @@ jobs:
       run: |
         make test.pkg
 
-    - name: Test Commands
-      run: |
-        make test.cmd
-
     - name: Report Test Coverage
       uses: codecov/codecov-action@v1
 

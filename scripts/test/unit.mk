@@ -14,6 +14,3 @@
 
 test.pkg:
 	sh scripts/test/unit.sh pkg
-
-test.cmd:
-	sh scripts/test/unit.sh cmd
