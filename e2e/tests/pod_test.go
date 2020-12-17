@@ -39,8 +39,8 @@ func TestPodCreated(t *testing.T) {
 				edgeDeviceNameAlice,
 				edgeDeviceNameBob,
 			},
-			// 1 aranya pod + 2 virtual pods
-			podCount: 3,
+			// 3 aranya pods + 2 virtual pods
+			podCount: 5,
 		},
 		{
 			ns: virtualPodNamespaceSys,
