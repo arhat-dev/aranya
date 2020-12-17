@@ -95,35 +95,10 @@ jobs:
     - name: Report Test Coverage
       uses: codecov/codecov-action@v1
 
-  build-test-images:
-    if: contains(github.head_ref, 'deps/') == false
-    needs:
-    - stylecheck
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Fetch history
-      run: git fetch --prune --unshallow
-
-    - name: Build Images For Testing
-      env:
-        DOCKER_CLI_EXPERIMENTAL: enabled
-        DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
-        GITHUB_DOCKER_USERNAME: ${{ github.actor }}
-        GITHUB_DOCKER_PASSWORD: ${{ secrets.GH_PACKAGES_TOKEN }}
-        IMAGE_REPOS: docker.io/arhatdev,ghcr.io/arhat-dev
-      run: |
-        docker login docker.io -u="${DOCKERHUB_USERNAME}" -p="${DOCKERHUB_PASSWORD}"
-        docker login ghcr.io/arhat-dev -u="${GITHUB_DOCKER_USERNAME}" -p="${GITHUB_DOCKER_PASSWORD}"
-
-        make image.build.aranya.linux.amd64
-        make image.push.aranya.linux.amd64
-
   e2e-tests:
     if: contains(github.head_ref, 'deps/') == false
     needs:
-    - build-test-images
+    - stylecheck
     # TODO: enable this for windows e2e tests once supported
     strategy:
       fail-fast: false
@@ -152,7 +127,8 @@ jobs:
       env:
         KIND_VERSION: v0.9.0
       run: |
-        curl -Lo "${HOME}/bin/kind" https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64
+        curl -Lo "${HOME}/bin/kind" \
+          https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64
         chmod +x "${HOME}/bin/kind"
 
     - name: Install kubectl
@@ -171,16 +147,29 @@ jobs:
           https://github.com/arhat-dev/helm-stack/releases/download/v0.1.2/helm-stack.linux.amd64
         chmod +x "${HOME}/bin/helm-stack"
 
+    - name: Setup Local Image Registry
+      run: |
+        make e2e.image.registry
+
+    - name: Build Test Image
+      env:
+        DOCKER_CLI_EXPERIMENTAL: enabled
+        IMAGE_REPOS: localhost:5000
+        MANIFEST_TAG: e2e
+      run: |
+        make image.build.aranya.linux.test
+        make image.push.aranya.linux.test
+
     - name: E2E Test
       run: |
         make e2e.${{ matrix.kube }}
 
-    - name: Upload Log Output
+    - name: Upload Results
       if: always()
       uses: actions/upload-artifact@v2
       with:
-        name: e2e-logs-${{ matrix.kube }}
-        path: build/e2e/results/${{ matrix.kube }}
+        name: e2e-output-${{ matrix.kube }}
+        path: build
 
     - name: Report e2e Coverage
       uses: codecov/codecov-action@v1
