@@ -20,8 +20,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"arhat.dev/pkg/kubehelper"
+	"github.com/blang/semver"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -48,7 +50,18 @@ const (
 	virtualPodNamespaceSys = edgeDeviceNamespaceSys
 )
 
-func createClient() kubernetes.Interface {
+// nolint:deadcode,varcheck,unused
+var (
+	v1_14 = semver.MustParse("1.14.0")
+	v1_15 = semver.MustParse("1.15.0")
+	v1_16 = semver.MustParse("1.16.0")
+	v1_17 = semver.MustParse("1.17.0")
+	v1_18 = semver.MustParse("1.18.0")
+	v1_19 = semver.MustParse("1.19.0")
+	v1_20 = semver.MustParse("1.20.0")
+)
+
+func createClient() (kubernetes.Interface, semver.Version) {
 	kubeConfigFile := os.Getenv(EnvKeyKubeConfig)
 	if len(kubeConfigFile) == 0 {
 		panic(fmt.Sprintf("no e2e kubeconfig provided, please set env %q", EnvKeyKubeConfig))
@@ -68,7 +81,12 @@ func createClient() kubernetes.Interface {
 		panic(err)
 	}
 
-	return kc
+	ver, err := kc.Discovery().ServerVersion()
+	if err != nil {
+		panic(err)
+	}
+
+	return kc, semver.MustParse(strings.TrimLeft(ver.GitVersion, "v"))
 }
 
 func getAranyaLeaderPod(kubeClient kubernetes.Interface, namespace string) (*corev1.Pod, error) {

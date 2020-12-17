@@ -26,7 +26,7 @@ import (
 )
 
 func TestPodCreated(t *testing.T) {
-	kubeClient := createClient()
+	kubeClient, _ := createClient()
 
 	tests := []struct {
 		ns           string

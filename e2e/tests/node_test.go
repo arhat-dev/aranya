@@ -41,7 +41,7 @@ const (
 )
 
 func TestNodeCreated(t *testing.T) {
-	kubeClient := createClient()
+	kubeClient, _ := createClient()
 
 	expectedNodes := sets.NewString(
 		edgeDeviceNameAlice,
@@ -70,7 +70,7 @@ func TestNodeCreated(t *testing.T) {
 }
 
 func TestNodeSpec(t *testing.T) {
-	kubeClient := createClient()
+	kubeClient, ver := createClient()
 
 	aranyaDefault, err := getAranyaLeaderPod(kubeClient, aranyaNamespaceDefault)
 	if !assert.NoError(t, err) {
@@ -441,7 +441,14 @@ func TestNodeSpec(t *testing.T) {
 			// check node spec
 			{
 				assert.NotEmpty(t, node.Spec.PodCIDR)
-				assert.NotEmpty(t, node.Spec.PodCIDRs)
+
+				if ver.LT(v1_16) {
+					// there is no podCIDRs before Kubernetes v1.16
+					assert.Empty(t, node.Spec.PodCIDRs)
+				} else {
+					assert.NotEmpty(t, node.Spec.PodCIDRs)
+				}
+
 				node.Spec.PodCIDR = ""
 				node.Spec.PodCIDRs = []string{}
 				node.Spec.ConfigSource = nil
