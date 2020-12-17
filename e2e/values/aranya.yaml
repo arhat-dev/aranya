@@ -1,8 +1,7 @@
 image:
-  repository: ghcr.io/arhat-dev/aranya
+  repository: localhost:5000/aranya
   pullPolicy: Always
-  # this tag will be updated before e2e test
-  tag: amd64-latest
+  tag: test-e2e
 
 config:
   aranya:

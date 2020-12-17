@@ -32,3 +32,6 @@ e2e.v1-15:
 
 e2e.v1-14:
 	sh e2e/suite.sh v1-14
+
+e2e.image.registry:
+	docker run -d --name "kind-registry" --restart=always -p "5000:5000" registry:2

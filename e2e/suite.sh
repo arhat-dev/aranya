@@ -26,6 +26,22 @@ metadata:
   name: e2e-alice
   namespace: default
 spec:
+  node:
+    # both valid and invalid override
+    labels:
+      e2e.aranya.arhat.dev/label-1: "1"
+      e2e.aranya.arhat.dev/label-2: "2"
+
+      kubernetes.io/role: valid-override
+
+      kubernetes.io/arch: invalid-override
+      arhat.dev/role: invalid-override
+      arhat.dev/arch: invalid-override
+      arhat.dev/namespace: invalid-override
+      arhat.dev/name: invalid-override
+    annotations:
+      e2e.aranya.arhat.dev/annotation-1: "1"
+
   connectivity:
     method: mqtt
     mqtt:
@@ -40,6 +56,15 @@ metadata:
   name: e2e-bob
   namespace: default
 spec:
+  node:
+    # no invalid override
+    labels:
+      e2e.aranya.arhat.dev/label-1: "1"
+      e2e.aranya.arhat.dev/label-2: "2"
+      kubernetes.io/role: valid-override
+    annotations:
+      e2e.aranya.arhat.dev/annotation-2: "2"
+
   connectivity:
     method: mqtt
     mqtt:
@@ -54,6 +79,15 @@ metadata:
   name: e2e-foo
   namespace: sys
 spec:
+  node:
+    # no override
+    labels:
+      e2e.aranya.arhat.dev/label-1: "1"
+      e2e.aranya.arhat.dev/label-2: "2"
+    annotations:
+      e2e.aranya.arhat.dev/annotation-1: "1"
+      e2e.aranya.arhat.dev/annotation-2: "2"
+
   connectivity:
     method: mqtt
     mqtt:
@@ -113,20 +147,20 @@ log_and_cleanup() {
   result_dir="build/e2e/results/${kube_version}"
   mkdir -p "${result_dir}/cluster-dump"
 
-  log_pods default "app.kubernetes.io/name=aranya" "${result_dir}/aranya-default.log"
-  log_pods full "app.kubernetes.io/name=aranya" "${result_dir}/aranya-full.log"
-  log_pods tenant "app.kubernetes.io/name=abbot" "${result_dir}/abbot.log"
-  log_pods remote "app.kubernetes.io/name=arhat" "${result_dir}/arhat.log"
+  log_pods default 'app.kubernetes.io/name=aranya' "${result_dir}/aranya-default.log"
+  log_pods full 'app.kubernetes.io/name=aranya' "${result_dir}/aranya-full.log"
+  log_pods tenant 'app.kubernetes.io/name=abbot' "${result_dir}/abbot.log"
+  log_pods remote 'app.kubernetes.io/name=arhat' "${result_dir}/arhat.log"
 
-  kubectl cluster-info dump --all-namespaces --output-directory="${result_dir}/cluster-dump"
+  kubectl cluster-info dump --all-namespaces --output-directory="${result_dir}/cluster-dump" || true
 
   if [ "${ARANYA_E2E_CLEAN}" = "1" ]; then
-    kind delete cluster --name "${kube_version}"
+    kind delete cluster --name "${kube_version}" || true
   fi
 }
 
 start_e2e_tests() {
-  kube_version=${1}
+  kube_version="${1}"
 
   rm -rf build/e2e/charts || true
   mkdir -p build/e2e/charts/aranya
@@ -154,6 +188,9 @@ start_e2e_tests() {
     --config "e2e/kind/${kube_version}.yaml" \
     --retain --kubeconfig "${KUBECONFIG}"
 
+  docker network disconnect "kind" "kind-registry" || true
+  docker network connect "kind" "kind-registry"
+
   # ensure tenant namespace
   kubectl create namespace sys
   kubectl create namespace tenant
@@ -165,16 +202,19 @@ start_e2e_tests() {
   done
 
   echo "waiting for coredns"
-  wait_for_pods kube-system "k8s-app=kube-dns"
+  wait_for_pods kube-system 'k8s-app=kube-dns'
 
   echo "waiting for aranya running in namespace 'default'"
-  wait_for_pods default "app.kubernetes.io/name=aranya"
+  wait_for_pods default 'app.kubernetes.io/name=aranya'
 
   echo "waiting for aranya running in namespace 'full'"
-  wait_for_pods full "app.kubernetes.io/name=aranya"
+  wait_for_pods full 'app.kubernetes.io/name=aranya'
 
   echo "waiting for abbot running in namespace 'tenant'"
-  wait_for_pods tenant "app.kubernetes.io/name=abbot"
+  wait_for_pods tenant 'app.kubernetes.io/name=abbot'
+
+  echo "waiting for arhat running in namespace 'remote'"
+  wait_for_pods remote 'app.kubernetes.io/name=arhat'
 
   # create edge devices after aranya is running
   while ! create_edge_devices "${kube_version}"; do
@@ -190,9 +230,7 @@ start_e2e_tests() {
     sleep 10
   done
 
-  go test -mod=vendor -v -failfast -race \
-    -covermode=atomic -coverprofile="coverage.e2e.${kube_version}.txt" -coverpkg=./... \
-    ./e2e/tests/...
+  go test -mod=vendor -v ./e2e/tests/...
 }
 
 kube_version="$1"
