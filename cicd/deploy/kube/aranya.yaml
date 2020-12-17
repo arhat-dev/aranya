@@ -1248,8 +1248,7 @@ spec:
             {}
           image: "ghcr.io/arhat-dev/aranya:latest"
           imagePullPolicy: Always
-          command:
-            - /aranya
+          args:
             - -c
             - /etc/aranya/config.yaml
           env:
