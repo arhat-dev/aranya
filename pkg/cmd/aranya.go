@@ -29,6 +29,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"arhat.dev/pkg/encodehelper"
 	"arhat.dev/pkg/envhelper"
@@ -272,6 +273,7 @@ func run(appCtx context.Context, config *conf.Config) error {
 		// on ejected
 		func() {
 			logger.E("lost leader-election")
+			// TODO: redo onElected
 			os.Exit(1)
 		},
 		// on new leader
@@ -329,7 +331,10 @@ func onElected(
 			break
 		}
 
-		logger.I("failed to add master leadership label to this pod", log.Error(err))
+		logger.I("failed to add leadership label to this pod", log.Error(err))
+
+		// simple backoff
+		time.Sleep(time.Second)
 
 		if !kubeerrors.IsConflict(err) {
 			continue
@@ -338,8 +343,11 @@ func onElected(
 		// conflict, get latest pod object to update
 		thisPod, err = podClient.Get(appCtx, envhelper.ThisPodName(), metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("failed to get this pod itself for conflicted update: %w", err)
+			return fmt.Errorf("failed to get this pod itself to resolve conflict update: %w", err)
 		}
+	}
+	if err != nil {
+		return fmt.Errorf("failed to add leadership label after 5 attempts: %w", err)
 	}
 
 	var (
