@@ -61,6 +61,7 @@ spec:
     labels:
       e2e.aranya.arhat.dev/label-1: "1"
       e2e.aranya.arhat.dev/label-2: "2"
+
       kubernetes.io/role: valid-override
     annotations:
       e2e.aranya.arhat.dev/annotation-2: "2"

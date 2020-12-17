@@ -17,11 +17,17 @@ limitations under the License.
 package tests
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"arhat.dev/pkg/kubehelper"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
+
+	"arhat.dev/aranya/pkg/constant"
 )
 
 const EnvKeyKubeConfig = "ARANYA_E2E_KUBECONFIG"
@@ -31,11 +37,13 @@ const (
 
 	edgeDeviceNameAlice        = _namePrefix + "alice"
 	edgeDeviceNameBob          = _namePrefix + "bob"
-	edgeDeviceNamespaceDefault = "default"
+	aranyaNamespaceDefault     = "default"
+	edgeDeviceNamespaceDefault = aranyaNamespaceDefault
 	virtualPodNamespaceDefault = edgeDeviceNamespaceDefault
 
-	edgeDeviceNameFoo      = _namePrefix + "foo"
-	edgeDeviceNameBar      = _namePrefix + "bar"
+	edgeDeviceNameFoo = _namePrefix + "foo"
+	edgeDeviceNameBar = _namePrefix + "bar"
+	// aranyaNamespaceFull    = "full"
 	edgeDeviceNamespaceSys = "sys"
 	virtualPodNamespaceSys = edgeDeviceNamespaceSys
 )
@@ -61,4 +69,21 @@ func createClient() kubernetes.Interface {
 	}
 
 	return kc
+}
+
+func getAranyaLeaderPod(kubeClient kubernetes.Interface, namespace string) (*corev1.Pod, error) {
+	pods, err := kubeClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: labels.FormatLabels(map[string]string{
+			constant.LabelControllerLeadership: constant.LabelControllerLeadershipLeader,
+		}),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(pods.Items) != 1 {
+		return nil, fmt.Errorf("unexpected %d leader pods", len(pods.Items))
+	}
+
+	return &pods.Items[0], nil
 }
