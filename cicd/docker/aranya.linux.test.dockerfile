@@ -1,18 +1,19 @@
-FROM ghcr.io/arhat-dev/builder-go:alpine as builder
-FROM ghcr.io/arhat-dev/go:alpine
+# MUST use debian image for race test and GNU tar for `kubectl cp`
+FROM ghcr.io/arhat-dev/builder-go:debian as builder
+FROM ghcr.io/arhat-dev/go:debian
 
 COPY e2e/testdata/ssh-host-key.pem /etc/ssh/ssh_host_ed25519_key
 COPY e2e/testdata/ssh-host-key.pem.pub /etc/ssh/ssh_host_ed25519_key.pub
 
-RUN mkdir -p /output
+RUN mkdir -p /profile
 
 ENTRYPOINT [ \
     "/aranya", \
-    "-test.blockprofile=/output/blockprofile.txt", \
-    "-test.cpuprofile=/output/cpuprofile.txt", \
-    "-test.memprofile=/output/memprofile.txt", \
-    "-test.mutexprofile=/output/mutexprofile.txt", \
-    "-test.coverprofile=/output/coverage.txt", \
-    "-test.outputdir=/output", \
+    "-test.blockprofile=/profile/blockprofile.out", \
+    "-test.cpuprofile=/profile/cpuprofile.out", \
+    "-test.memprofile=/profile/memprofile.out", \
+    "-test.mutexprofile=/profile/mutexprofile.out", \
+    "-test.coverprofile=/profile/coverage.txt", \
+    "-test.outputdir=/profile", \
     "--" \
 ]

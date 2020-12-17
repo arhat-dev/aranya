@@ -133,13 +133,22 @@ wait_for_pods() {
   done
 }
 
-log_pods() {
+log_pods_prev() {
   namespace="${1}"
   label_selector="${2}"
   log_file="${3}"
 
-  kubectl --namespace "${namespace}" logs --prefix --tail=-1 \
-    --selector "${label_selector}" > "${log_file}" 2>&1 || true
+  kubectl --namespace "${namespace}" logs \
+    --previous --prefix --tail=-1 --selector "${label_selector}" \
+    > "${log_file}" 2>&1 || true
+}
+
+get_aranya_leader_pod_name() {
+  namespace="${1}"
+
+  kubectl --namespace "${namespace}" get pods \
+    --selector 'controller.arhat.dev/leadership=leader' \
+    -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true
 }
 
 log_and_cleanup() {
@@ -148,12 +157,16 @@ log_and_cleanup() {
   result_dir="build/e2e/results/${kube_version}"
   mkdir -p "${result_dir}/cluster-dump"
 
-  log_pods default 'app.kubernetes.io/name=aranya' "${result_dir}/aranya-default.log"
-  log_pods full 'app.kubernetes.io/name=aranya' "${result_dir}/aranya-full.log"
-  log_pods tenant 'app.kubernetes.io/name=abbot' "${result_dir}/abbot.log"
-  log_pods remote 'app.kubernetes.io/name=arhat' "${result_dir}/arhat.log"
+  log_pods_prev default 'app.kubernetes.io/name=aranya' "${result_dir}/aranya-default.prev.log"
+  log_pods_prev full 'app.kubernetes.io/name=aranya' "${result_dir}/aranya-full.prev.log"
+  log_pods_prev tenant 'app.kubernetes.io/name=abbot' "${result_dir}/abbot-tenant.prev.log"
+  log_pods_prev remote 'app.kubernetes.io/name=arhat' "${result_dir}/arhat-remote.prev.log"
 
   kubectl cluster-info dump --all-namespaces --output-directory="${result_dir}/cluster-dump" || true
+
+  # copy aranya test profiles
+  kubectl cp "default/$(get_aranya_leader_pod_name default):/profile" "${result_dir}/profile" || true
+  kubectl cp "default/$(get_aranya_leader_pod_name full):/profile" "${result_dir}/profile" || true
 
   if [ "${ARANYA_E2E_CLEAN}" = "1" ]; then
     kind delete cluster --name "${kube_version}" || true
