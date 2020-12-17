@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 
-	"arhat.dev/pkg/envhelper"
 	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
@@ -556,7 +555,7 @@ func (c *Controller) newTenantPodRoleForAllEdgeDevices(
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleName,
-			Namespace: envhelper.ThisPodNS(),
+			Namespace: constant.TenantNS(),
 			Labels: map[string]string{
 				constant.LabelRole: constant.LabelRoleValuePodRole,
 			},
