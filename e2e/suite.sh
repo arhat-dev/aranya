@@ -164,15 +164,16 @@ log_and_cleanup() {
 
   kubectl cluster-info dump --all-namespaces --output-directory="${result_dir}/cluster-dump" || true
 
-  namespaces="default full"
-  for ns in ${namespaces}; do
-    leader_pod=$(get_aranya_leader_pod_name default)
+  aranya_namespaces="default full"
+  for ns in ${aranya_namespaces}; do
+    leader_pod="$(get_aranya_leader_pod_name "${ns}")"
     # kill aranya process to get coverage profile
-    aranya_pid=$(kubectl exec --namespace "${ns}" "${leader_pod}" -- pidof aranya)
-    kubectl exec --namespace "${ns}" "${leader_pod}" -- bash -c "kill -s SIGINT ${aranya_pid}"
+    aranya_pid="$(kubectl exec --namespace "${ns}" "${leader_pod}" -- pidof aranya)"
 
+    sleep 10
+    kubectl exec --namespace "${ns}" "${leader_pod}" -- bash -c "kill -s SIGINT ${aranya_pid}"
     # copy aranya test profiles
-    kubectl cp "${ns}/${leader_pod}:/profile" "${result_dir}/profile" || true
+    kubectl cp "${ns}/${leader_pod}:/profile" "${result_dir}/profile-aranya-${ns}" || true
   done
 
   if [ "${ARANYA_E2E_CLEAN}" = "1" ]; then
