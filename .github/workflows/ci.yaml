@@ -177,18 +177,7 @@ jobs:
     - e2e-tests
     - unit-tests
     strategy:
-      fail-fast: false
-      matrix:
-        arch:
-        - amd64
-        - arm64
-        - armv5
-        - armv6
-        - armv7
-        - mips64le
-        - ppc64le
-        - s390x
-        - x86
+      fail-fast: true
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -207,8 +196,8 @@ jobs:
         docker login docker.io -u="${DOCKERHUB_USERNAME}" -p="${DOCKERHUB_PASSWORD}"
         docker login ghcr.io/arhat-dev -u="${GITHUB_DOCKER_USERNAME}" -p="${GITHUB_DOCKER_PASSWORD}"
 
-        make image.build.aranya.linux.${{ matrix.arch }}
-        make image.push.aranya.linux.${{ matrix.arch }}
+        make image.build.linux.all
+        make image.push.linux.all
 
   # TODO: Add support for windows image build in arhat-dev/dockerfile
   # build-windows-images:
