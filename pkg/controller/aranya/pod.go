@@ -94,14 +94,11 @@ func (c *podController) start() error {
 }
 
 func (c *podController) reconcile(wg *sync.WaitGroup, stop <-chan struct{}) {
-	err := c.podRec.Schedule(queue.Job{
+	_ = c.podRec.Schedule(queue.Job{
 		Action: queue.ActionUpdate,
 		// we are sure this pod is cached
 		Key: envhelper.ThisPodNS() + "/" + envhelper.ThisPodName(),
 	}, 0)
-	if err != nil {
-		panic(err)
-	}
 
 	wg.Add(1)
 	go func() {
