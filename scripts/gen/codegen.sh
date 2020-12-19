@@ -65,7 +65,7 @@ _do_gen_clients() {
 
   mkdir -p build
 
-  sh "${GOPATH}/pkg/mod/k8s.io/code-generator@v0.19.6/generate-groups.sh" client,lister,informer \
+  bash "${GOPATH}/pkg/mod/k8s.io/code-generator@v0.19.6/generate-groups.sh" client,lister,informer \
     "arhat.dev/aranya/pkg/apis/${group_name}/generated" \
     arhat.dev/aranya/pkg/apis "${group_name}:${group_version}" \
     --go-header-file "$(pwd)/scripts/gen/boilerplate.go.txt" \
