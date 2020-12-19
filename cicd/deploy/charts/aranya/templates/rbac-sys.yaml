@@ -1,0 +1,79 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "aranya.fullname" . }}:sys
+  namespace: {{ include "sysNamespace" . }}
+rules:
+# reconcile EdgeDevices
+- apiGroups: ["aranya.arhat.dev"]
+  resources:
+  - edgedevices
+  verbs:
+  - list
+  - get
+  - watch
+  - delete # finalize edgedevice resources
+- apiGroups: ["aranya.arhat.dev"]
+  resources:
+  - edgedevices/status
+  verbs:
+  - update
+  - patch
+- apiGroups: [""]
+  resources:
+  # to fetch resouces referenced in edge device spec
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+# manage virtual pods
+- apiGroups: [""]
+  resources:
+  - pods
+  - pods/status
+  - pods/ephemeralcontainers
+{{- if (include "manageVirtualPodRoles" .) }}
+  # required verbs to manage pod roles
+  - pods/exec
+  - pods/log
+  - pods/attach
+  - pods/portforward
+{{- end }}
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+{{- if (include "manageVirtualPodRoles" .) }}
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources:
+  # to manage virtual pod roles
+  - roles
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "aranya.fullname" . }}:sys
+  namespace: {{ include "sysNamespace" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "aranya.fullname" . }}:sys
+subjects:
+- kind: ServiceAccount
+  name: {{ include "aranya.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -1,0 +1,88 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "aranya.fullname" . }}:tenant
+  namespace: {{ include "tenantNamespace" . }}
+rules:
+- apiGroups: [""]
+  resources:
+  # to watch pods change and deliver command to edge devices
+  - pods
+  # to update pods status according to edge devices messages
+  - pods/status
+{{- if (include "manageTenantPodRoles" .) }}
+  # required verbs to manage pod roles
+  - pods/exec
+  - pods/log
+  - pods/attach
+  - pods/portforward
+{{- end }}
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete # finalize pod resource
+- apiGroups: [""]
+  resources:
+  - pods/ephemeralcontainers
+  verbs:
+  - get
+  - list
+  - watch
+{{- if (include "manageTenantPodRoles" .) }}
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources:
+  # to manage tenant pod roles
+  - roles
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+{{- end }}
+{{- if .Values.config.virtualnode.storage.enabled }}
+- apiGroups: [""]
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}
+- apiGroups: [""]
+  resources:
+  # to record pod events
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups: [""]
+  resources:
+  # to fetch resouces required by tenant pods for edge devices
+  - secrets
+  - configmaps
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "aranya.fullname" . }}:tenant
+  namespace: {{ include "tenantNamespace" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "aranya.fullname" . }}:tenant
+subjects:
+- kind: ServiceAccount
+  name: {{ include "aranya.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}

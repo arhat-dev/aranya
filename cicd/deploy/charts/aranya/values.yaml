@@ -134,7 +134,7 @@ config:
       connectivityService:
         name: edgedevice-connectivity
 
-      sftpService:
+      storageService:
         name: edgedevice-sftp
 
       nodeClusterRoles: {}

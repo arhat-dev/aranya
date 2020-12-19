@@ -26,10 +26,12 @@ rules:
   - patch
 - apiGroups: [""]
   resources:
-  # to find and update aranya pod itself
+  # to find and update aranya leader pod itself
   - pods
   verbs:
   - get
+  - list
+  - watch
   - update
 {{- end }}
 {{- if (include "lock.endpoints" .) }}

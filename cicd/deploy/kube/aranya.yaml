@@ -846,7 +846,7 @@ data:
           name: edgedevice-connectivity
         nodeClusterRoles: {}
         podRoles: {}
-        sftpService:
+        storageService:
           name: edgedevice-sftp
         virtualPodRoles: {}
       maxVirtualnodeCreatingInParallel: 0
@@ -1094,11 +1094,56 @@ rules:
   - create
   - patch
 ---
-# Source: aranya/templates/rbac-virtualnode.yaml
+# Source: aranya/templates/rbac-sys.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: aranya:virtualnode
+  name: aranya:sys
+  namespace: aranya
+rules:
+# reconcile EdgeDevices
+- apiGroups: ["aranya.arhat.dev"]
+  resources:
+  - edgedevices
+  verbs:
+  - list
+  - get
+  - watch
+  - delete # finalize edgedevice resources
+- apiGroups: ["aranya.arhat.dev"]
+  resources:
+  - edgedevices/status
+  verbs:
+  - update
+  - patch
+- apiGroups: [""]
+  resources:
+  # to fetch resouces referenced in edge device spec
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+# manage virtual pods
+- apiGroups: [""]
+  resources:
+  - pods
+  - pods/status
+  - pods/ephemeralcontainers
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+---
+# Source: aranya/templates/rbac-tenant.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aranya:tenant
   namespace: aranya
 rules:
 - apiGroups: [""]
@@ -1108,7 +1153,6 @@ rules:
   # to update pods status according to edge devices messages
   - pods/status
   verbs:
-  - create # create virtual pod
   - get
   - list
   - watch
@@ -1139,21 +1183,6 @@ rules:
   - get
   - list
   - watch
-# reconcile EdgeDevices
-- apiGroups: ["aranya.arhat.dev"]
-  resources:
-  - edgedevices
-  verbs:
-  - list
-  - get
-  - watch
-  - delete # finalize edgedevice resources
-- apiGroups: ["aranya.arhat.dev"]
-  resources:
-  - edgedevices/status
-  verbs:
-  - update
-  - patch
 ---
 # Source: aranya/templates/rbac-controller.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1170,16 +1199,31 @@ subjects:
   name: aranya
   namespace: aranya
 ---
-# Source: aranya/templates/rbac-virtualnode.yaml
+# Source: aranya/templates/rbac-sys.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: aranya:virtualnode
+  name: aranya:sys
   namespace: aranya
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: aranya:virtualnode
+  name: aranya:sys
+subjects:
+- kind: ServiceAccount
+  name: aranya
+  namespace: aranya
+---
+# Source: aranya/templates/rbac-tenant.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aranya:tenant
+  namespace: aranya
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: aranya:tenant
 subjects:
 - kind: ServiceAccount
   name: aranya
