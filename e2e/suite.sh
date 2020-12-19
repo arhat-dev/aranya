@@ -172,7 +172,9 @@ log_and_cleanup() {
     kubectl exec --namespace "${ns}" "${leader_pod}" -- bash -c "kill -s SIGINT ${aranya_pid}"
     sleep 60
     # copy aranya test profiles
-    kubectl cp "${ns}/${leader_pod}:/profile" "${result_dir}/profile-aranya-${ns}" || true
+    profile_dir="${result_dir}/profile-aranya-${ns}"
+    kubectl cp "${ns}/${leader_pod}:/profile" "${profile_dir}" || true
+    cp "${profile_dir}/coverage.txt" "coverage.e2e.${kube_version}.${ns}.txt" || true
   done
 
   if [ "${ARANYA_E2E_CLEAN}" = "1" ]; then
