@@ -60,11 +60,10 @@ func (c *sysSecretController) init(
 	c.sysSecretCtx = ctrl.Context()
 	c.meshNetworkEnabled = config.VirtualNode.Network.Enabled
 
+	c.sysSecretClient = kubeClient.CoreV1().Secrets(constant.SysNS())
 	c.sysSecretInformer = sysInformerFactory.Core().V1().Secrets().Informer()
-	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs,
-		c.sysSecretInformer.HasSynced,
-	)
 
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.sysSecretInformer.HasSynced)
 	ctrl.listActions = append(ctrl.listActions, func() error {
 		_, err := listerscorev1.NewSecretLister(c.sysSecretInformer.GetIndexer()).List(labels.Everything())
 		if err != nil {
@@ -91,7 +90,7 @@ func (c *sysSecretController) ensureMeshConfig(name string, config aranyaapi.Net
 	meshSecret, err := c.sysSecretClient.Get(c.sysSecretCtx, secretName, metav1.GetOptions{})
 	if err != nil {
 		if !kubeerrors.IsNotFound(err) {
-			return nil, fmt.Errorf("failed to retrieve mesh secret: %w", err)
+			return nil, fmt.Errorf("failed to check existing mesh secret: %w", err)
 		}
 
 		create = true
