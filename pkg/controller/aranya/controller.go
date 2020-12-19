@@ -87,6 +87,7 @@ func (c *Controller) OnEjected() {
 }
 
 func (c *Controller) OnNewLeader(podName string) {
+	// TODO: distributed EdgeDevice creation with coordination with leader
 }
 
 func nextActionUpdate(obj interface{}) *reconcile.Result {

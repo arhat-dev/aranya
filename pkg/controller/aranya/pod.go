@@ -118,7 +118,7 @@ func (c *podController) onPodUpdated(oldObj, newObj interface{}) *reconcile.Resu
 
 		delete(po.Labels, constant.LabelAranyaLeadership)
 		_, err := c.podClient.Update(c.podCtx, po, metav1.UpdateOptions{})
-		if err == nil {
+		if err != nil {
 			c.podLogger.I("failed to delete pod label", log.Error(err))
 			// try next time
 			return &reconcile.Result{Err: err}
