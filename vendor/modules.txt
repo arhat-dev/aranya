@@ -13,7 +13,6 @@ arhat.dev/pkg/backoff
 arhat.dev/pkg/decodehelper
 arhat.dev/pkg/encodehelper
 arhat.dev/pkg/envhelper
-arhat.dev/pkg/hashhelper
 arhat.dev/pkg/iohelper
 arhat.dev/pkg/kubehelper
 arhat.dev/pkg/log
