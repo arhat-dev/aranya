@@ -18,19 +18,15 @@ package v1alpha1
 
 import corev1 "k8s.io/api/core/v1"
 
-// +kubebuilder:validation:Enum=WithNodeMetrics;WithArhatConnectivity;WithStandaloneClient
+// +kubebuilder:validation:Enum=WithNodeMetrics;WithReporter
 type PeripheralMetricsReportMethod string
 
 const (
-	// ReportViaNodeMetrics will report metrics when arhat receive node metrics collect command
-	ReportViaNodeMetrics PeripheralMetricsReportMethod = "node"
+	// ReportWithNodeMetrics will report metrics when arhat receive node metrics collect command
+	ReportWithNodeMetrics PeripheralMetricsReportMethod = "WithNodeMetrics"
 
-	// ReportViaArhatConnectivity will publish data using arhat's connectivity
-	// useful when you want realtime metrics but do not want to create standalone metrics reporter
-	ReportViaArhatConnectivity PeripheralMetricsReportMethod = "arhat"
-
-	// ReportViaStandaloneClient will create a connectivity client for metrics reporting
-	ReportViaStandaloneClient PeripheralMetricsReportMethod = "standalone"
+	// ReportWithReporter will create a connectivity client for metrics reporting
+	ReportWithReporter PeripheralMetricsReportMethod = "WithReporter"
 )
 
 // +kubebuilder:validation:Enum=counter;"";gauge;unknown

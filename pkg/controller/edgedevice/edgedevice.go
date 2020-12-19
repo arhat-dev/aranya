@@ -824,12 +824,12 @@ func (c *Controller) preparePeripheralOptions(
 		for _, m := range d.Metrics {
 			var reportMethod aranyagopb.PeripheralMetric_ReportMethod
 			switch m.ReportMethod {
-			case aranyaapi.ReportViaArhatConnectivity:
-				reportMethod = aranyagopb.REPORT_WITH_ARHAT_CONNECTIVITY
-			case aranyaapi.ReportViaNodeMetrics, "":
+			case aranyaapi.ReportWithNodeMetrics, "":
 				reportMethod = aranyagopb.REPORT_WITH_NODE_METRICS
-			case aranyaapi.ReportViaStandaloneClient:
+			case aranyaapi.ReportWithReporter:
 				reportMethod = aranyagopb.REPORT_WITH_STANDALONE_CLIENT
+			default:
+				return nil, fmt.Errorf("unsupported metrics report method %q", m.ReportMethod)
 			}
 
 			var valueType aranyagopb.PeripheralMetric_ValueType

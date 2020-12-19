@@ -360,14 +360,14 @@ spec:
     metrics:
     - name: foo_node_stats
       valueType: counter
-      # upload metrics along with node metrics
-      reportMethod: node
+      # upload metrics along with node metrics (default)
+      reportMethod: WithNodeMetrics
       # params are resolved by your custom peripheral extension
       params:
         AT: COLLECT FOO METRICS
     - name: foo_standalone_stats
       valueType: gauge
-      reportMethod: standalone
+      reportMethod: WithReporter
       reporterName: foo_reporter
       # params are resolved by your custom peripheral extension
       params:

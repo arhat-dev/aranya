@@ -571,8 +571,7 @@ spec:
                           description: ReportMethod for this metrics
                           enum:
                           - WithNodeMetrics
-                          - WithArhatConnectivity
-                          - WithStandaloneClient
+                          - WithReporter
                           type: string
                         reporterName:
                           description: ReporterName the name reference to a metrics
