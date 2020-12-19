@@ -147,7 +147,7 @@ get_aranya_leader_pod_name() {
   namespace="${1}"
 
   kubectl --namespace "${namespace}" get pods \
-    --selector 'controller.arhat.dev/leadership=leader' \
+    --selector 'aranya.arhat.dev/leadership=leader' \
     -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true
 }
 
