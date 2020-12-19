@@ -143,11 +143,14 @@ start_e2e_tests() {
   device_manifests="alice bob foo bar"
   for m in ${device_manifests}; do
     echo "creating EdgeDevice ${m}"
+    kind_cluster_name="${kube_version}"
+    export kind_cluster_name
+
     while ! (
       echo "cat <<EOF"
       cat "e2e/testdata/edgedevices/${m}.yaml"
       echo EOF
-    ) | kubectl apply -f -; do
+    ) | sh | kubectl apply -f -; do
       sleep 10
     done
   done
