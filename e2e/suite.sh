@@ -159,7 +159,7 @@ log_and_cleanup() {
 
   log_pods_prev default 'app.kubernetes.io/name=aranya' "${result_dir}/aranya-default.prev.log"
   log_pods_prev full 'app.kubernetes.io/name=aranya' "${result_dir}/aranya-full.prev.log"
-  log_pods_prev tenant 'app.kubernetes.io/name=abbot' "${result_dir}/abbot-tenant.prev.log"
+  log_pods_prev tenant 'app.kubernetes.io/component=abbot' "${result_dir}/abbot-tenant.prev.log"
   log_pods_prev remote 'app.kubernetes.io/name=arhat' "${result_dir}/arhat-remote.prev.log"
 
   kubectl cluster-info dump --all-namespaces --output-directory="${result_dir}/cluster-dump" || true
@@ -233,7 +233,7 @@ start_e2e_tests() {
   wait_for_pods full 'app.kubernetes.io/name=aranya'
 
   echo "waiting for abbot running in namespace 'tenant'"
-  wait_for_pods tenant 'app.kubernetes.io/name=abbot'
+  wait_for_pods tenant 'app.kubernetes.io/component=abbot'
 
   echo "waiting for arhat running in namespace 'remote'"
   wait_for_pods remote 'app.kubernetes.io/name=arhat'
