@@ -74,6 +74,8 @@ func (c *Controller) Start() error {
 }
 
 func (c *Controller) OnElected(ctx context.Context) {
+	c.logger.I("elected as leader")
+
 	wg := new(sync.WaitGroup)
 
 	c.podController.reconcile(wg, ctx.Done())

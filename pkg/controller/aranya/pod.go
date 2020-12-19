@@ -113,6 +113,7 @@ func (c *podController) onPodUpdated(oldObj, newObj interface{}) *reconcile.Resu
 
 		leadership, ok := po.Labels[constant.LabelAranyaLeadership]
 		if !ok || leadership != constant.LabelAranyaLeadershipLeader {
+			// no leadership label, as expected
 			continue
 		}
 
@@ -152,6 +153,8 @@ func (c *podController) onPodUpdated(oldObj, newObj interface{}) *reconcile.Resu
 		return nil
 	}
 
+	c.podLogger.I("updating pod with leadership label")
+	thisPod.Labels[constant.LabelAranyaLeadership] = constant.LabelAranyaLeadershipLeader
 	_, err = c.podClient.Update(c.podCtx, thisPod, metav1.UpdateOptions{})
 	if err != nil {
 		c.podLogger.I("failed to update aranya pod with leadership label", log.Error(err))
