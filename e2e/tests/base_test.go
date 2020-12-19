@@ -92,7 +92,7 @@ func createClient() (kubernetes.Interface, semver.Version) {
 func getAranyaLeaderPod(kubeClient kubernetes.Interface, namespace string) (*corev1.Pod, error) {
 	pods, err := kubeClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: labels.FormatLabels(map[string]string{
-			constant.LabelControllerLeadership: constant.LabelControllerLeadershipLeader,
+			constant.LabelAranyaLeadership: constant.LabelAranyaLeadershipLeader,
 		}),
 	})
 	if err != nil {
