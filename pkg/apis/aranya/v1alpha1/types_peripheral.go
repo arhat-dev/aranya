@@ -18,7 +18,7 @@ package v1alpha1
 
 import corev1 "k8s.io/api/core/v1"
 
-// +kubebuilder:validation:Enum=WithNodeMetrics;WithReporter
+// +kubebuilder:validation:Enum=WithNodeMetrics;WithReporter;""
 type PeripheralMetricsReportMethod string
 
 const (

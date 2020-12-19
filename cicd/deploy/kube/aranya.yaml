@@ -574,6 +574,7 @@ spec:
                           enum:
                           - WithNodeMetrics
                           - WithReporter
+                          - ""
                           type: string
                         reporterName:
                           description: ReporterName the name reference to a metrics
