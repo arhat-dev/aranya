@@ -47,12 +47,12 @@ spec:
             - name: abbot
               containerPort: {{ .Values.abbot.config.listenPort }}
               protocol: TCP
-          livenessProbe:
-            tcpSocket:
-              port: {{ .Values.abbot.config.listenPort }}
-          readinessProbe:
-            tcpSocket:
-              port: {{ .Values.abbot.config.listenPort }}
+          # livenessProbe:
+          #   tcpSocket:
+          #     port: {{ .Values.abbot.config.listenPort }}
+          # readinessProbe:
+          #   tcpSocket:
+          #     port: {{ .Values.abbot.config.listenPort }}
           volumeMounts:
             - name: config
               mountPath: /etc/abbot/config.yaml
