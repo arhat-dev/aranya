@@ -32,14 +32,19 @@ spec:
       params:
         hex_data: 0123456789ABCDEF
     metrics:
+    - name: recv_bytes
+      valueType: counter
+      reportMethod: ""
+      params:
+        AT: GET recv_bytes
     - name: sent_bytes
       valueType: counter
-      reportMethod: node
+      reportMethod: WithNodeMetrics
       params:
         AT: GET sent_bytes
     - name: irq_count_per_minute
       valueType: gauge
-      reportMethod: standalone
+      reportMethod: WithReporter
       reporterName: mqtt
       params:
         AT: GET irg_count_per_minute
