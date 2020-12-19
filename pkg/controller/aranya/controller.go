@@ -38,9 +38,9 @@ func NewController(
 	edCtrl *edgedevice.Controller,
 ) (*Controller, error) {
 	ctrl := &Controller{
+		ctx:    appCtx,
 		logger: logger,
 		edCtrl: edCtrl,
-
 		informerFactory: informers.NewSharedInformerFactoryWithOptions(
 			kubeClient, 0, informers.WithNamespace(envhelper.ThisPodNS()),
 		),
