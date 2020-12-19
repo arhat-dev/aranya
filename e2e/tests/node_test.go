@@ -31,20 +31,14 @@ import (
 )
 
 const (
-	testValidOverrideValue = "valid-override"
-	testCustomValue        = "custom-value"
-	testSetValue           = "set-value"
-)
-
-const (
 	testLabel1 = "e2e.aranya.arhat.dev/label-1"
 	testLabel2 = "e2e.aranya.arhat.dev/label-2"
 
 	testAnnotation1 = "e2e.aranya.arhat.dev/annotation-1"
 	testAnnotation2 = "e2e.aranya.arhat.dev/annotation-2"
 
-	taintKey1 = "e2e.aranya.arhat.dev/taint1"
-	taintKey2 = "e2e.aranya.arhat.dev/taint2"
+	taintKey1 = "e2e.aranya.arhat.dev/taint-1"
+	taintKey2 = "e2e.aranya.arhat.dev/taint-2"
 )
 
 // node ext info related
@@ -295,7 +289,7 @@ func TestNodeSpec(t *testing.T) {
 				"arhat.dev/namespace":    edgeDeviceNamespaceDefault,
 
 				// can override kubernetes.io/role
-				"kubernetes.io/role": testValidOverrideValue,
+				"kubernetes.io/role": "valid-override",
 
 				// custom labels
 				testLabel1: "1",

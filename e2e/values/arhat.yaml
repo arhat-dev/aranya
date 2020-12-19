@@ -48,7 +48,7 @@ config:
         applyTo: metadata.annotations['e2e.aranya.arhat.dev/ext-info-set-string']
       - valueFrom:
           text: append-string
-        operator: "+="
+        operator: +=
         valueType: string
         applyTo: metadata.annotations['e2e.aranya.arhat.dev/ext-info-append-string']
 
@@ -59,12 +59,12 @@ config:
         applyTo: metadata.annotations['e2e.aranya.arhat.dev/ext-info-set-1']
       - valueFrom:
           text: "1"
-        operator: "+="
+        operator: +=
         valueType: int
         applyTo: metadata.annotations['e2e.aranya.arhat.dev/ext-info-add-1']
       - valueFrom:
           text: "1"
-        operator: "-="
+        operator: -=
         valueType: int
         applyTo: metadata.annotations['e2e.aranya.arhat.dev/ext-info-minus-1']
 
@@ -75,12 +75,12 @@ config:
         applyTo: metadata.annotations['e2e.aranya.arhat.dev/ext-info-set-1-5']
       - valueFrom:
           text: "1.5"
-        operator: "+="
+        operator: +=
         valueType: float
         applyTo: metadata.annotations['e2e.aranya.arhat.dev/ext-info-add-1-5']
       - valueFrom:
           text: "1.5"
-        operator: "-="
+        operator: -=
         valueType: float
         applyTo: metadata.annotations['e2e.aranya.arhat.dev/ext-info-minus-1-5']
 
@@ -92,7 +92,7 @@ config:
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-set-string']
       - valueFrom:
           text: append-string
-        operator: "+="
+        operator: +=
         valueType: string
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-append-string']
 
@@ -103,12 +103,12 @@ config:
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-set-1']
       - valueFrom:
           text: "1"
-        operator: "+="
+        operator: +=
         valueType: int
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-add-1']
       - valueFrom:
           text: "1"
-        operator: "-="
+        operator: -=
         valueType: int
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-minus-1']
 
@@ -119,12 +119,12 @@ config:
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-set-1-5']
       - valueFrom:
           text: "1.5"
-        operator: "+="
+        operator: +=
         valueType: float
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-add-1-5']
       - valueFrom:
           text: "1.5"
-        operator: "-="
+        operator: -=
         valueType: float
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-minus-1-5']
 

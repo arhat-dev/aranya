@@ -84,10 +84,10 @@ spec:
       e2e.aranya.arhat.dev/annotation-1: "1"
 
     taints:
-    - key: e2e.aranya.arhat.dev/taint1
+    - key: e2e.aranya.arhat.dev/taint-1
       value: "1"
       effect: NoSchedule
-    - key: e2e.aranya.arhat.dev/taint2
+    - key: e2e.aranya.arhat.dev/taint-2
       value: "2"
       effect: NoExecute
 
