@@ -1,0 +1,29 @@
+apiVersion: aranya.arhat.dev/v1alpha1
+kind: EdgeDevice
+metadata:
+  name: e2e-foo
+  namespace: sys
+spec:
+  node:
+    metrics:
+      enabled: true
+    # no override
+    labels:
+      e2e.aranya.arhat.dev/label-1: "1"
+      e2e.aranya.arhat.dev/label-2: "2"
+    annotations:
+      e2e.aranya.arhat.dev/annotation-1: "1"
+      e2e.aranya.arhat.dev/annotation-2: "2"
+
+  network:
+    enabled: true
+  storage:
+    enabled: true
+
+  connectivity:
+    method: mqtt
+    mqtt:
+      broker: emqx.emqx:1883
+      clientID: aranya.e2e(${kind_cluster_name}-worker3)
+      topicNamespace: e2e.aranya.arhat.dev/${kind_cluster_name}-worker3
+      transport: tcp

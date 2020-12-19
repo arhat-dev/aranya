@@ -19,6 +19,8 @@ package tests
 import (
 	"context"
 	"sort"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,7 +31,9 @@ import (
 )
 
 const (
-	testOverrideValue = "valid-override"
+	testValidOverrideValue = "valid-override"
+	testCustomValue        = "custom-value"
+	testSetValue           = "set-value"
 )
 
 const (
@@ -38,6 +42,32 @@ const (
 
 	testAnnotation1 = "e2e.aranya.arhat.dev/annotation-1"
 	testAnnotation2 = "e2e.aranya.arhat.dev/annotation-2"
+
+	taintKey1 = "e2e.aranya.arhat.dev/taint1"
+	taintKey2 = "e2e.aranya.arhat.dev/taint2"
+)
+
+// node ext info related
+const (
+	arhatRestartCount = 5
+
+	extInfoSetString    = "e2e.aranya.arhat.dev/ext-info-set-string"
+	extInfoAppendString = "e2e.aranya.arhat.dev/ext-info-append-string"
+
+	extInfoSet1   = "e2e.aranya.arhat.dev/ext-info-set-1"
+	extInfoAdd1   = "e2e.aranya.arhat.dev/ext-info-add-1"
+	extInfoMinus1 = "e2e.aranya.arhat.dev/ext-info-minus-1"
+
+	extInfoSet1_5   = "e2e.aranya.arhat.dev/ext-info-set-1-5"
+	extInfoAdd1_5   = "e2e.aranya.arhat.dev/ext-info-add-1-5"
+	extInfoMinus1_5 = "e2e.aranya.arhat.dev/ext-info-minus-1-5"
+)
+
+// field hook related
+const (
+	fieldHookExpressionValue = "e2e.aranya.arhat.dev/field-hook-expression-value"
+	fieldHookReferenceValue  = "e2e.aranya.arhat.dev/field-hook-reference-value"
+	fieldHookSetValue        = "e2e.aranya.arhat.dev/field-hook-set-value"
 )
 
 func TestNodeCreated(t *testing.T) {
@@ -135,6 +165,35 @@ func TestNodeSpec(t *testing.T) {
 		corev1.ResourcePods:             resource.Quantity{},
 	}
 
+	extInfoValues := map[string]string{
+		extInfoSetString:    "set-string",
+		extInfoAppendString: strings.Repeat("append-string", arhatRestartCount),
+
+		extInfoSet1:   "1",
+		extInfoAdd1:   strconv.FormatInt(arhatRestartCount, 10),
+		extInfoMinus1: strconv.FormatInt(-arhatRestartCount, 10),
+
+		extInfoSet1_5:   "1.5",
+		extInfoAdd1_5:   strconv.FormatFloat(1.5*arhatRestartCount, 'f', -1, 64),
+		extInfoMinus1_5: strconv.FormatFloat(-1.5*arhatRestartCount, 'f', -1, 64),
+	}
+
+	commonLabels := map[string]string{
+		"arhat.dev/arch":          "amd64",
+		"arhat.dev/role":          "Node",
+		"beta.kubernetes.io/arch": "amd64",
+		"beta.kubernetes.io/os":   "linux",
+		"kubernetes.io/arch":      "amd64",
+		"kubernetes.io/os":        "linux",
+	}
+
+	commonAnnotations := map[string]string{}
+
+	for k, v := range extInfoValues {
+		commonLabels[k] = v
+		commonAnnotations[k] = v
+	}
+
 	tests := []struct {
 		name string
 
@@ -146,27 +205,32 @@ func TestNodeSpec(t *testing.T) {
 		{
 			name: edgeDeviceNameAlice,
 			labels: map[string]string{
-				"arhat.dev/arch":          "amd64",
-				"arhat.dev/role":          "Node",
-				"beta.kubernetes.io/arch": "amd64",
-				"beta.kubernetes.io/os":   "linux",
-				"kubernetes.io/arch":      "amd64",
-				"kubernetes.io/os":        "linux",
-
 				// override should not work on these labels
 				"kubernetes.io/hostname": nodeDefault.Name,
 				"arhat.dev/name":         edgeDeviceNameAlice,
 				"arhat.dev/namespace":    edgeDeviceNamespaceDefault,
 
 				// can override kubernetes.io/role
-				"kubernetes.io/role": testOverrideValue,
+				"kubernetes.io/role": "valid-override",
 
 				// custom labels
 				testLabel1: "1",
 				testLabel2: "2",
+
+				// labels['e2e.aranya.arhat.dev/annotation-1'] == 1
+				fieldHookExpressionValue: "true",
+				// from .spec.providerID
+				fieldHookReferenceValue: "aranya://" + edgeDeviceNamespaceDefault + "/" + edgeDeviceNameAlice,
+				fieldHookSetValue:       "set-label-value",
 			},
 			annotations: map[string]string{
 				testAnnotation1: "1",
+
+				// labels['e2e.aranya.arhat.dev/ext-info-add-1'] == arhatRestartCount
+				fieldHookExpressionValue: "true",
+				// labels['kubernetes.io/role']
+				fieldHookReferenceValue: "valid-override",
+				fieldHookSetValue:       "set-annotation-value",
 			},
 			spec: corev1.NodeSpec{
 				PodCIDR:       "",
@@ -178,6 +242,16 @@ func TestNodeSpec(t *testing.T) {
 						Key:    "arhat.dev/namespace",
 						Value:  edgeDeviceNamespaceDefault,
 						Effect: corev1.TaintEffectNoSchedule,
+					},
+					{
+						Key:    taintKey1,
+						Value:  "1",
+						Effect: corev1.TaintEffectNoSchedule,
+					},
+					{
+						Key:    taintKey2,
+						Value:  "2",
+						Effect: corev1.TaintEffectNoExecute,
 					},
 				},
 				ConfigSource: nil,
@@ -215,27 +289,32 @@ func TestNodeSpec(t *testing.T) {
 		{
 			name: edgeDeviceNameBob,
 			labels: map[string]string{
-				"arhat.dev/arch":          "amd64",
-				"arhat.dev/role":          "Node",
-				"beta.kubernetes.io/arch": "amd64",
-				"beta.kubernetes.io/os":   "linux",
-				"kubernetes.io/arch":      "amd64",
-				"kubernetes.io/os":        "linux",
-
 				// no override and should present
 				"kubernetes.io/hostname": nodeDefault.Name,
 				"arhat.dev/name":         edgeDeviceNameBob,
 				"arhat.dev/namespace":    edgeDeviceNamespaceDefault,
 
 				// can override kubernetes.io/role
-				"kubernetes.io/role": testOverrideValue,
+				"kubernetes.io/role": testValidOverrideValue,
 
 				// custom labels
 				testLabel1: "1",
 				testLabel2: "2",
+
+				// labels['e2e.aranya.arhat.dev/annotation-2'] == 2
+				fieldHookExpressionValue: "true",
+				// labels['e2e.aranya.arhat.dev/ext-info-add-1']
+				fieldHookReferenceValue: extInfoValues[extInfoAdd1],
+				fieldHookSetValue:       "set-label-value",
 			},
 			annotations: map[string]string{
 				testAnnotation2: "2",
+
+				// labels['e2e.aranya.arhat.dev/ext-info-minus-1'] == -arhatRestartCount
+				fieldHookExpressionValue: "true",
+				// labels['e2e.aranya.arhat.dev/ext-info-minus-1-5']
+				fieldHookReferenceValue: extInfoValues[extInfoMinus1_5],
+				fieldHookSetValue:       "set-annotation-value",
 			},
 			spec: corev1.NodeSpec{
 				PodCIDR:       "",
@@ -284,13 +363,6 @@ func TestNodeSpec(t *testing.T) {
 		{
 			name: edgeDeviceNameFoo,
 			labels: map[string]string{
-				"arhat.dev/arch":          "amd64",
-				"arhat.dev/role":          "Node",
-				"beta.kubernetes.io/arch": "amd64",
-				"beta.kubernetes.io/os":   "linux",
-				"kubernetes.io/arch":      "amd64",
-				"kubernetes.io/os":        "linux",
-
 				// no override and should present
 				"kubernetes.io/hostname": nodeFull.Name,
 				"arhat.dev/name":         edgeDeviceNameFoo,
@@ -354,13 +426,6 @@ func TestNodeSpec(t *testing.T) {
 		{
 			name: edgeDeviceNameBar,
 			labels: map[string]string{
-				"arhat.dev/arch":          "amd64",
-				"arhat.dev/role":          "Node",
-				"beta.kubernetes.io/arch": "amd64",
-				"beta.kubernetes.io/os":   "linux",
-				"kubernetes.io/arch":      "amd64",
-				"kubernetes.io/os":        "linux",
-
 				// no override and should present
 				"kubernetes.io/hostname": nodeFull.Name,
 				"arhat.dev/name":         edgeDeviceNameBar,
@@ -432,11 +497,19 @@ func TestNodeSpec(t *testing.T) {
 			}
 
 			// check node metadata
-			assert.EqualValues(t, test.labels, node.Labels)
+			{
+				for k, v := range commonLabels {
+					test.labels[k] = v
+				}
+				assert.EqualValues(t, test.labels, node.Labels)
 
-			// remove kubernetes managed annotations
-			delete(node.Annotations, "node.alpha.kubernetes.io/ttl")
-			assert.EqualValues(t, test.annotations, node.Annotations)
+				for k, v := range commonAnnotations {
+					test.annotations[k] = v
+				}
+				// remove kubernetes managed annotations
+				delete(node.Annotations, "node.alpha.kubernetes.io/ttl")
+				assert.EqualValues(t, test.annotations, node.Annotations)
+			}
 
 			// check node spec
 			{
@@ -448,6 +521,13 @@ func TestNodeSpec(t *testing.T) {
 				} else {
 					assert.NotEmpty(t, node.Spec.PodCIDRs)
 				}
+
+				sort.Slice(node.Spec.Taints, func(i, j int) bool {
+					return node.Spec.Taints[i].Key < node.Spec.Taints[j].Key
+				})
+				sort.Slice(test.spec.Taints, func(i, j int) bool {
+					return test.spec.Taints[i].Key < test.spec.Taints[j].Key
+				})
 
 				node.Spec.PodCIDR = ""
 				node.Spec.PodCIDRs = []string{}

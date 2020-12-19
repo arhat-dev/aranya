@@ -1,0 +1,121 @@
+apiVersion: aranya.arhat.dev/v1alpha1
+kind: EdgeDevice
+metadata:
+  name: e2e-alice
+  namespace: default
+spec:
+  metricsReporters:
+  - name: mqtt
+    connector:
+      method: mqtt
+      target: mqtt.example.com:1883
+      params:
+        client_id: mqtt
+
+  peripherals:
+  - name: serial
+    connector:
+      method: serial
+      target: /dev/cu.usbserial-XXXX
+      params:
+        baud_rate: "115200"
+        data_bits: "8"
+        parity: "none"
+        stop_bits: "1"
+    operations:
+    - name: Start
+      pseudoCommand: start
+      params:
+        text_data: FOO AT CMD
+    - name: Stop
+      pseudoCommand: stop
+      params:
+        hex_data: 0123456789ABCDEF
+    metrics:
+    - name: sent_bytes
+      valueType: counter
+      reportMethod: node
+      params:
+        AT: GET sent_bytes
+    - name: irq_count_per_minute
+      valueType: gauge
+      reportMethod: standalone
+      reporterName: mqtt
+      params:
+        AT: GET irg_count_per_minute
+      reporterParams:
+        pub_topic: /test/data
+        pub_qos: "1"
+
+  pod:
+    timers:
+      forceSyncInterval: 5s
+    ipv4CIDR: 10.0.10.0/24
+    ipv6CIDR: ::1/128
+    dns:
+      servers:
+      - "1.1.1.1"
+      - "8.8.8.8"
+      searches:
+      - cluster.local
+      options:
+      - ndots:5
+    allocatable: 1000
+
+  node:
+    timers:
+      forceSyncInterval: 5s
+    metrics:
+      enabled: true
+
+    # both valid and invalid override
+    labels:
+      e2e.aranya.arhat.dev/label-1: "1"
+      e2e.aranya.arhat.dev/label-2: "2"
+
+      kubernetes.io/role: valid-override
+
+      kubernetes.io/arch: invalid-override
+      arhat.dev/role: invalid-override
+      arhat.dev/arch: invalid-override
+      arhat.dev/namespace: invalid-override
+      arhat.dev/name: invalid-override
+    annotations:
+      e2e.aranya.arhat.dev/annotation-1: "1"
+
+    taints:
+    - key: e2e.aranya.arhat.dev/taint1
+      value: "1"
+      effect: NoSchedule
+    - key: e2e.aranya.arhat.dev/taint2
+      value: "2"
+      effect: NoExecute
+
+    fieldHooks:
+    - query: .metadata.annotations."e2e.aranya.arhat.dev/annotation-1"
+      targetFieldPath: metadata.labels["e2e.aranya.arhat.dev/field-hook-expression-value"]
+      valueExpression: .[0] == 1
+    - query: .spec.providerID
+      targetFieldPath: metadata.labels["e2e.aranya.arhat.dev/field-hook-reference-value"]
+      valueExpression: .[0]
+    - query: "."
+      targetFieldPath: metadata.labels["e2e.aranya.arhat.dev/field-hook-set-value"]
+      value: set-label-value
+
+    - query: .metadata.annotations
+      targetFieldPath: metadata.annotations["e2e.aranya.arhat.dev/field-hook-expression-value"]
+      valueExpression: .[0]["e2e.aranya.arhat.dev/ext-info-minus-1"] == -5
+    - query: .metadata.labels
+      targetFieldPath: metadata.annotations["e2e.aranya.arhat.dev/field-hook-reference-value"]
+      valueExpression: .[0]["e2e.aranya.arhat.dev/ext-info-minus-1-5"]
+    - query: "."
+      targetFieldPath: metadata.annotations["e2e.aranya.arhat.dev/field-hook-set-value"]
+      value: set-annotation-value
+
+  connectivity:
+    method: mqtt
+    mqtt:
+      broker: emqx.emqx:1883
+      clientID: aranya.e2e(${kind_cluster_name}-worker)
+      topicNamespace: e2e.aranya.arhat.dev/${kind_cluster_name}-worker
+      transport: tcp

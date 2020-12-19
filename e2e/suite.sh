@@ -14,104 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -ex
-
-create_edge_devices() {
-  kind_cluster_name=${1}
-
-  cat <<EOF | kubectl apply -f -
-apiVersion: aranya.arhat.dev/v1alpha1
-kind: EdgeDevice
-metadata:
-  name: e2e-alice
-  namespace: default
-spec:
-  node:
-    # both valid and invalid override
-    labels:
-      e2e.aranya.arhat.dev/label-1: "1"
-      e2e.aranya.arhat.dev/label-2: "2"
-
-      kubernetes.io/role: valid-override
-
-      kubernetes.io/arch: invalid-override
-      arhat.dev/role: invalid-override
-      arhat.dev/arch: invalid-override
-      arhat.dev/namespace: invalid-override
-      arhat.dev/name: invalid-override
-    annotations:
-      e2e.aranya.arhat.dev/annotation-1: "1"
-
-  connectivity:
-    method: mqtt
-    mqtt:
-      broker: emqx.emqx:1883
-      clientID: aranya.e2e(${kind_cluster_name}-worker)
-      topicNamespace: e2e.aranya.arhat.dev/${kind_cluster_name}-worker
-      transport: tcp
----
-apiVersion: aranya.arhat.dev/v1alpha1
-kind: EdgeDevice
-metadata:
-  name: e2e-bob
-  namespace: default
-spec:
-  node:
-    # no invalid override
-    labels:
-      e2e.aranya.arhat.dev/label-1: "1"
-      e2e.aranya.arhat.dev/label-2: "2"
-
-      kubernetes.io/role: valid-override
-    annotations:
-      e2e.aranya.arhat.dev/annotation-2: "2"
-
-  connectivity:
-    method: mqtt
-    mqtt:
-      broker: emqx.emqx:1883
-      clientID: aranya.e2e(${kind_cluster_name}-worker2)
-      topicNamespace: e2e.aranya.arhat.dev/${kind_cluster_name}-worker2
-      transport: tcp
----
-apiVersion: aranya.arhat.dev/v1alpha1
-kind: EdgeDevice
-metadata:
-  name: e2e-foo
-  namespace: sys
-spec:
-  node:
-    # no override
-    labels:
-      e2e.aranya.arhat.dev/label-1: "1"
-      e2e.aranya.arhat.dev/label-2: "2"
-    annotations:
-      e2e.aranya.arhat.dev/annotation-1: "1"
-      e2e.aranya.arhat.dev/annotation-2: "2"
-
-  connectivity:
-    method: mqtt
-    mqtt:
-      broker: emqx.emqx:1883
-      clientID: aranya.e2e(${kind_cluster_name}-worker3)
-      topicNamespace: e2e.aranya.arhat.dev/${kind_cluster_name}-worker3
-      transport: tcp
----
-apiVersion: aranya.arhat.dev/v1alpha1
-kind: EdgeDevice
-metadata:
-  name: e2e-bar
-  namespace: sys
-spec:
-  connectivity:
-    method: mqtt
-    mqtt:
-      broker: emqx.emqx:1883
-      clientID: aranya.e2e(${kind_cluster_name}-worker4)
-      topicNamespace: e2e.aranya.arhat.dev/${kind_cluster_name}-worker4
-      transport: tcp
-EOF
-}
+set -e
 
 wait_for_pods() {
   namespace="${1}"
@@ -119,8 +22,7 @@ wait_for_pods() {
 
   for _ in $(seq 0 1 12); do
     if ! kubectl wait --namespace "${namespace}" --for=condition=Ready \
-            --selector "${label_selector}" pods --all --timeout=30s
-    then
+      --selector "${label_selector}" pods --all --timeout=30s; then
       kubectl get pods \
         --all-namespaces -o wide || true
 
@@ -140,7 +42,7 @@ log_pods_prev() {
 
   kubectl --namespace "${namespace}" logs \
     --previous --prefix --tail=-1 --selector "${label_selector}" \
-    > "${log_file}" 2>&1 || true
+    >"${log_file}" 2>&1 || true
 }
 
 get_aranya_leader_pod_name() {
@@ -172,9 +74,7 @@ log_and_cleanup() {
     kubectl exec --namespace "${ns}" "${leader_pod}" -- bash -c "kill -s SIGINT ${aranya_pid}"
     sleep 60
     # copy aranya test profiles
-    profile_dir="${result_dir}/profile-aranya-${ns}"
-    kubectl cp "${ns}/${leader_pod}:/profile" "${profile_dir}" || true
-    cp "${profile_dir}/coverage.txt" "coverage.e2e.${kube_version}.${ns}.txt" || true
+    kubectl cp "${ns}/${leader_pod}:/profile" "${result_dir}/profile-aranya-${ns}" || true
   done
 
   if [ "${ARANYA_E2E_CLEAN}" = "1" ]; then
@@ -240,18 +140,32 @@ start_e2e_tests() {
   wait_for_pods remote 'app.kubernetes.io/name=arhat'
 
   # create edge devices after aranya is running
-  while ! create_edge_devices "${kube_version}"; do
-    sleep 10
+  device_manifests="alice bob foo bar"
+  for m in ${device_manifests}; do
+    echo "creating EdgeDevice ${m}"
+    while ! (
+      echo "cat <<EOF"
+      cat "e2e/testdata/edgedevices/${m}.yaml"
+      echo EOF
+    ) | kubectl apply -f -; do
+      sleep 10
+    done
   done
 
-  # give aranya 120s to create related resources
-  for _ in $(seq 0 1 12); do
-    # should be able to find new virtual nodes now (for debugging)
-    kubectl get certificatesigningrequests
-    kubectl get nodes -o wide
-    kubectl get pods --all-namespaces
-    sleep 10
+  # give aranya 60s to create related resources
+  sleep 60
+
+  # restart arhat pods to update node ext info
+  # NOTE: make sure restart count equals constant arhatRestartCount in tests/node_test.go
+  for _ in $(seq 0 1 5); do
+    kubectl delete po --namespace remote --all --grace-period 0
+    sleep 5
+    wait_for_pods remote 'app.kubernetes.io/name=arhat'
   done
+
+  kubectl get certificatesigningrequests || true
+  kubectl get nodes -o wide || true
+  kubectl get pods --all-namespaces -o wide || true
 
   go test -mod=vendor -v ./e2e/tests/...
 }

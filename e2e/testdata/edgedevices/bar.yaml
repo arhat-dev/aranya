@@ -1,0 +1,18 @@
+apiVersion: aranya.arhat.dev/v1alpha1
+kind: EdgeDevice
+metadata:
+  name: e2e-bar
+  namespace: sys
+spec:
+  network:
+    enabled: true
+  storage:
+    enabled: true
+
+  connectivity:
+    method: mqtt
+    mqtt:
+      broker: emqx.emqx:1883
+      clientID: aranya.e2e(${kind_cluster_name}-worker4)
+      topicNamespace: e2e.aranya.arhat.dev/${kind_cluster_name}-worker4
+      transport: tcp
