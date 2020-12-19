@@ -100,7 +100,7 @@ func getAranyaLeaderPod(kubeClient kubernetes.Interface, namespace string) (*cor
 	}
 
 	if len(pods.Items) != 1 {
-		return nil, fmt.Errorf("unexpected %d leader pods", len(pods.Items))
+		return nil, fmt.Errorf("unexpected %d leader pods in namespace %q", len(pods.Items), namespace)
 	}
 
 	return &pods.Items[0], nil
