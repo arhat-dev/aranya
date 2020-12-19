@@ -23,5 +23,5 @@ home: https://github.com/arhat-dev/aranya
 sources:
 - https://github.com/arhat-dev/aranya
 - https://github.com/arhat-dev/helm-charts
-version: 0.1.11
+version: 0.1.12
 appVersion: latest
