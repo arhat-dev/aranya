@@ -26,8 +26,10 @@ import (
 )
 
 // EdgeDeviceLister helps list EdgeDevices.
+// All objects returned here must be treated as read-only.
 type EdgeDeviceLister interface {
 	// List lists all EdgeDevices in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.EdgeDevice, err error)
 	// EdgeDevices returns an object that can list and get EdgeDevices.
 	EdgeDevices(namespace string) EdgeDeviceNamespaceLister
@@ -58,10 +60,13 @@ func (s *edgeDeviceLister) EdgeDevices(namespace string) EdgeDeviceNamespaceList
 }
 
 // EdgeDeviceNamespaceLister helps list and get EdgeDevices.
+// All objects returned here must be treated as read-only.
 type EdgeDeviceNamespaceLister interface {
 	// List lists all EdgeDevices in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.EdgeDevice, err error)
 	// Get retrieves the EdgeDevice from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.EdgeDevice, error)
 	EdgeDeviceNamespaceListerExpansion
 }
