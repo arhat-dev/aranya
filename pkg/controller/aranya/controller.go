@@ -37,37 +37,43 @@ func NewController(
 	kubeClient kubernetes.Interface,
 	edCtrl *edgedevice.Controller,
 ) (*Controller, error) {
-	informerFactory := informers.NewSharedInformerFactoryWithOptions(
-		kubeClient, 0, informers.WithNamespace(envhelper.ThisPodNS()),
-	)
-
 	ctrl := &Controller{
 		logger: logger,
 		edCtrl: edCtrl,
+
+		informerFactory: informers.NewSharedInformerFactoryWithOptions(
+			kubeClient, 0, informers.WithNamespace(envhelper.ThisPodNS()),
+		),
 	}
 
-	ctrl.podController.init(appCtx, logger, kubeClient, informerFactory)
+	ctrl.podController.init(appCtx, logger, kubeClient, ctrl.informerFactory)
 
 	return ctrl, nil
 }
 
 // Controller to reconcile aranya self related resouces in POD_NAMESPACE when elected as leader
 type Controller struct {
-	logger log.Interface
-	edCtrl *edgedevice.Controller
+	ctx             context.Context
+	logger          log.Interface
+	edCtrl          *edgedevice.Controller
+	informerFactory informers.SharedInformerFactory
 
 	podController
 }
 
 func (c *Controller) Start() error {
+	c.informerFactory.Start(c.ctx.Done())
+
+	c.logger.I("starting aranya pod controller")
 	err := c.podController.start()
 	if err != nil {
 		return fmt.Errorf("failed to start aranya pod controller: %w", err)
 	}
 
+	c.logger.I("starting edge device controller")
 	err = c.edCtrl.Start()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to start edge device controller: %w", err)
 	}
 
 	return nil

@@ -170,12 +170,6 @@ func run(appCtx context.Context, config *conf.Config) error {
 		return fmt.Errorf("failed to create edge device controller: %w", err)
 	}
 
-	logger.I("starting edge device controller")
-	err = edCtrl.Start()
-	if err != nil {
-		return fmt.Errorf("failed to start edge device controller: %w", err)
-	}
-
 	logger.I("creating aranya controller")
 	aranyaCtrl, err := aranya.NewController(appCtx, logger, kubeClient, edCtrl)
 	if err != nil {

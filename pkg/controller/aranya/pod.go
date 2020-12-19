@@ -29,9 +29,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	listerscorev1 "k8s.io/client-go/listers/core/v1"
 	kubecache "k8s.io/client-go/tools/cache"
 
 	"arhat.dev/aranya/pkg/constant"
@@ -74,7 +76,21 @@ func (c *podController) init(
 }
 
 func (c *podController) start() error {
-	return c.podRec.Start()
+	err := c.podRec.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start pod reconciler: %w", err)
+	}
+
+	_, err = listerscorev1.NewPodLister(c.podInformer.GetIndexer()).List(labels.Everything())
+	if err != nil {
+		return fmt.Errorf("failed to list pods in namespace %q: %w", envhelper.ThisPodNS(), err)
+	}
+
+	if !kubecache.WaitForCacheSync(c.podCtx.Done(), c.podInformer.HasSynced) {
+		return fmt.Errorf("failed to sync pod cache")
+	}
+
+	return nil
 }
 
 func (c *podController) reconcile(wg *sync.WaitGroup, stop <-chan struct{}) {
