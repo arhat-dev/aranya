@@ -59,11 +59,10 @@ import (
 )
 
 type nodeController struct {
-	vnRec         *reconcile.Core
-	virtualNodes  *virtualnode.Manager
-	sshPrivateKey []byte
-	vnConfig      *conf.VirtualnodeConfig
-	vnKubeconfig  *rest.Config
+	vnRec        *reconcile.Core
+	virtualNodes *virtualnode.Manager
+	vnConfig     *conf.VirtualnodeConfig
+	vnKubeconfig *rest.Config
 
 	// Node management
 	nodeClient    clientcorev1.NodeInterface
@@ -81,7 +80,6 @@ func (c *nodeController) init(
 	config *conf.Config,
 	kubeClient kubeclient.Interface,
 	nodeInformerTyped informerscorev1.NodeInformer,
-	sshPrivateKey []byte,
 	preferredResources []*metav1.APIResourceList,
 ) error {
 	_, kubeConfigForVirtualNode, err := config.VirtualNode.KubeClient.NewKubeClient(nil, true)
@@ -104,7 +102,6 @@ func (c *nodeController) init(
 	c.vnKubeconfig = kubeConfigForVirtualNode
 	c.nodeClient = kubeClient.CoreV1().Nodes()
 	c.nodeLeaseClient = kubeClient.CoordinationV1().Leases(corev1.NamespaceNodeLease)
-	c.sshPrivateKey = sshPrivateKey
 	c.vnConfig = &config.VirtualNode
 
 	var getLeaseFunc func(name string) *coordinationv1.Lease

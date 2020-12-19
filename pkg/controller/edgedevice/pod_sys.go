@@ -17,6 +17,7 @@ limitations under the License.
 package edgedevice
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -44,12 +45,12 @@ import (
 
 // sysPodController to reconcile virtual pods
 type sysPodController struct {
+	sysPodCtx context.Context
+
 	sysPodClient   clientcorev1.PodInterface
 	sysPodInformer kubecache.SharedIndexInformer
-	managedPods    sets.String
-	vpReqRec       *reconcile.Core
 
-	sysSecretInformer kubecache.SharedIndexInformer
+	vpReqRec *reconcile.Core
 }
 
 func (c *sysPodController) init(
@@ -58,27 +59,16 @@ func (c *sysPodController) init(
 	kubeClient kubeclient.Interface,
 	sysInformerFactory informers.SharedInformerFactory,
 ) error {
-	c.managedPods = sets.NewString()
-
+	c.sysPodCtx = ctrl.Context()
 	c.sysPodClient = kubeClient.CoreV1().Pods(constant.SysNS())
 
 	c.sysPodInformer = sysInformerFactory.Core().V1().Pods().Informer()
-	c.sysSecretInformer = sysInformerFactory.Core().V1().Secrets().Informer()
 
-	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs,
-		c.sysPodInformer.HasSynced,
-		c.sysSecretInformer.HasSynced,
-	)
-
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.sysPodInformer.HasSynced)
 	ctrl.listActions = append(ctrl.listActions, func() error {
 		_, err := listerscorev1.NewPodLister(c.sysPodInformer.GetIndexer()).List(labels.Everything())
 		if err != nil {
 			return fmt.Errorf("failed to list pods in namespace %q: %w", constant.SysNS(), err)
-		}
-
-		_, err = listerscorev1.NewSecretLister(c.sysSecretInformer.GetIndexer()).List(labels.Everything())
-		if err != nil {
-			return fmt.Errorf("failed to list secrets in namespace %q: %w", constant.SysNS(), err)
 		}
 
 		return nil
@@ -98,6 +88,7 @@ func (c *sysPodController) init(
 		OnBackoffStart: nil,
 		OnBackoffReset: nil,
 	})
+
 	ctrl.recStart = append(ctrl.recStart, virtualPodRec.Start)
 	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, virtualPodRec.ReconcileUntil)
 
@@ -112,6 +103,7 @@ func (c *sysPodController) init(
 		OnBackoffStart: nil,
 		OnBackoffReset: nil,
 	}.ResolveNil())
+
 	ctrl.recStart = append(ctrl.recStart, c.vpReqRec.Start)
 	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.vpReqRec.ReconcileUntil)
 
@@ -382,7 +374,12 @@ func (c *Controller) newVirtualPodForEdgeDevice(device *aranyaapi.EdgeDevice) (*
 func (c *sysPodController) getSysPodObject(name string) (*corev1.Pod, bool) {
 	obj, found, err := c.sysPodInformer.GetIndexer().GetByKey(constant.SysNS() + "/" + name)
 	if err != nil || !found {
-		return nil, false
+		pod, err := c.sysPodClient.Get(c.sysPodCtx, name, metav1.GetOptions{})
+		if err != nil {
+			return nil, false
+		}
+
+		return pod, true
 	}
 
 	pod, ok := obj.(*corev1.Pod)
@@ -391,31 +388,4 @@ func (c *sysPodController) getSysPodObject(name string) (*corev1.Pod, bool) {
 	}
 
 	return pod, true
-}
-
-func (c *sysPodController) getUserPassFromSecret(name string) (username, password []byte, err error) {
-	secret, ok := c.getSysSecretObject(name)
-	if !ok {
-		return nil, nil, fmt.Errorf("failed to get secret %q", name)
-	}
-
-	if secret.Type != corev1.SecretTypeBasicAuth {
-		return nil, nil, fmt.Errorf("non basic auth secret found by userPassRef")
-	}
-
-	return secret.Data[corev1.BasicAuthUsernameKey], secret.Data[corev1.BasicAuthPasswordKey], nil
-}
-
-func (c *sysPodController) getSysSecretObject(name string) (*corev1.Secret, bool) {
-	obj, found, err := c.sysSecretInformer.GetIndexer().GetByKey(constant.SysNS() + "/" + name)
-	if err != nil || !found {
-		return nil, false
-	}
-
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		return nil, false
-	}
-
-	return secret, true
 }

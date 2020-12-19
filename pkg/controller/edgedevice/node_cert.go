@@ -17,21 +17,17 @@ limitations under the License.
 package edgedevice
 
 import (
-	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
 	"net"
-	"strings"
 
 	"arhat.dev/pkg/envhelper"
 	"arhat.dev/pkg/kubehelper"
@@ -54,10 +50,15 @@ import (
 )
 
 type nodeCertController struct {
+	certCtx    context.Context
+	certLogger log.Interface
+
 	certSecretClient clientcorev1.SecretInterface
 	csrClient        *kubehelper.CertificateSigningRequestClient
 
 	certSecretInformer kubecache.SharedIndexInformer
+
+	certAutoApprove bool
 }
 
 func (c *nodeCertController) init(
@@ -67,15 +68,15 @@ func (c *nodeCertController) init(
 	preferredResources []*metav1.APIResourceList,
 	thisPodNSInformerFactory informers.SharedInformerFactory,
 ) error {
+	c.certCtx = ctrl.Context()
+	c.certLogger = ctrl.Log
+	c.certAutoApprove = config.VirtualNode.Node.Cert.AutoApprove
 	c.certSecretClient = kubeClient.CoreV1().Secrets(envhelper.ThisPodNS())
 	c.csrClient = kubehelper.CreateCertificateSigningRequestClient(preferredResources, kubeClient)
 
 	c.certSecretInformer = thisPodNSInformerFactory.Core().V1().Secrets().Informer()
 
-	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs,
-		c.certSecretInformer.HasSynced,
-	)
-
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.certSecretInformer.HasSynced)
 	ctrl.listActions = append(ctrl.listActions, func() error {
 		_, err := listerscorev1.NewSecretLister(c.certSecretInformer.GetIndexer()).List(labels.Everything())
 		if err != nil {
@@ -88,136 +89,8 @@ func (c *nodeCertController) init(
 	return nil
 }
 
-func generatePEMEncodedCSR(template *x509.CertificateRequest, privateKey interface{}) ([]byte, error) {
-	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, template, privateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	return pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE REQUEST",
-		Bytes: csrBytes,
-	}), nil
-}
-
-func parsePEMEncodedCSR(in []byte) (csr *x509.CertificateRequest, err error) {
-	in = bytes.TrimSpace(in)
-	p, _ := pem.Decode(in)
-	if p != nil {
-		if p.Type != "NEW CERTIFICATE REQUEST" && p.Type != "CERTIFICATE REQUEST" {
-			return nil, fmt.Errorf("unexpected non csr pem block")
-		}
-
-		csr, err = x509.ParseCertificateRequest(p.Bytes)
-	} else {
-		csr, err = x509.ParseCertificateRequest(in)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return csr, nil
-}
-
-func parsePEMEncodedPrivateKey(keyPEM, password []byte) (key crypto.Signer, err error) {
-	p, _ := pem.Decode(keyPEM)
-	if p == nil {
-		return nil, fmt.Errorf("no private key block found")
-	}
-
-	var keyDER []byte
-	if procType, ok := p.Headers["Proc-Type"]; ok && strings.Contains(procType, "ENCRYPTED") {
-		if len(password) != 0 {
-			keyDER, err = x509.DecryptPEMBlock(p, password)
-			if err != nil {
-				return nil, fmt.Errorf("failed to decrypt pem block: %w", err)
-			}
-		} else {
-			return nil, fmt.Errorf("private key password not provided")
-		}
-	} else {
-		keyDER = p.Bytes
-	}
-
-	generalKey, err := x509.ParsePKCS8PrivateKey(keyDER)
-	if err != nil {
-		generalKey, err = x509.ParsePKCS1PrivateKey(keyDER)
-		if err != nil {
-			generalKey, err = x509.ParseECPrivateKey(keyDER)
-			if err != nil {
-				// oneAsymmetricKey reflects the ASN.1 structure for storing private keys in
-				// https://tools.ietf.org/html/draft-ietf-curdle-pkix-04, excluding the optional
-				// fields, which we don't use here.
-				//
-				// This is identical to pkcs8 in crypto/x509.
-				type oneAsymmetricKey struct {
-					Version    int
-					Algorithm  pkix.AlgorithmIdentifier
-					PrivateKey []byte
-				}
-
-				// curvePrivateKey is the innter type of the PrivateKey field of
-				// oneAsymmetricKey.
-				type curvePrivateKey []byte
-
-				var ed25519OID = asn1.ObjectIdentifier{1, 3, 101, 112}
-
-				// ParseEd25519PrivateKey returns the Ed25519 private key encoded by the input.
-				parseEd25519PrivateKey := func(der []byte) (crypto.PrivateKey, error) {
-					asym := new(oneAsymmetricKey)
-					var rest []byte
-					rest, err = asn1.Unmarshal(der, asym)
-					if err != nil {
-						return nil, err
-					} else if len(rest) > 0 {
-						return nil, fmt.Errorf("oneAsymmetricKey too long")
-					}
-
-					// Check that the key type is correct.
-					if !asym.Algorithm.Algorithm.Equal(ed25519OID) {
-						return nil, fmt.Errorf("incorrect ed25519 object identifier")
-					}
-
-					// Unmarshal the inner CurvePrivateKey.
-					seed := new(curvePrivateKey)
-					rest, err = asn1.Unmarshal(asym.PrivateKey, seed)
-					if err != nil {
-						return nil, err
-					} else if len(rest) > 0 {
-						return nil, fmt.Errorf("curvePrivateKey too long")
-					}
-
-					return ed25519.NewKeyFromSeed(*seed), nil
-				}
-
-				generalKey, err = parseEd25519PrivateKey(keyDER)
-				if err != nil {
-					// We don't include the actual error into
-					// the final error. The reason might be
-					// we don't want to leak any info about
-					// the private key.
-					return nil, fmt.Errorf("failed to parse private key")
-				}
-			}
-		}
-	}
-
-	switch t := generalKey.(type) {
-	case *rsa.PrivateKey:
-		return t, nil
-	case *ecdsa.PrivateKey:
-		return t, nil
-	case ed25519.PrivateKey:
-		return t, nil
-	}
-
-	// should never reach here
-	return nil, fmt.Errorf("failed to parse private key")
-}
-
 // nolint:gocyclo,lll
-func (c *Controller) ensureKubeletServerCert(
+func (c *nodeCertController) ensureKubeletServerCert(
 	name, hostNodeName string,
 	certInfo aranyaapi.NodeCertSpec,
 	nodeAddresses []corev1.NodeAddress,
@@ -242,7 +115,7 @@ func (c *Controller) ensureKubeletServerCert(
 		secretObjName = fmt.Sprintf("kubelet-tls.%s.%s", hostNodeName, name)
 		// kubernetes csr name
 		csrObjName = fmt.Sprintf("kubelet-tls.%s.%s", hostNodeName, name)
-		logger     = c.Log.WithFields(log.String("name", csrObjName))
+		logger     = c.certLogger.WithFields(log.String("name", csrObjName))
 		certReq    = &x509.CertificateRequest{
 			Subject: pkix.Name{
 				// CommonName is the RBAC role name, which must be `system:node:{nodeName}`
@@ -269,7 +142,7 @@ func (c *Controller) ensureKubeletServerCert(
 		certBytes       []byte
 	)
 
-	pkSecret, err := c.certSecretClient.Get(c.Context(), secretObjName, metav1.GetOptions{})
+	nodeCertSecret, err := c.getCertSecretObject(secretObjName)
 	if err != nil {
 		// create secret object if not found, add tls.csr
 		if kubeerrors.IsNotFound(err) {
@@ -303,7 +176,7 @@ func (c *Controller) ensureKubeletServerCert(
 		}
 		privateKeyBytes = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: b})
 
-		pkSecret = &corev1.Secret{
+		nodeCertSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: envhelper.ThisPodNS(),
 				Name:      secretObjName,
@@ -320,7 +193,7 @@ func (c *Controller) ensureKubeletServerCert(
 		}
 
 		logger.D("creating secret with private key and csr")
-		pkSecret, err = c.certSecretClient.Create(c.Context(), pkSecret, metav1.CreateOptions{})
+		nodeCertSecret, err = c.certSecretClient.Create(c.certCtx, nodeCertSecret, metav1.CreateOptions{})
 		if err != nil {
 			logger.I("failed create csr and private key secret", log.Error(err))
 			return nil, err
@@ -328,18 +201,18 @@ func (c *Controller) ensureKubeletServerCert(
 	} else {
 		var ok bool
 
-		privateKeyBytes, ok = pkSecret.Data[corev1.TLSPrivateKeyKey]
+		privateKeyBytes, ok = nodeCertSecret.Data[corev1.TLSPrivateKeyKey]
 		if !ok {
 			// TODO: try to fix this (caused by other controller or user)
 			return nil, fmt.Errorf("invalid secret, missing private key")
 		}
 
-		certBytes, ok = pkSecret.Data[corev1.TLSCertKey]
+		certBytes, ok = nodeCertSecret.Data[corev1.TLSCertKey]
 		if ok && len(certBytes) > 0 {
 			needToGetKubeCSR = false
 		}
 
-		csrBytes, ok = pkSecret.Data["tls.csr"]
+		csrBytes, ok = nodeCertSecret.Data["tls.csr"]
 		if !ok && needToGetKubeCSR {
 			// csr not found, but still need to get kubernetes csr, conflict
 			// this could happen when user has created the tls secret with
@@ -397,7 +270,7 @@ func (c *Controller) ensureKubeletServerCert(
 	if needToGetKubeCSR {
 		logger.V("fetching existing kubernetes csr")
 		var csrReq *certapi.CertificateSigningRequest
-		csrReq, err = c.csrClient.Get(c.Context(), csrObjName, metav1.GetOptions{})
+		csrReq, err = c.csrClient.Get(c.certCtx, csrObjName, metav1.GetOptions{})
 		if err != nil {
 			if kubeerrors.IsNotFound(err) {
 				needToCreateKubeCSR = true
@@ -410,7 +283,7 @@ func (c *Controller) ensureKubeletServerCert(
 		if needToCreateKubeCSR {
 			logger.D("deleting kubernetes csr to recreate")
 			// delete first to make sure no invalid data exists
-			err = c.csrClient.Delete(c.Context(), csrObjName, *deleteAtOnce)
+			err = c.csrClient.Delete(c.certCtx, csrObjName, *deleteAtOnce)
 			if err != nil && !kubeerrors.IsNotFound(err) {
 				logger.I("failed to delete csr object", log.Error(err))
 				return nil, err
@@ -437,7 +310,7 @@ func (c *Controller) ensureKubeletServerCert(
 			}
 
 			logger.I("creating new kubernetes csr")
-			csrReq, err = c.csrClient.Create(c.Context(), csrObj, metav1.CreateOptions{})
+			csrReq, err = c.csrClient.Create(c.certCtx, csrObj, metav1.CreateOptions{})
 			if err != nil {
 				logger.I("failed to crate new kubernetes csr", log.Error(err))
 				return nil, err
@@ -455,7 +328,7 @@ func (c *Controller) ensureKubeletServerCert(
 			}
 		}
 
-		if needToApproveKubeCSR && c.vnConfig.Node.Cert.AutoApprove {
+		if needToApproveKubeCSR && c.certAutoApprove {
 			csrReq.Status.Conditions = append(csrReq.Status.Conditions, certapi.CertificateSigningRequestCondition{
 				Type:    certapi.CertificateApproved,
 				Status:  coreapi.ConditionTrue,
@@ -464,7 +337,7 @@ func (c *Controller) ensureKubeletServerCert(
 			})
 
 			logger.D("approving kubernetes csr automatically")
-			csrReq, err = c.csrClient.UpdateApproval(c.Context(), csrReq, metav1.UpdateOptions{})
+			csrReq, err = c.csrClient.UpdateApproval(c.certCtx, csrReq, metav1.UpdateOptions{})
 			if err != nil {
 				logger.I("failed to approve kubernetes csr", log.Error(err))
 				return nil, err
@@ -485,9 +358,9 @@ func (c *Controller) ensureKubeletServerCert(
 			return nil, fmt.Errorf("certificate not issued")
 		}
 
-		pkSecret.Data[corev1.TLSCertKey] = certBytes
+		nodeCertSecret.Data[corev1.TLSCertKey] = certBytes
 		logger.V("updating secret to include kubelet cert")
-		_, err = c.certSecretClient.Update(c.Context(), pkSecret, metav1.UpdateOptions{})
+		_, err = c.certSecretClient.Update(c.certCtx, nodeCertSecret, metav1.UpdateOptions{})
 		if err != nil {
 			logger.I("failed to update node secret", log.Error(err))
 			return nil, err
@@ -495,7 +368,7 @@ func (c *Controller) ensureKubeletServerCert(
 
 		// delete at last to make sure no invalid data exists
 		logger.V("deleting kubernetes csr after being approved")
-		err = c.csrClient.Delete(c.Context(), csrObjName, *deleteAtOnce)
+		err = c.csrClient.Delete(c.certCtx, csrObjName, *deleteAtOnce)
 		if err != nil && !kubeerrors.IsNotFound(err) {
 			logger.I("failed to delete csr object", log.Error(err))
 			return nil, err
@@ -506,7 +379,7 @@ func (c *Controller) ensureKubeletServerCert(
 	if err != nil {
 		logger.I("failed to load certificate", log.Error(err))
 
-		err2 := c.certSecretClient.Delete(c.Context(), secretObjName, *deleteAtOnce)
+		err2 := c.certSecretClient.Delete(c.certCtx, secretObjName, *deleteAtOnce)
 		if err2 != nil {
 			logger.I("failed to delete bad certificate", log.Error(err2))
 		}
@@ -516,73 +389,21 @@ func (c *Controller) ensureKubeletServerCert(
 	return &cert, nil
 }
 
-func (c *Controller) createTLSConfigFromSecret(tlsSecretRef *corev1.LocalObjectReference) (*tls.Config, error) {
-	// no tls required
-	if tlsSecretRef == nil {
-		return nil, nil
-	}
-
-	// use system default tls config
-	if tlsSecretRef.Name == "" {
-		return &tls.Config{}, nil
-	}
-
-	tlsSecret, ok := c.getCertSecretObject(tlsSecretRef.Name)
-	if !ok {
-		return nil, fmt.Errorf("failed to get secret %q", tlsSecretRef.Name)
-	}
-
-	_, insecureSkipVerify := tlsSecret.Data["insecureSkipVerify"]
-	caPEM, hasCACert := tlsSecret.Data[constant.TLSCaCertKey]
-	certPEM, hasCert := tlsSecret.Data[corev1.TLSCertKey]
-	keyPEM, hasKey := tlsSecret.Data[corev1.TLSPrivateKeyKey]
-	clientCaPEM, hasClientCACert := tlsSecret.Data["client_ca.crt"]
-
-	tlsConfig := &tls.Config{
-		ServerName:         string(tlsSecret.Data["serverName"]),
-		InsecureSkipVerify: insecureSkipVerify,
-	}
-
-	if hasCACert {
-		tlsConfig.RootCAs = x509.NewCertPool()
-		tlsConfig.RootCAs.AppendCertsFromPEM(caPEM)
-	}
-
-	if hasClientCACert {
-		tlsConfig.ClientCAs = x509.NewCertPool()
-		tlsConfig.ClientCAs.AppendCertsFromPEM(clientCaPEM)
-		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
-	}
-
-	if hasCert {
-		if hasKey {
-			cert, err := tls.X509KeyPair(certPEM, keyPEM)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load x509 key pair: %w", err)
-			}
-			tlsConfig.Certificates = []tls.Certificate{cert}
-		} else {
-			certPool := x509.NewCertPool()
-			if !certPool.AppendCertsFromPEM(certPEM) {
-				return nil, fmt.Errorf("failed to append certificates")
-			}
-			tlsConfig.RootCAs = certPool
-		}
-	}
-
-	return tlsConfig, nil
-}
-
-func (c *nodeCertController) getCertSecretObject(name string) (*corev1.Secret, bool) {
+func (c *nodeCertController) getCertSecretObject(name string) (*corev1.Secret, error) {
 	obj, found, err := c.certSecretInformer.GetIndexer().GetByKey(envhelper.ThisPodNS() + "/" + name)
 	if err != nil || !found {
-		return nil, false
+		secret, err := c.certSecretClient.Get(c.certCtx, name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		return secret, nil
 	}
 
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
-		return nil, false
+		return nil, fmt.Errorf("invalid non secret object for cert")
 	}
 
-	return secret, true
+	return secret, nil
 }

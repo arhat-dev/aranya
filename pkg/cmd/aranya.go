@@ -18,32 +18,18 @@ package cmd
 
 import (
 	"context"
-	"crypto/ed25519"
-	"crypto/rand"
-	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
-	"time"
 
-	"arhat.dev/pkg/encodehelper"
 	"arhat.dev/pkg/envhelper"
 	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
-	"arhat.dev/pkg/patchhelper"
+	"arhat.dev/pkg/perfhelper"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh"
 	corev1 "k8s.io/api/core/v1"
-	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	kubeclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
@@ -51,8 +37,8 @@ import (
 	"arhat.dev/aranya/pkg/apis"
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
+	"arhat.dev/aranya/pkg/controller/aranya"
 	"arhat.dev/aranya/pkg/controller/edgedevice"
-	"arhat.dev/aranya/pkg/util/manager"
 )
 
 func NewAranyaCmd() *cobra.Command {
@@ -107,9 +93,136 @@ func run(appCtx context.Context, config *conf.Config) error {
 		return fmt.Errorf("failed to create kube client from kubeconfig: %w", err)
 	}
 
-	metricsConfig := config.Aranya.Metrics
-	pprofConfig := config.Aranya.PProf
+	err = setupTelemetry(
+		&config.Aranya.Metrics,
+		&config.Aranya.PProf,
+		&config.Aranya.Tracing,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup telemetry: %w", err)
+	}
 
+	logger.I("trying to find myself")
+	podClient := kubeClient.CoreV1().Pods(envhelper.ThisPodNS())
+	thisPod, err := podClient.Get(appCtx, envhelper.ThisPodName(), metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get this pod itself: %w", err)
+	}
+
+	logger.I("trying to find host node")
+	thisNode, err := kubeClient.CoreV1().Nodes().Get(appCtx, thisPod.Spec.NodeName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get host node of this pod: %w", err)
+	}
+
+	var (
+		nodeAddresses    []corev1.NodeAddress
+		hostname, hostIP string
+	)
+
+	for i, addr := range thisNode.Status.Addresses {
+		switch addr.Type {
+		case corev1.NodeHostName:
+			hostname = addr.Address
+		case corev1.NodeInternalIP:
+			hostIP = addr.Address
+		case corev1.NodeExternalIP:
+			if hostIP == "" {
+				hostIP = addr.Address
+			}
+		}
+
+		nodeAddresses = append(nodeAddresses, thisNode.Status.Addresses[i])
+	}
+
+	if len(nodeAddresses) == 0 {
+		return fmt.Errorf("failed to get at least one node address")
+	}
+
+	// setup scheme for all custom resources
+	logger.D("adding api scheme")
+	err = apis.AddToScheme(scheme.Scheme)
+	if err != nil {
+		return fmt.Errorf("failed to add api scheme: %w", err)
+	}
+
+	logger.D("discovering api resources")
+	preferredResources, err := kubeClient.Discovery().ServerPreferredResources()
+	if err != nil {
+		logger.I("failed to discover cluster preferred api, will try to fallback", log.Error(err))
+	}
+
+	if len(preferredResources) == 0 {
+		logger.I("no api resource discovered")
+		preferredResources = edgedevice.CheckAPIVersionFallback(kubeClient)
+	} else {
+		logger.D("found api resources", log.Any("resources", preferredResources))
+	}
+
+	logger.I("creating edge device controller")
+	edCtrl, err := edgedevice.NewController(
+		appCtx, config,
+		thisNode.Name, hostname, hostIP,
+		nodeAddresses,
+		preferredResources,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create edge device controller: %w", err)
+	}
+
+	logger.I("starting edge device controller")
+	err = edCtrl.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start edge device controller: %w", err)
+	}
+
+	logger.I("creating aranya controller")
+	aranyaCtrl, err := aranya.NewController(appCtx, logger, kubeClient, edCtrl)
+	if err != nil {
+		return fmt.Errorf("failed to create aranya controller: %w", err)
+	}
+
+	logger.I("starting aranya controller")
+	err = aranyaCtrl.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start aranya controller: %w", err)
+	}
+
+	logger.V("creating leader elector")
+	evb := record.NewBroadcaster()
+	watchEventLogging := evb.StartLogging(func(format string, args ...interface{}) {
+		logger.I(fmt.Sprintf(format, args...), log.String("source", "event"))
+	})
+	watchEventRecording := evb.StartRecordingToSink(&typedcorev1.EventSinkImpl{
+		Interface: kubeClient.CoreV1().Events(envhelper.ThisPodNS()),
+	})
+	defer func() {
+		watchEventLogging.Stop()
+		watchEventRecording.Stop()
+	}()
+
+	elector, err := config.Aranya.LeaderElection.CreateElector("aranya", kubeClient,
+		evb.NewRecorder(scheme.Scheme, corev1.EventSource{
+			Component: "aranya",
+		}),
+		aranyaCtrl.OnElected,
+		aranyaCtrl.OnEjected,
+		aranyaCtrl.OnNewLeader,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create elector: %w", err)
+	}
+
+	logger.I("running controller with leader election")
+	elector.Run(appCtx)
+	return nil
+}
+
+func setupTelemetry(
+	metricsConfig *perfhelper.MetricsConfig,
+	pprofConfig *perfhelper.PProfConfig,
+	tracingConfig *perfhelper.TracingConfig,
+) error {
 	_, mtHandler, err := metricsConfig.CreateIfEnabled(true)
 	if err != nil {
 		return fmt.Errorf("failed to create metrics provider: %w", err)
@@ -199,315 +312,10 @@ func run(appCtx context.Context, config *conf.Config) error {
 		}()
 	}
 
-	_, err = config.Aranya.Tracing.CreateIfEnabled(true, nil)
+	_, err = tracingConfig.CreateIfEnabled(true, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create tracing provider: %w", err)
 	}
 
-	var (
-		privateKey  []byte
-		sshListener net.Listener
-		sftpManager *manager.SFTPManager
-	)
-	if config.VirtualNode.Storage.Enabled {
-		sshListener, err = net.Listen("tcp", ":0")
-		if err != nil {
-			return fmt.Errorf("failed to listen for ssh server: %w", err)
-		}
-
-		var (
-			hostKeyBytes []byte
-			hostKey      ssh.Signer
-			pubKey       ed25519.PublicKey
-			privKey      ed25519.PrivateKey
-			publicKey    ssh.PublicKey
-		)
-
-		hostKeyBytes, err = ioutil.ReadFile(config.VirtualNode.Storage.SFTP.HostKeyFile)
-		if err != nil {
-			return fmt.Errorf("failed to read sftp host key: %w", err)
-		}
-
-		hostKey, err = ssh.ParsePrivateKey(hostKeyBytes)
-		if err != nil {
-			return fmt.Errorf("failed to parse sftp host key: %w", err)
-		}
-
-		pubKey, privKey, err = ed25519.GenerateKey(rand.Reader)
-		if err != nil {
-			return fmt.Errorf("failed to generate ed25519 key pair: %w", err)
-		}
-
-		publicKey, _ = ssh.NewPublicKey(pubKey)
-		privateKey = pem.EncodeToMemory(
-			&pem.Block{Type: "OPENSSH PRIVATE KEY", Bytes: encodehelper.MarshalED25519PrivateKeyForOpenSSH(privKey)})
-
-		sftpManager = manager.NewSFTPManager(
-			appCtx, config.VirtualNode.Storage.RootDir, sshListener, hostKey, publicKey.Marshal())
-	}
-
-	evb := record.NewBroadcaster()
-	watchEventLogging := evb.StartLogging(func(format string, args ...interface{}) {
-		logger.I(fmt.Sprintf(format, args...), log.String("source", "event"))
-	})
-	watchEventRecording := evb.StartRecordingToSink(
-		&typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events(envhelper.ThisPodNS())})
-	defer func() {
-		watchEventLogging.Stop()
-		watchEventRecording.Stop()
-	}()
-
-	logger.V("creating leader elector")
-	elector, err := config.Aranya.LeaderElection.CreateElector("aranya", kubeClient,
-		evb.NewRecorder(scheme.Scheme, corev1.EventSource{
-			Component: "aranya",
-		}),
-		// on elected
-		func(ctx context.Context) {
-			err2 := onElected(ctx, logger, kubeClient, config, sshListener, sftpManager, privateKey)
-			if err2 != nil {
-				logger.E("failed to run controller", log.Error(err2))
-				os.Exit(1)
-			}
-		},
-		// on ejected
-		func() {
-			logger.E("lost leader-election")
-			// TODO: redo onElected
-			os.Exit(1)
-		},
-		// on new leader
-		func(identity string) {
-			// TODO: react when new leader elected
-		},
-	)
-
-	if err != nil {
-		return fmt.Errorf("failed to create elector: %w", err)
-	}
-
-	logger.I("running leader election")
-	elector.Run(appCtx)
-
-	return fmt.Errorf("unreachable code")
-}
-
-func onElected(
-	appCtx context.Context,
-	logger log.Interface,
-	kubeClient kubeclient.Interface,
-	config *conf.Config,
-
-	// storage related
-	sshListener net.Listener,
-	sftpManager *manager.SFTPManager,
-	privateKey []byte,
-) error {
-	logger.I("won leader election")
-
-	logger.I("trying to find myself")
-	podClient := kubeClient.CoreV1().Pods(envhelper.ThisPodNS())
-	thisPod, err := podClient.Get(appCtx, envhelper.ThisPodName(), metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to get this pod itself: %w", err)
-	}
-
-	logger.I("trying to find host node I am living on")
-	thisNode, err := kubeClient.CoreV1().Nodes().Get(appCtx, thisPod.Spec.NodeName, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to get host node of this pod: %w", err)
-	}
-
-	podLabels := make(map[string]string)
-	for i := 0; i < 5; i++ {
-		if thisPod.Labels != nil {
-			podLabels = thisPod.Labels
-		}
-		podLabels[constant.LabelControllerLeadership] = constant.LabelControllerLeadershipLeader
-		thisPod.Labels = podLabels
-
-		_, err = podClient.Update(appCtx, thisPod, metav1.UpdateOptions{})
-		if err == nil {
-			break
-		}
-
-		logger.I("failed to add leadership label to this pod", log.Error(err))
-
-		// simple backoff
-		time.Sleep(time.Second)
-
-		if !kubeerrors.IsConflict(err) {
-			continue
-		}
-
-		// conflict, get latest pod object to update
-		thisPod, err = podClient.Get(appCtx, envhelper.ThisPodName(), metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to get this pod itself to resolve conflict update: %w", err)
-		}
-	}
-	if err != nil {
-		return fmt.Errorf("failed to add leadership label after 5 attempts: %w", err)
-	}
-
-	var (
-		nodeAddresses    []corev1.NodeAddress
-		hostname, hostIP string
-	)
-
-	for i, addr := range thisNode.Status.Addresses {
-		switch addr.Type {
-		case corev1.NodeHostName:
-			hostname = addr.Address
-		case corev1.NodeInternalIP:
-			hostIP = addr.Address
-		case corev1.NodeExternalIP:
-			if hostIP == "" {
-				hostIP = addr.Address
-			}
-		}
-
-		nodeAddresses = append(nodeAddresses, thisNode.Status.Addresses[i])
-	}
-
-	if len(nodeAddresses) == 0 {
-		return fmt.Errorf("failed to get at least one node address")
-	}
-
-	if config.VirtualNode.Storage.SFTP.Enabled {
-		err = setupServiceForSftpManager(
-			config.Aranya.Managed.SFTPService.Name, sshListener.Addr().String(), kubeClient, podLabels,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to setup sftp service: %w", err)
-		}
-
-		logger.D("starting sftp manager")
-		go func() {
-			if err2 := sftpManager.Start(); err2 != nil {
-				logger.E("failed to start sftp manager", log.Error(err2))
-				os.Exit(1)
-			}
-		}()
-	}
-
-	// setup scheme for all custom resources
-	logger.D("adding api scheme")
-	if err = apis.AddToScheme(scheme.Scheme); err != nil {
-		return fmt.Errorf("failed to add api scheme: %w", err)
-	}
-
-	logger.D("discovering api resources")
-	preferredResources, err := kubeClient.Discovery().ServerPreferredResources()
-	if err != nil {
-		logger.I("failed to finish api discovery", log.Error(err))
-	}
-
-	if len(preferredResources) == 0 {
-		logger.I("no api resource discovered")
-		preferredResources = edgedevice.CheckAPIVersionFallback(kubeClient)
-	} else {
-		logger.D("found api resources", log.Any("resources", preferredResources))
-	}
-
-	// create and start controller
-	logger.I("creating controller")
-	controller, err := edgedevice.NewController(
-		appCtx, config, privateKey,
-		thisNode.Name, hostname, hostIP, nodeAddresses,
-		podLabels,
-		preferredResources,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create new controller: %w", err)
-	}
-
-	logger.I("starting controller")
-	if err = controller.Start(); err != nil {
-		return fmt.Errorf("failed to start controller: %w", err)
-	}
-
-	return fmt.Errorf("controller exited: %w", appCtx.Err())
-}
-
-func setupServiceForSftpManager(
-	name, listenAddr string,
-	kubeClient kubeclient.Interface,
-	selector map[string]string,
-) error {
-	if name == "" {
-		// no service will be managed by us
-		return nil
-	}
-
-	_, portStr, _ := net.SplitHostPort(listenAddr)
-	port, err := strconv.ParseInt(portStr, 10, 32)
-	if err != nil {
-		return fmt.Errorf("failed to parse sftp listener port value: %w", err)
-	}
-
-	create := false
-	svc := newServiceForSFTP(name, int(port), selector)
-	svcClient := kubeClient.CoreV1().Services(envhelper.ThisPodNS())
-
-	oldSvc, err := svcClient.Get(context.TODO(), name, metav1.GetOptions{})
-	if err == nil {
-		// try to patch update
-		clone := oldSvc.DeepCopy()
-
-		clone.Spec.Ports = svc.Spec.Ports
-		clone.Spec.Selector = svc.Spec.Selector
-		clone.Spec.ClusterIP = svc.Spec.ClusterIP
-
-		err = patchhelper.TwoWayMergePatch(oldSvc, clone, &corev1.Service{}, func(patchData []byte) error {
-			_, err2 := svcClient.Patch(
-				context.TODO(), name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{})
-			if err2 != nil {
-				return fmt.Errorf("failed to patch node spec: %w", err2)
-			}
-			return nil
-		})
-
-		if err != nil {
-			err = svcClient.Delete(context.TODO(), name, *metav1.NewDeleteOptions(0))
-			if err != nil && !kubeerrors.IsNotFound(err) {
-				return fmt.Errorf("failed to delete managed sftp service")
-			}
-
-			create = true
-		}
-	} else {
-		if !kubeerrors.IsNotFound(err) {
-			return fmt.Errorf("failed to get old sftp service: %w", err)
-		}
-
-		create = true
-	}
-
-	if create {
-		_, err := svcClient.Create(context.TODO(), svc, metav1.CreateOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to create managed sftp service: %w", err)
-		}
-	}
-
 	return nil
-}
-
-func newServiceForSFTP(name string, listenerPort int, selector map[string]string) *corev1.Service {
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: envhelper.ThisPodNS(),
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{{
-				Name:       "sftp",
-				Port:       22,
-				TargetPort: intstr.FromInt(listenerPort),
-			}},
-			Selector:  selector,
-			ClusterIP: corev1.ClusterIPNone,
-		},
-	}
 }

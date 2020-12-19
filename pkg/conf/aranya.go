@@ -41,10 +41,10 @@ type AppConfig struct {
 			Name string `json:"name" yaml:"name"`
 		} `json:"connectivityService" yaml:"connectivityService"`
 
-		SFTPService struct {
+		StorageService struct {
 			// aranya will only manage Service.spec.{selector, ports[].{name, port, targetPort}}
 			Name string `json:"name" yaml:"name"`
-		} `json:"sftpService" yaml:"sftpService"`
+		} `json:"storageService" yaml:"storageService"`
 
 		// NodeClusterRoles managed for node access
 		// aranya will add nodes related to the edgedevices in watch namespace to this cluster role
@@ -60,7 +60,7 @@ func FlagsForAranyaAppConfig(prefix string, config *AppConfig) *pflag.FlagSet {
 	flags.IntVar(&config.MaxVirtualnodeCreatingInParallel, "maxVirtualnodeCreatingInParallel", 0,
 		"set how many virtualnode can be creating in parallel, values <= 0 means no limit")
 
-	flags.StringVar(&config.Managed.SFTPService.Name, prefix+"managed.sftpService.name",
+	flags.StringVar(&config.Managed.StorageService.Name, prefix+"managed.storageService.name",
 		"edgedevice-sftp", "set sftp service resource name managed by aranya (for remote csi storage feature)")
 	flags.StringVar(&config.Managed.ConnectivityService.Name, prefix+"managed.connectivity.name",
 		"edgedevice-connectivity",

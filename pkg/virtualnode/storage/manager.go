@@ -74,6 +74,8 @@ const (
 )
 
 type Options struct {
+	SSHPrivateKey []byte
+
 	StorageRootDir         string
 	KubeletRegistrationDir string
 	KubeletPluginsDir      string

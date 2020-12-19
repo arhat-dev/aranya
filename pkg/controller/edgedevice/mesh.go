@@ -17,49 +17,45 @@ limitations under the License.
 package edgedevice
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
 
 	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
-	corev1 "k8s.io/api/core/v1"
-	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
 	kubeclient "k8s.io/client-go/kubernetes"
-	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	listerscorev1 "k8s.io/client-go/listers/core/v1"
 	kubecache "k8s.io/client-go/tools/cache"
 
-	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/util/ipam"
 )
 
 // network management
-type networkController struct {
-	meshSecretClient clientcorev1.SecretInterface
-
+type meshController struct {
 	meshIPAMv4 *ipam.IPAddressManager
 	meshIPAMv6 *ipam.IPAddressManager
 
-	abbotEndpointsInformer kubecache.SharedIndexInformer
-	abbotEndpointsRec      *kubehelper.KubeInformerReconciler
+	abbotSvcName    string
+	abbotEpInformer kubecache.SharedIndexInformer
+	abbotEpRec      *kubehelper.KubeInformerReconciler
 
-	netSvcInformer       kubecache.SharedIndexInformer
-	netSvcRec            *kubehelper.KubeInformerReconciler
-	netEndpointsInformer kubecache.SharedIndexInformer
-	netEndpointsRec      *kubehelper.KubeInformerReconciler
+	netSvcName     string
+	netSvcInformer kubecache.SharedIndexInformer
+	netSvcRec      *kubehelper.KubeInformerReconciler
+	netEpInformer  kubecache.SharedIndexInformer
+	netEpRec       *kubehelper.KubeInformerReconciler
 
-	// nolint:structcheck
 	netReqRec *reconcile.Core
 }
 
-func (c *networkController) init(
+func (c *meshController) init(
 	ctrl *Controller,
 	config *conf.Config,
 	kubeClient kubeclient.Interface,
@@ -70,7 +66,16 @@ func (c *networkController) init(
 		return nil
 	}
 
-	c.meshSecretClient = kubeClient.CoreV1().Secrets(constant.SysNS())
+	c.abbotSvcName = config.VirtualNode.Network.AbbotService.Name
+	c.netSvcName = config.VirtualNode.Network.NetworkService.Name
+
+	if len(c.abbotSvcName) == 0 {
+		return fmt.Errorf("abbot service name not set")
+	}
+
+	if len(c.netSvcName) == 0 {
+		return fmt.Errorf("network service name not set")
+	}
 
 	if blocks := netConf.Mesh.IPv4Blocks; len(blocks) != 0 {
 		c.meshIPAMv4 = ipam.NewIPAddressManager()
@@ -92,17 +97,31 @@ func (c *networkController) init(
 		}
 	}
 
+	if c.meshIPAMv4 == nil && c.meshIPAMv6 == nil {
+		return fmt.Errorf("no address block available for mesh network")
+	}
+
 	// watch abbot endpoints
-	c.abbotEndpointsInformer = informerscorev1.New(tenantInformerFactory, constant.TenantNS(),
+	filterAbbotSvcName := fields.OneTermEqualSelector("metadata.name", c.abbotSvcName).String()
+	c.abbotEpInformer = informerscorev1.New(tenantInformerFactory, constant.TenantNS(),
 		func(options *metav1.ListOptions) {
-			options.FieldSelector = fields.OneTermEqualSelector(
-				"metadata.name", config.VirtualNode.Network.AbbotService.Name,
-			).String()
+			options.FieldSelector = filterAbbotSvcName
 		},
 	).Endpoints().Informer()
-	c.abbotEndpointsRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.abbotEndpointsInformer,
+
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.abbotEpInformer.HasSynced)
+	ctrl.listActions = append(ctrl.listActions, func() error {
+		_, err := listerscorev1.NewEndpointsLister(c.abbotEpInformer.GetIndexer()).List(labels.Everything())
+		if err != nil {
+			return fmt.Errorf("failed to list abbot endpoints in namespace %q: %w", constant.TenantNS(), err)
+		}
+
+		return nil
+	})
+
+	c.abbotEpRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.abbotEpInformer,
 		reconcile.Options{
-			Logger:          ctrl.Log.WithName("rec:net:abbot"),
+			Logger:          ctrl.Log.WithName("rec:abbot:ep"),
 			BackoffStrategy: nil,
 			Workers:         1,
 			RequireCache:    true,
@@ -114,17 +133,28 @@ func (c *networkController) init(
 			OnBackoffReset: nil,
 		},
 	)
-	ctrl.recStart = append(ctrl.recStart, c.abbotEndpointsRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.abbotEndpointsRec.ReconcileUntil)
+
+	ctrl.recStart = append(ctrl.recStart, c.abbotEpRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.abbotEpRec.ReconcileUntil)
 
 	// monitor managed network service
+	filterNetSvcName := fields.OneTermEqualSelector("metadata.name", c.netSvcName).String()
 	c.netSvcInformer = informerscorev1.New(tenantInformerFactory, constant.TenantNS(),
 		func(options *metav1.ListOptions) {
-			options.FieldSelector = fields.OneTermEqualSelector(
-				"metadata.name", config.VirtualNode.Network.NetworkService.Name,
-			).String()
+			options.FieldSelector = filterNetSvcName
 		},
 	).Services().Informer()
+
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.netSvcInformer.HasSynced)
+	ctrl.listActions = append(ctrl.listActions, func() error {
+		_, err := listerscorev1.NewServiceLister(c.netSvcInformer.GetIndexer()).List(labels.Everything())
+		if err != nil {
+			return fmt.Errorf("failed to list network services in namespace %q: %w", constant.TenantNS(), err)
+		}
+
+		return nil
+	})
+
 	c.netSvcRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.netSvcInformer,
 		reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:net:svc"),
@@ -143,14 +173,23 @@ func (c *networkController) init(
 	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.netSvcRec.ReconcileUntil)
 
 	// monitor managed network service endpoints
-	c.netEndpointsInformer = informerscorev1.New(tenantInformerFactory, constant.TenantNS(),
+	c.netEpInformer = informerscorev1.New(tenantInformerFactory, constant.TenantNS(),
 		func(options *metav1.ListOptions) {
-			options.FieldSelector = fields.OneTermEqualSelector(
-				"metadata.name", config.VirtualNode.Network.NetworkService.Name,
-			).String()
+			options.FieldSelector = filterNetSvcName
 		},
 	).Endpoints().Informer()
-	c.netEndpointsRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.netEndpointsInformer,
+
+	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.netEpInformer.HasSynced)
+	ctrl.listActions = append(ctrl.listActions, func() error {
+		_, err := listerscorev1.NewEndpointsLister(c.netEpInformer.GetIndexer()).List(labels.Everything())
+		if err != nil {
+			return fmt.Errorf("failed to list network endpoints in namespace %q: %w", constant.TenantNS(), err)
+		}
+
+		return nil
+	})
+
+	c.netEpRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.netEpInformer,
 		reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:net:ep"),
 			BackoffStrategy: nil,
@@ -164,8 +203,8 @@ func (c *networkController) init(
 			OnBackoffReset: nil,
 		},
 	)
-	ctrl.recStart = append(ctrl.recStart, c.netEndpointsRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.netEndpointsRec.ReconcileUntil)
+	ctrl.recStart = append(ctrl.recStart, c.netEpRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.netEpRec.ReconcileUntil)
 
 	// handle EdgeDevice add/delete
 	ctrl.netReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
@@ -211,7 +250,7 @@ func (c *Controller) onMeshMemberDeleteRequested(obj interface{}) *reconcile.Res
 	return nil
 }
 
-func (c *networkController) requestNetworkEnsure(name string) error {
+func (c *meshController) requestNetworkEnsure(name string) error {
 	if c.netReqRec == nil {
 		return fmt.Errorf("network ensure not supported")
 	}
@@ -223,95 +262,4 @@ func (c *networkController) requestNetworkEnsure(name string) error {
 	}
 
 	return nil
-}
-
-// nolint:unparam
-func (c *Controller) ensureMeshConfig(name string, config aranyaapi.NetworkSpec) (*corev1.Secret, error) {
-	if !c.vnConfig.Network.Enabled || !config.Enabled {
-		return nil, nil
-	}
-
-	var (
-		secretName = fmt.Sprintf("mesh-config.%s", name)
-		create     = false
-	)
-
-	meshSecret, err := c.meshSecretClient.Get(c.Context(), secretName, metav1.GetOptions{})
-	if err != nil {
-		if !kubeerrors.IsNotFound(err) {
-			return nil, fmt.Errorf("failed to retrieve mesh secret: %w", err)
-		}
-
-		create = true
-	}
-
-	if create {
-		meshSecret, err = newSecretForMesh(secretName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate mesh secret: %w", err)
-		}
-
-		meshSecret, err = c.meshSecretClient.Create(c.Context(), meshSecret, metav1.CreateOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create mesh secret: %w", err)
-		}
-
-		return meshSecret, nil
-	}
-
-	// check and update
-
-	update := false
-	wgPk, ok := accessMap(meshSecret.StringData, meshSecret.Data, constant.MeshConfigKeyWireguardPrivateKey)
-	if !ok || len(wgPk) != constant.WireguardKeyLength {
-		update = true
-	}
-
-	if update {
-		var newSecret *corev1.Secret
-		newSecret, err = newSecretForMesh(secretName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate mesh secret for update: %w", err)
-		}
-
-		meshSecret.Data = newSecret.Data
-		meshSecret.StringData = newSecret.StringData
-
-		meshSecret, err = c.meshSecretClient.Update(c.Context(), meshSecret, metav1.UpdateOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("failed to update invalid mesh secret: %w", err)
-		}
-	}
-
-	return meshSecret, nil
-}
-
-func newSecretForMesh(secretName string) (*corev1.Secret, error) {
-	wgPk, err := generateWireguardPrivateKey()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate wireguard private key: %w", err)
-	}
-
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: constant.SysNS(),
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			constant.MeshConfigKeyWireguardPrivateKey: wgPk,
-		},
-	}, nil
-}
-
-func generateWireguardPrivateKey() ([]byte, error) {
-	key := make([]byte, constant.WireguardKeyLength)
-	if _, err := rand.Read(key); err != nil {
-		return nil, fmt.Errorf("failed to read random bytes: %v", err)
-	}
-
-	key[0] &= 248
-	key[31] &= 127
-	key[31] |= 64
-	return key, nil
 }

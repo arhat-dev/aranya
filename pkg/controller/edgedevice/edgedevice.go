@@ -118,7 +118,6 @@ func (c *edgeDeviceController) init(
 	c.edgeDeviceInformer = edgeDeviceInformerFactory.Aranya().V1alpha1().EdgeDevices().Informer()
 
 	ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.edgeDeviceInformer.HasSynced)
-
 	ctrl.listActions = append(ctrl.listActions, func() error {
 		_, err := listersaranyav1a1.NewEdgeDeviceLister(c.edgeDeviceInformer.GetIndexer()).List(labels.Everything())
 		if err != nil {
@@ -140,6 +139,7 @@ func (c *edgeDeviceController) init(
 			OnDeleted:  ctrl.onEdgeDeviceResDeleted,
 		},
 	})
+
 	ctrl.recStart = append(ctrl.recStart, edgeDeviceRec.Start)
 	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, edgeDeviceRec.ReconcileUntil)
 
@@ -273,7 +273,6 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 			Hostname: c.hostname,
 			HostIP:   c.hostIP,
 
-			SSHPrivateKey:      make([]byte, len(c.sshPrivateKey)),
 			EventBroadcaster:   record.NewBroadcaster(),
 			VirtualnodeManager: c.virtualNodes,
 
@@ -289,7 +288,6 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 			PodOptions: nil,
 		}
 	)
-	_ = copy(opts.SSHPrivateKey, c.sshPrivateKey)
 
 	ed, ok := c.getEdgeDeviceObject(name)
 	if !ok {
@@ -472,7 +470,7 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 		}
 	}
 
-	if vn.ConnectivityServerListener() != nil && c.svcReqRec != nil {
+	if vn.ConnectivityServerListener() != nil && c.connSvcReqRec != nil {
 		logger.D("requesting connectivity service ensure")
 		err = c.requestConnectivityServiceEnsure()
 		if err != nil {
@@ -578,7 +576,7 @@ func (c *Controller) prepareConnectivityOptions(
 			tlsConfig      *tls.Config
 		)
 
-		tlsConfig, err = c.createTLSConfigFromSecret(grpcConfig.TLSSecretRef)
+		tlsConfig, err = c.createTLSConfigFromSysSecret(grpcConfig.TLSSecretRef)
 		if err != nil {
 			c.Log.I("failed to get grpc server tls secret", log.Error(err))
 			return nil, err
@@ -612,7 +610,7 @@ func (c *Controller) prepareConnectivityOptions(
 			password   []byte
 		)
 
-		tlsConfig, err = c.createTLSConfigFromSecret(mqttConfig.TLSSecretRef)
+		tlsConfig, err = c.createTLSConfigFromSysSecret(mqttConfig.TLSSecretRef)
 		if err != nil {
 			c.Log.I("failed to get mqtt client tls secret", log.Error(err))
 			return nil, err
@@ -641,7 +639,7 @@ func (c *Controller) prepareConnectivityOptions(
 			password   []byte
 		)
 
-		tlsConfig, err = c.createTLSConfigFromSecret(amqpConfig.TLSSecretRef)
+		tlsConfig, err = c.createTLSConfigFromSysSecret(amqpConfig.TLSSecretRef)
 		if err != nil {
 			c.Log.I("failed to create amqp client tls config", log.Error(err))
 			return nil, err
@@ -899,6 +897,9 @@ func (c *Controller) prepareStorageOptions(
 	}
 
 	opts := &storage.Options{
+		// TODO: implement ssh private key
+		SSHPrivateKey: nil,
+
 		StorageRootDir:         vnConfig.Storage.RootDir,
 		KubeletRegistrationDir: vnConfig.Storage.KubeletRegistrationDir,
 		KubeletPluginsDir:      vnConfig.Storage.KubeletPluginsDir,

@@ -37,9 +37,9 @@ const (
 )
 
 const (
-	LabelControllerLeadership = "controller.arhat.dev/leadership"
+	LabelAranyaLeadership = "aranya.arhat.dev/leadership"
 
-	LabelControllerLeadershipLeader = "leader"
+	LabelAranyaLeadershipLeader = "leader"
 )
 
 // Well-known kubernetes role label for node objects

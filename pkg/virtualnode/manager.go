@@ -17,15 +17,12 @@ limitations under the License.
 package virtualnode
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
-	"arhat.dev/pkg/hashhelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -36,7 +33,6 @@ import (
 
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 func NewVirtualNodeManager(
@@ -108,21 +104,38 @@ func (m *Manager) doPerQueue(do func(q *queue.TimeoutQueue)) {
 	}
 }
 
-func (m *Manager) Start() error {
+func (m *Manager) Start(wg *sync.WaitGroup, stop <-chan struct{}) {
 	m.doPerQueue(func(q *queue.TimeoutQueue) {
-		q.Start(m.ctx.Done())
+		q.Start(stop)
 	})
 
-	go m.consumeForceNodeSync()
-	go m.consumeForcePodSync()
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
 
+		m.consumeForceNodeSync()
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		m.consumeForcePodSync()
+	}()
+
+	wg.Add(1)
 	if m.leaseEnabled {
-		m.consumeLeaseUpdate()
-	} else {
-		m.consumeMirrorNodeSync()
-	}
+		go func() {
+			defer wg.Done()
 
-	return m.ctx.Err()
+			m.consumeLeaseUpdate()
+		}()
+	} else {
+		go func() {
+			defer wg.Done()
+
+			m.consumeMirrorNodeSync()
+		}()
+	}
 }
 
 func (m *Manager) OnVirtualNodeDisconnected(vn *VirtualNode) {
@@ -233,51 +246,6 @@ func (m *Manager) OnVirtualNodeConnected(vn *VirtualNode) (allow bool) {
 		}
 
 		vn.log.V("scheduled mirror node update")
-	}
-
-	if vn.storageManager != nil {
-		// send storage credentials when storage enabled
-		vn.log.D("sending credentials to node")
-		msgCh, _, err := vn.opt.ConnectivityManager.PostCmd(
-			0, aranyagopb.CMD_CRED_ENSURE, &aranyagopb.CredentialEnsureCmd{SshPrivateKey: vn.opt.SSHPrivateKey},
-		)
-		if err != nil {
-			vn.log.E("failed to send storage credentials", log.Error(err))
-			vn.opt.ConnectivityManager.Reject(
-				aranyagopb.REJECTION_INITIAL_CHECK_FAILURE, "failed to sync credentials")
-			return false
-		}
-
-		connectivity.HandleMessages(msgCh, func(msg *aranyagopb.Msg) (exit bool) {
-			if msgErr := msg.GetError(); msgErr != nil {
-				err = msgErr
-				return true
-			}
-
-			credStatus := msg.GetCredentialStatus()
-			if credStatus == nil {
-				vn.log.I("unexpected non credential status message", log.Any("msg", msg))
-				return true
-			}
-
-			if !bytes.Equal(credStatus.SshPrivateKeySha256, hashhelper.Sha256Sum(vn.opt.SSHPrivateKey)) {
-				err = fmt.Errorf("ssh identity corrupted")
-				return true
-			}
-
-			return false
-		})
-
-		if err != nil {
-			if e, ok := err.(*aranyagopb.ErrorMsg); ok && e.Kind == aranyagopb.ERR_NOT_SUPPORTED {
-				vn.log.I("node credentials not supported")
-			} else {
-				vn.log.I("failed to set node credentials", log.Error(err))
-				vn.opt.ConnectivityManager.Reject(
-					aranyagopb.REJECTION_INITIAL_CHECK_FAILURE, "failed to sync credentials")
-				return false
-			}
-		}
 	}
 
 	return true

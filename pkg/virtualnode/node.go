@@ -51,7 +51,6 @@ type CreationOptions struct {
 	HostIP   string
 	Hostname string
 
-	SSHPrivateKey         []byte
 	ScheduleNodeSync      func() error
 	KubeClient            kubeclient.Interface
 	KubeletServerListener net.Listener

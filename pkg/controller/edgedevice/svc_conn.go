@@ -45,8 +45,8 @@ import (
 )
 
 type connectivityServiceController struct {
-	svcReqRec           *reconcile.Core
-	sysSvcClient        clientcorev1.ServiceInterface
+	connSvcReqRec       *reconcile.Core
+	connSvcClient       clientcorev1.ServiceInterface
 	connectivityService string
 }
 
@@ -62,7 +62,7 @@ func (c *connectivityServiceController) init(
 	}
 
 	// client
-	c.sysSvcClient = kubeClient.CoreV1().Services(envhelper.ThisPodNS())
+	c.connSvcClient = kubeClient.CoreV1().Services(envhelper.ThisPodNS())
 
 	// informer and sync
 	setLabelSelector := newTweakListOptionsFunc(
@@ -102,7 +102,7 @@ func (c *connectivityServiceController) init(
 	ctrl.recStart = append(ctrl.recStart, serviceRec.Start)
 	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, serviceRec.ReconcileUntil)
 
-	c.svcReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+	c.connSvcReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:svc_req"),
 		BackoffStrategy: nil,
 		Workers:         1,
@@ -113,8 +113,8 @@ func (c *connectivityServiceController) init(
 		OnBackoffStart: nil,
 		OnBackoffReset: nil,
 	}.ResolveNil())
-	ctrl.recStart = append(ctrl.recStart, c.svcReqRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.svcReqRec.ReconcileUntil)
+	ctrl.recStart = append(ctrl.recStart, c.connSvcReqRec.Start)
+	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.connSvcReqRec.ReconcileUntil)
 
 	return nil
 }
@@ -133,13 +133,6 @@ func (c *Controller) checkServiceUpToDate(
 
 	if len(svc.Labels) == 0 || svc.Labels[constant.LabelRole] != constant.LabelRoleValueConnectivity {
 		upToDate = false
-	}
-
-	for k, v := range c.thisPodLabels {
-		if svc.Spec.Selector[k] != v {
-			upToDate = false
-			break
-		}
 	}
 
 	if len(svc.Spec.Ports) != len(allPorts) {
@@ -172,15 +165,15 @@ func (c *Controller) checkServiceUpToDate(
 	return
 }
 
-func (c *Controller) requestConnectivityServiceEnsure() error {
+func (c *connectivityServiceController) requestConnectivityServiceEnsure() error {
 	switch {
 	case c.connectivityService == "":
 		return nil
-	case c.svcReqRec == nil:
+	case c.connSvcReqRec == nil:
 		return nil
 	}
 
-	err := c.svcReqRec.Schedule(queue.Job{Action: queue.ActionAdd, Key: ""}, 0)
+	err := c.connSvcReqRec.Schedule(queue.Job{Action: queue.ActionAdd, Key: ""}, 0)
 	if err != nil && !errors.Is(err, queue.ErrJobDuplicated) {
 		return fmt.Errorf("failed to schedule connectivity service ensure: %w", err)
 	}
@@ -235,7 +228,7 @@ func (c *Controller) onServiceUpdated(oldObj, newObj interface{}) *reconcile.Res
 
 func (c *Controller) onServiceDeleting(obj interface{}) *reconcile.Result {
 	// TODO: add finalizer
-	err := c.sysSvcClient.Delete(c.Context(), obj.(*corev1.Service).Name, *deleteAtOnce)
+	err := c.connSvcClient.Delete(c.Context(), obj.(*corev1.Service).Name, *deleteAtOnce)
 	if err != nil && !kubeerrors.IsNotFound(err) {
 		return &reconcile.Result{Err: err}
 	}
@@ -278,7 +271,7 @@ func (c *Controller) ensureConnectivityService() error {
 	svc := c.newServiceForAllEdgeDevices()
 
 	// get latest service object, not from informer cache
-	oldSvc, err := c.sysSvcClient.Get(c.Context(), c.connectivityService, metav1.GetOptions{})
+	oldSvc, err := c.connSvcClient.Get(c.Context(), c.connectivityService, metav1.GetOptions{})
 	if err == nil {
 		logger.D("found old svc, checking if up to date")
 
@@ -299,11 +292,11 @@ func (c *Controller) ensureConnectivityService() error {
 
 		if hasUnknownPort {
 			// update to remove unknown port(s)
-			oldSvc, err = c.sysSvcClient.Update(c.Context(), clone, metav1.UpdateOptions{})
+			oldSvc, err = c.connSvcClient.Update(c.Context(), clone, metav1.UpdateOptions{})
 		} else if !upToDate {
 			// patch to update ports
 			err = patchhelper.TwoWayMergePatch(oldSvc, clone, &corev1.Service{}, func(patchData []byte) error {
-				oldSvc, err = c.sysSvcClient.Patch(
+				oldSvc, err = c.connSvcClient.Patch(
 					c.Context(),
 					c.connectivityService,
 					types.StrategicMergePatchType,
@@ -320,7 +313,7 @@ func (c *Controller) ensureConnectivityService() error {
 			}
 
 			logger.I("failed to update svc object, will create after delete", log.Error(err))
-			err = c.sysSvcClient.Delete(c.Context(), c.connectivityService, *deleteAtOnce)
+			err = c.connSvcClient.Delete(c.Context(), c.connectivityService, *deleteAtOnce)
 			if err != nil && !kubeerrors.IsNotFound(err) {
 				return fmt.Errorf("failed to delete old service: %w", err)
 			}
@@ -338,7 +331,7 @@ func (c *Controller) ensureConnectivityService() error {
 
 	if create && len(svc.Spec.Ports) != 0 {
 		logger.D("creating connectivity service object")
-		_, err = c.sysSvcClient.Create(c.Context(), svc, metav1.CreateOptions{})
+		_, err = c.connSvcClient.Create(c.Context(), svc, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to create connectivity service object: %w", err)
 		}
@@ -379,8 +372,7 @@ func (c *Controller) newServiceForAllEdgeDevices() *corev1.Service {
 			Labels:    map[string]string{constant.LabelRole: constant.LabelRoleValueConnectivity},
 		},
 		Spec: corev1.ServiceSpec{
-			Ports:    c.getAllRequiredServicePorts(),
-			Selector: c.thisPodLabels,
+			Ports: c.getAllRequiredServicePorts(),
 		},
 	}
 }

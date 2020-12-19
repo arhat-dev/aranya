@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"arhat.dev/pkg/envhelper"
@@ -89,10 +90,8 @@ func CheckAPIVersionFallback(kubeClient kubeclient.Interface) []*metav1.APIResou
 func NewController(
 	appCtx context.Context,
 	config *conf.Config,
-	sshPrivateKey []byte,
 	hostNodeName, hostname, hostIP string,
 	hostNodeAddresses []corev1.NodeAddress,
-	thisPodLabels map[string]string,
 	preferredResources []*metav1.APIResourceList,
 ) (*Controller, error) {
 	kubeClient, kubeConfig, err := config.Aranya.KubeClient.NewKubeClient(nil, true)
@@ -146,7 +145,6 @@ func NewController(
 		hostname:          hostname,
 		hostIP:            hostIP,
 		hostNodeAddresses: hostNodeAddresses,
-		thisPodLabels:     thisPodLabels,
 
 		informerFactoryStart: []func(<-chan struct{}){
 			clusterInformerFactory.Start,
@@ -166,7 +164,7 @@ func NewController(
 		return nil, fmt.Errorf("failed to create connectivity service controller: %w", err)
 	}
 
-	err = ctrl.nodeController.init(ctrl, config, kubeClient, nodeInformerTyped, sshPrivateKey, preferredResources)
+	err = ctrl.nodeController.init(ctrl, config, kubeClient, nodeInformerTyped, preferredResources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create node controller: %w", err)
 	}
@@ -174,6 +172,11 @@ func NewController(
 	err = ctrl.nodeCertController.init(ctrl, config, kubeClient, preferredResources, thisPodNSInformerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create node cert controller: %w", err)
+	}
+
+	err = ctrl.sysSecretController.init(ctrl, config, kubeClient, sysInformerFactory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create sys secret controller: %w", err)
 	}
 
 	err = ctrl.sysPodController.init(ctrl, config, kubeClient, sysInformerFactory)
@@ -201,9 +204,14 @@ func NewController(
 		return nil, fmt.Errorf("failed to create node cluster role controller: %w", err)
 	}
 
-	err = ctrl.networkController.init(ctrl, config, kubeClient, tenantInformerFactory)
+	err = ctrl.meshController.init(ctrl, config, kubeClient, tenantInformerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create network controller: %w", err)
+	}
+
+	err = ctrl.storageServiceController.init(ctrl, config, kubeClient, thisPodNSInformerFactory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create storage service controller: %w", err)
 	}
 
 	if config.VirtualNode.Storage.Enabled {
@@ -229,6 +237,34 @@ func NewController(
 			}
 			return nil
 		})
+
+		// // create sftp server
+		// sshListener, err2 := net.Listen("tcp", ":0")
+		// if err2 != nil {
+		// 	return nil, fmt.Errorf("failed to listen for ssh server: %w", err2)
+		// }
+
+		// hostKeyBytes, err2 := ioutil.ReadFile(config.VirtualNode.Storage.SFTP.HostKeyFile)
+		// if err2 != nil {
+		// 	return nil, fmt.Errorf("failed to read sftp host key: %w", err2)
+		// }
+
+		// hostKey, err2 := ssh.ParsePrivateKey(hostKeyBytes)
+		// if err2 != nil {
+		// 	return nil, fmt.Errorf("failed to parse sftp host key: %w", err2)
+		// }
+
+		// sftpManager := manager.NewSFTPManager(
+		// 	appCtx, config.VirtualNode.Storage.RootDir,
+		// 	sshListener, hostKey, publicKey.Marshal(),
+		// )
+
+		// go func() {
+		// 	err2 := sftpManager.Start()
+		// 	if err2 != nil {
+		// 		panic(fmt.Errorf("failed to start sftp manager: %w", err2))
+		// 	}
+		// }()
 	}
 
 	if config.Aranya.RunAsCloudProvider {
@@ -258,7 +294,6 @@ type Controller struct {
 	hostNodeName      string
 	hostname, hostIP  string
 	hostNodeAddresses []corev1.NodeAddress
-	thisPodLabels     map[string]string
 
 	cacheSyncWaitFuncs   []kubecache.InformerSynced
 	informerFactoryStart []func(<-chan struct{})
@@ -273,13 +308,17 @@ type Controller struct {
 	nodeCertController
 	nodeClusterRoleController
 
+	sysSecretController
+
 	sysPodController
 	sysPodRoleController
 
 	tenantPodController
 	tenantPodRoleController
 
-	networkController
+	meshController
+
+	storageServiceController
 
 	// Storage management
 	csiDriverLister *kubehelper.CSIDriverLister
@@ -289,6 +328,7 @@ type Controller struct {
 	cloudNodeLifecycleController *cloudnodelifecyclecontroller.CloudNodeLifecycleController
 }
 
+// Start caching but do not reconcile
 func (c *Controller) Start() error {
 	return c.OnStart(func() error {
 		var (
@@ -317,22 +357,40 @@ func (c *Controller) Start() error {
 			return fmt.Errorf("failed to sync resource cache")
 		}
 
-		for _, startReconcile := range c.recReconcileUntil {
-			go startReconcile(stopCh)
-		}
-
-		if c.cloudNodeController != nil && c.cloudNodeLifecycleController != nil {
-			go c.cloudNodeController.Run(stopCh)
-			go c.cloudNodeLifecycleController.Run(stopCh)
-		}
-
-		err = c.virtualNodes.Start()
-		if err != nil {
-			return fmt.Errorf("failed to start virtual node manager: %w", err)
-		}
-
 		return nil
 	})
+}
+
+// Reconcile resouces objects
+func (c *Controller) Reconcile(wg *sync.WaitGroup, stop <-chan struct{}) {
+	wg.Add(len(c.recReconcileUntil))
+
+	for i := range c.recReconcileUntil {
+		startReconcile := c.recReconcileUntil[i]
+		go func() {
+			defer wg.Done()
+
+			startReconcile(stop)
+		}()
+	}
+
+	if c.cloudNodeController != nil && c.cloudNodeLifecycleController != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			c.cloudNodeController.Run(stop)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			c.cloudNodeLifecycleController.Run(stop)
+		}()
+	}
+
+	c.virtualNodes.Start(wg, stop)
 }
 
 func (c *Controller) Stop() error {

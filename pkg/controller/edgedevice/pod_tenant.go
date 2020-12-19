@@ -17,6 +17,7 @@ limitations under the License.
 package edgedevice
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -26,6 +27,7 @@ import (
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/informers"
@@ -39,6 +41,8 @@ import (
 )
 
 type tenantPodController struct {
+	tenantPodCtx context.Context
+
 	tenantPodClient   clientcorev1.PodInterface
 	tenantPodInformer kubecache.SharedIndexInformer
 	tenantPods        sets.String
@@ -55,6 +59,7 @@ func (c *tenantPodController) init(
 	kubeClient kubeclient.Interface,
 	tenantInformerFactory informers.SharedInformerFactory,
 ) error {
+	c.tenantPodCtx = ctrl.Context()
 	c.tenantPods = sets.NewString()
 	c.tenantPodsMu = new(sync.RWMutex)
 
@@ -380,7 +385,12 @@ func (c *tenantPodController) getTenantPodsForNode(name string) []*corev1.Pod {
 func (c *tenantPodController) getTenantPodObject(name string) (*corev1.Pod, bool) {
 	obj, found, err := c.tenantPodInformer.GetIndexer().GetByKey(constant.TenantNS() + "/" + name)
 	if err != nil || !found {
-		return nil, false
+		pod, err := c.tenantPodClient.Get(c.tenantPodCtx, name, metav1.GetOptions{})
+		if err != nil {
+			return nil, false
+		}
+
+		return pod, true
 	}
 
 	pod, ok := obj.(*corev1.Pod)
