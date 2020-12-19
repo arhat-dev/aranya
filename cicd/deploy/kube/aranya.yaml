@@ -1166,6 +1166,18 @@ rules:
   - get
   - list
   - watch
+# manage abbot endpoints and network service for network mesh
+- apiGroups: [""]
+  resources:
+  - endpoints
+  - services
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
 - apiGroups: [""]
   resources:
   # to record pod events
@@ -1178,7 +1190,6 @@ rules:
   # to fetch resouces required by tenant pods for edge devices
   - secrets
   - configmaps
-  - services
   verbs:
   - get
   - list

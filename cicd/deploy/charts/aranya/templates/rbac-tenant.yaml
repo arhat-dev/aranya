@@ -32,6 +32,20 @@ rules:
   - get
   - list
   - watch
+# manage abbot endpoints and network service for network mesh
+{{- if or (include "manageAbbotService" .) (include "manageNetworkService" .) }}
+- apiGroups: [""]
+  resources:
+  - endpoints
+  - services
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+{{- end }}
 {{- if (include "manageTenantPodRoles" .) }}
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources:
@@ -66,7 +80,9 @@ rules:
   # to fetch resouces required by tenant pods for edge devices
   - secrets
   - configmaps
+{{- if and (not (include "manageAbbotService" .)) (not (include "manageNetworkService" .)) }}
   - services
+{{- end }}
   verbs:
   - get
   - list

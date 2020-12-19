@@ -107,3 +107,15 @@ Create the name of the service account to use
 "yes"
 {{- end -}}
 {{- end }}
+
+{{- define "manageAbbotService" -}}
+{{- if ne (len .Values.config.virtualnode.network.abbotService.name) 0 -}}
+"yes"
+{{- end -}}
+{{- end }}
+
+{{- define "manageNetworkService" -}}
+{{- if ne (len .Values.config.virtualnode.network.networkService.name) 0 -}}
+"yes"
+{{- end -}}
+{{- end }}
