@@ -616,7 +616,7 @@ spec:
                         params:
                           additionalProperties:
                             type: string
-                          description: Params to override ..connectivity.params
+                          description: Params to override ..connector.params
                           type: object
                         pseudoCommand:
                           description: PseudoCommand used to trigger this operation,

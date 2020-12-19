@@ -98,7 +98,7 @@ type (
 		// +optional
 		PseudoCommand string `json:"pseudoCommand,omitempty"`
 
-		// Params to override ..connectivity.params
+		// Params to override ..connector.params
 		// +optional
 		Params map[string]string `json:"params,omitempty"`
 	}
@@ -145,10 +145,13 @@ type (
 		// +optional
 		InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 
+		// +optional
 		MinVersion string `json:"minVersion,omitempty"`
 
+		// +optional
 		MaxVersion string `json:"maxVersion,omitempty"`
 
+		// +optional
 		NextProtos []string `json:"nextProtos,omitempty"`
 
 		// +optional
