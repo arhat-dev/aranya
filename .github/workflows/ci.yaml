@@ -199,7 +199,7 @@ jobs:
 
   # TODO: Add support for windows image build in arhat-dev/dockerfile
   # build-windows-images:
-  #   # yamllint disable-line rule:line-length
+  # yamllint disable-line rule:line-length
   #   if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v') == true)
   #   needs:
   #   - e2e-tests
