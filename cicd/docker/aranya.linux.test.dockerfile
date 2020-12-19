@@ -8,6 +8,8 @@ COPY e2e/testdata/ssh-host-key.pem.pub /etc/ssh/ssh_host_ed25519_key.pub
 COPY e2e/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+RUN mkdir -p /profile
+
 ENTRYPOINT [ \
     "/entrypoint.sh", "/aranya", \
     "-test.blockprofile=/profile/blockprofile.out", \
