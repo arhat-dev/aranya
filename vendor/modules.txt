@@ -1,7 +1,7 @@
 # arhat.dev/abbot-proto v0.1.1
 ## explicit
 arhat.dev/abbot-proto/abbotgopb
-# arhat.dev/aranya-proto v0.3.4-0.20201208110348-80e0beff3693
+# arhat.dev/aranya-proto v0.3.4
 ## explicit
 arhat.dev/aranya-proto/aranyagopb
 arhat.dev/aranya-proto/aranyagopb/aranyagoconst
