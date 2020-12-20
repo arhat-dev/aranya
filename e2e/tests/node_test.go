@@ -215,8 +215,8 @@ func TestNodeSpec(t *testing.T) {
 
 				// labels['e2e.aranya.arhat.dev/annotation-1'] == 1
 				fieldHookExpressionValue: "true",
-				// from .spec.providerID
-				fieldHookReferenceValue: "aranya://" + edgeDeviceNamespaceDefault + "/" + edgeDeviceNameAlice,
+				// labels['kubernetes.io/role']
+				fieldHookReferenceValue: "valid-override",
 				fieldHookSetValue:       "set-label-value",
 			},
 			annotations: map[string]string{
@@ -224,8 +224,8 @@ func TestNodeSpec(t *testing.T) {
 
 				// labels['e2e.aranya.arhat.dev/ext-info-add-1'] == arhatRestartCount
 				fieldHookExpressionValue: "true",
-				// labels['kubernetes.io/role']
-				fieldHookReferenceValue: "valid-override",
+				// from .spec.providerID
+				fieldHookReferenceValue: "aranya://" + edgeDeviceNamespaceDefault + "/" + edgeDeviceNameAlice,
 				fieldHookSetValue:       "set-annotation-value",
 			},
 			spec: corev1.NodeSpec{

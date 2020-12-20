@@ -9,23 +9,23 @@ spec:
       enabled: true
     fieldHooks:
     - query: .metadata.annotations."e2e.aranya.arhat.dev/annotation-2"
-      targetFieldPath: metadata.labels["e2e.aranya.arhat.dev/field-hook-expression-value"]
-      valueExpression: .[0] == 2
+      targetFieldPath: metadata.labels['e2e.aranya.arhat.dev/field-hook-expression-value']
+      valueExpression: . == 2
     - query: .metadata.labels
-      targetFieldPath: metadata.labels["e2e.aranya.arhat.dev/field-hook-reference-value"]
-      valueExpression: .[0]["e2e.aranya.arhat.dev/ext-info-add-1"]
+      targetFieldPath: metadata.labels['e2e.aranya.arhat.dev/field-hook-reference-value']
+      valueExpression: ."e2e.aranya.arhat.dev/ext-info-add-1"
     - query: "."
-      targetFieldPath: metadata.labels["e2e.aranya.arhat.dev/field-hook-set-value"]
+      targetFieldPath: metadata.labels['e2e.aranya.arhat.dev/field-hook-set-value']
       value: set-label-value
 
     - query: .metadata.annotations
-      targetFieldPath: metadata.annotations["e2e.aranya.arhat.dev/field-hook-expression-value"]
-      valueExpression: .[0]["e2e.aranya.arhat.dev/ext-info-add-1"] == 5
+      targetFieldPath: metadata.annotations['e2e.aranya.arhat.dev/field-hook-expression-value']
+      valueExpression: ."e2e.aranya.arhat.dev/ext-info-add-1" == 5
     - query: .metadata.labels
-      targetFieldPath: metadata.annotations["e2e.aranya.arhat.dev/field-hook-reference-value"]
-      valueExpression: .[0]["kubernetes.io/role"]
+      targetFieldPath: metadata.annotations['e2e.aranya.arhat.dev/field-hook-reference-value']
+      valueExpression: ."kubernetes.io/role"
     - query: "."
-      targetFieldPath: metadata.annotations["e2e.aranya.arhat.dev/field-hook-set-value"]
+      targetFieldPath: metadata.annotations['e2e.aranya.arhat.dev/field-hook-set-value']
       value: set-annotation-value
 
     # no invalid override

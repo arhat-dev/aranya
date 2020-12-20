@@ -98,23 +98,23 @@ spec:
 
     fieldHooks:
     - query: .metadata.annotations."e2e.aranya.arhat.dev/annotation-1"
-      targetFieldPath: metadata.labels["e2e.aranya.arhat.dev/field-hook-expression-value"]
-      valueExpression: .[0] == 1
-    - query: .spec.providerID
-      targetFieldPath: metadata.labels["e2e.aranya.arhat.dev/field-hook-reference-value"]
-      valueExpression: .[0]
+      targetFieldPath: metadata.labels['e2e.aranya.arhat.dev/field-hook-expression-value']
+      valueExpression: . == 1
+    - query: .metadata.labels."kubernetes.io/role"
+      targetFieldPath: metadata.labels['e2e.aranya.arhat.dev/field-hook-reference-value']
+      valueExpression: "."
     - query: "."
-      targetFieldPath: metadata.labels["e2e.aranya.arhat.dev/field-hook-set-value"]
+      targetFieldPath: metadata.labels['e2e.aranya.arhat.dev/field-hook-set-value']
       value: set-label-value
 
     - query: .metadata.annotations
-      targetFieldPath: metadata.annotations["e2e.aranya.arhat.dev/field-hook-expression-value"]
-      valueExpression: .[0]["e2e.aranya.arhat.dev/ext-info-minus-1"] == -5
-    - query: .metadata.labels
-      targetFieldPath: metadata.annotations["e2e.aranya.arhat.dev/field-hook-reference-value"]
-      valueExpression: .[0]["e2e.aranya.arhat.dev/ext-info-minus-1-5"]
+      targetFieldPath: metadata.annotations['e2e.aranya.arhat.dev/field-hook-expression-value']
+      valueExpression: ."e2e.aranya.arhat.dev/ext-info-minus-1" == -5
+    - query: .spec.providerID
+      targetFieldPath: metadata.annotations['e2e.aranya.arhat.dev/field-hook-reference-value']
+      valueExpression: "."
     - query: "."
-      targetFieldPath: metadata.annotations["e2e.aranya.arhat.dev/field-hook-set-value"]
+      targetFieldPath: metadata.annotations['e2e.aranya.arhat.dev/field-hook-set-value']
       value: set-annotation-value
 
   connectivity:
