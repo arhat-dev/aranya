@@ -161,7 +161,7 @@ func TestNodeSpec(t *testing.T) {
 
 	extInfoValues := map[string]string{
 		extInfoSetString:    "set-string",
-		extInfoAppendString: strings.Repeat("append-string", arhatRestartCount),
+		extInfoAppendString: strings.Repeat("str", arhatRestartCount),
 
 		extInfoSet1: "1",
 		extInfoAdd1: strconv.FormatInt(arhatRestartCount, 10),

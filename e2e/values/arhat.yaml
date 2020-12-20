@@ -47,7 +47,7 @@ config:
         valueType: string
         applyTo: metadata.annotations['e2e.aranya.arhat.dev/ext-info-set-string']
       - valueFrom:
-          text: append-string
+          text: str
         operator: +=
         valueType: string
         applyTo: metadata.annotations['e2e.aranya.arhat.dev/ext-info-append-string']
@@ -91,7 +91,7 @@ config:
         valueType: string
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-set-string']
       - valueFrom:
-          text: append-string
+          text: str
         operator: +=
         valueType: string
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-append-string']
