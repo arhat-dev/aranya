@@ -370,7 +370,7 @@ func (c *Controller) onNodeUpdated(oldObj, newObj interface{}) *reconcile.Result
 
 	listener := vn.KubeletServerListener()
 	if listener == nil {
-		logger.E("no kubelet listener found, error in virtualnode creation")
+		logger.I("no kubelet listener found, error in virtualnode creation")
 		return nil
 	}
 
@@ -429,7 +429,7 @@ func (c *Controller) onNodeDeleted(obj interface{}) *reconcile.Result {
 
 	listener := vn.KubeletServerListener()
 	if listener == nil {
-		logger.E("no kubelet listener found, error in virtualnode creation")
+		logger.I("no kubelet listener found, error in virtualnode creation")
 		return nil
 	}
 
@@ -467,13 +467,13 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, nodeO
 		var query *gojq.Query
 		query, err = gojq.Parse(h.Query)
 		if err != nil {
-			logger.E("bad field query", log.String("query", h.Query), log.Error(err))
+			logger.I("bad field query", log.String("query", h.Query), log.Error(err))
 			continue
 		}
 
 		result, found, err2 := textquery.RunQuery(query, data, nil)
 		if err2 != nil {
-			logger.E("failed to run query over node object", log.String("query", h.Query), log.Error(err2))
+			logger.I("failed to run query over node object", log.String("query", h.Query), log.Error(err2))
 			continue
 		}
 
@@ -491,7 +491,7 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, nodeO
 		case targetValue == "" && h.ValueExpression != "":
 			targetValue, err = textquery.JQ(h.ValueExpression, result)
 			if err != nil {
-				logger.E("failed to eval value expression", log.String("exp", h.ValueExpression), log.Error(err))
+				logger.I("failed to eval value expression", log.String("exp", h.ValueExpression), log.Error(err))
 			}
 		}
 
@@ -513,7 +513,7 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, nodeO
 				nodeNeedUpdate = true
 			}
 		default:
-			logger.E("unsupported target field", log.String("targetField", fp))
+			logger.I("unsupported target field", log.String("targetField", fp))
 			continue
 		}
 	}
@@ -532,7 +532,7 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, nodeO
 		)
 
 		if err != nil {
-			logger.E("failed to update node object", log.Error(err))
+			logger.I("failed to update node object", log.Error(err))
 			return err
 		}
 	}
