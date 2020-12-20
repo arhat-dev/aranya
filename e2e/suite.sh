@@ -159,8 +159,8 @@ start_e2e_tests() {
   sleep 60
 
   # restart arhat pods to update node ext info
-  # NOTE: make sure restart count equals constant arhatRestartCount in tests/node_test.go
-  for _ in $(seq 1 1 5); do
+  # NOTE: make sure restart count is equal to arhatRestartCount-1 in tests/node_test.go
+  for _ in $(seq 1 1 4); do
     kubectl delete po --namespace remote --all --grace-period 0
     # wait for pod deletion
     sleep 5
