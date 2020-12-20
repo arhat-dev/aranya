@@ -208,11 +208,7 @@ func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg) {
 	}
 
 	for _, info := range msg.GetExtInfo() {
-		var (
-			target, oldValues map[string]string
-			key               = info.TargetKey
-		)
-
+		var target, oldValues map[string]string
 		switch info.Target {
 		case aranyagopb.NODE_EXT_INFO_TARGET_ANNOTATION:
 			target, oldValues = annotations, oldAnnotations
@@ -223,56 +219,27 @@ func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg) {
 			continue
 		}
 
-		oldVal := oldValues[key]
+		oldVal := oldValues[info.TargetKey]
 
-		switch info.Operator {
-		case aranyagopb.NODE_EXT_INFO_OPERATOR_SET:
-			switch info.ValueType {
-			case aranyagopb.NODE_EXT_INFO_TYPE_STRING:
-				target[key] = info.Value
-			case aranyagopb.NODE_EXT_INFO_TYPE_NUMBER:
-				_, _, err := new(big.Float).Parse(info.Value, 0)
-				if err != nil {
-					// TODO: log error
-					continue
-				}
-
-				target[key] = info.Value
+		switch info.ValueType {
+		case aranyagopb.NODE_EXT_INFO_TYPE_STRING:
+			switch info.Operator {
+			case aranyagopb.NODE_EXT_INFO_OPERATOR_SET:
+				target[info.TargetKey] = info.Value
+			case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
+				target[info.TargetKey] = oldVal + info.Value
 			default:
 				// TODO: log unsupported
+			}
+		case aranyagopb.NODE_EXT_INFO_TYPE_NUMBER:
+			resolvedVal, err := calculateNumber(oldVal, info.Value, info.Operator)
+			if err != nil {
+				// TODO: log error
 				continue
 			}
-		case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
-			switch info.ValueType {
-			case aranyagopb.NODE_EXT_INFO_TYPE_STRING:
-				target[key] = oldValues[key] + info.Value
-			case aranyagopb.NODE_EXT_INFO_TYPE_NUMBER:
-				var err error
-				target[key], err = calculateNumber(oldVal, info.Value, aranyagopb.NODE_EXT_INFO_OPERATOR_ADD)
-				if err != nil {
-					// TODO: log error
-					continue
-				}
-			default:
-				// TODO: report unsupported
-				continue
-			}
-		case aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
-			switch info.ValueType {
-			case aranyagopb.NODE_EXT_INFO_TYPE_NUMBER:
-				var err error
-				target[key], err = calculateNumber(oldVal, info.Value, aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS)
-				if err != nil {
-					// TODO: log error
-					continue
-				}
-			default:
-				// TODO: report unsupported
-				continue
-			}
+			target[info.TargetKey] = resolvedVal
 		default:
-			// TODO: report unsupported
-			continue
+			// TODO: log unsupported
 		}
 	}
 
@@ -362,10 +329,12 @@ func calculateNumber(oldVal, v string, op aranyagopb.NodeExtInfo_Operator) (stri
 	}
 
 	switch op {
+	case aranyagopb.NODE_EXT_INFO_OPERATOR_SET:
+		return newNum.Text('f', -1), nil
 	case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
-		return oldNum.Add(oldNum, newNum).Text('f', 0), nil
+		return oldNum.Add(oldNum, newNum).Text('f', -1), nil
 	case aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
-		return oldNum.Add(oldNum, newNum.Neg(newNum)).Text('f', 0), nil
+		return oldNum.Add(oldNum, newNum.Neg(newNum)).Text('f', -1), nil
 	default:
 		return "", fmt.Errorf("unsupported operator for number %q", op.String())
 	}
