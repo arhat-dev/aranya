@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"reflect"
 	"strings"
 	"time"
 
@@ -227,7 +226,7 @@ func (c *nodeController) init(
 	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, nodeRec.ReconcileUntil)
 
 	c.nodeReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
-		Logger:          ctrl.Log.WithName("rec:node_req"),
+		Logger:          ctrl.Log.WithName("rec:node:req"),
 		BackoffStrategy: nil,
 		Workers:         1,
 		RequireCache:    true,
@@ -242,7 +241,7 @@ func (c *nodeController) init(
 
 	// start a standalone node status reconciler in addition to node reconciler to make it clear for node
 	c.nodeStatusRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
-		Logger: ctrl.Log.WithName("rec:nodestatus"),
+		Logger: ctrl.Log.WithName("rec:node:status"),
 		// no backoff, always wait for 1s
 		BackoffStrategy: backoff.NewStrategy(time.Second, time.Second, 1, 0),
 		Workers:         1,
@@ -274,7 +273,7 @@ func (c *nodeController) init(
 	return nil
 }
 
-func (c *Controller) checkNodeQualified(node *corev1.Node, kubeletListener net.Listener) bool {
+func (c *nodeController) checkNodeQualified(node *corev1.Node, kubeletListener net.Listener) bool {
 	port, err := getListenerPort(kubeletListener)
 	if err != nil {
 		return false
@@ -296,7 +295,7 @@ func (c *Controller) checkNodeQualified(node *corev1.Node, kubeletListener net.L
 	return hasRequiredTaint && node.Status.DaemonEndpoints.KubeletEndpoint.Port == port
 }
 
-func (c *Controller) requestNodeEnsure(name string) error {
+func (c *nodeController) requestNodeEnsure(name string) error {
 	if c.nodeReqRec == nil {
 		return nil
 	}
@@ -356,11 +355,10 @@ func (c *Controller) onNodeAdd(obj interface{}) *reconcile.Result {
 
 func (c *Controller) onNodeUpdated(oldObj, newObj interface{}) *reconcile.Result {
 	var (
-		err     error
-		oldNode = oldObj.(*corev1.Node).DeepCopy()
-		newNode = newObj.(*corev1.Node).DeepCopy()
-		name    = newNode.Name
-		logger  = c.Log.WithFields(log.String("name", name))
+		err    error
+		node   = newObj.(*corev1.Node).DeepCopy()
+		name   = node.Name
+		logger = c.Log.WithFields(log.String("name", name))
 	)
 
 	vn, ignore := c.doNodeResourcePreCheck(name)
@@ -374,9 +372,10 @@ func (c *Controller) onNodeUpdated(oldObj, newObj interface{}) *reconcile.Result
 		return nil
 	}
 
-	if c.checkNodeQualified(newNode, listener) {
+	if c.checkNodeQualified(node, listener) {
 		logger.V("matches virtual node, setting pod cidr(s)")
-		vn.SetPodCIDRs(convert.GetPodCIDRWithIPVersion(newNode.Spec.PodCIDR, newNode.Spec.PodCIDRs))
+		// TODO: recognize cni plugin specific CIDR annotations (e.g. calico, cilium)
+		vn.SetPodCIDRs(convert.GetPodCIDRWithIPVersion(node.Spec.PodCIDR, node.Spec.PodCIDRs))
 	} else {
 		logger.D("updating outdated node")
 		err = c.ensureNodeObject(name, listener)
@@ -385,20 +384,20 @@ func (c *Controller) onNodeUpdated(oldObj, newObj interface{}) *reconcile.Result
 			return &reconcile.Result{Err: err}
 		}
 
-		// reschedule node update to check node annotations
-		return &reconcile.Result{NextAction: queue.ActionUpdate}
-	}
-
-	if reflect.DeepEqual(oldNode.Annotations, newNode.Annotations) &&
-		reflect.DeepEqual(oldNode.Labels, newNode.Labels) {
-		// no changes to annotation and label, so no need to check node field hook
-		logger.V("node is up to date, skipping field hooks")
-		return nil
+		logger.V("scheduling node status update for updated node")
+		err = c.nodeStatusRec.Schedule(queue.Job{
+			Action: queue.ActionUpdate,
+			Key:    name,
+		}, 0)
+		if err != nil {
+			logger.I("failed to schedule node status update for updated node", log.Error(err))
+		}
 	}
 
 	logger.D("evaluating node field hooks")
-	err = c.evalNodeFiledHooksAndUpdateNode(logger, newNode)
+	err = c.evalNodeFiledHooksAndUpdateNode(logger, node)
 	if err != nil {
+		logger.I("failed to eval and update node field hooks", log.Error(err))
 		return &reconcile.Result{Err: err}
 	}
 
@@ -785,8 +784,12 @@ func (c *Controller) newNodeForEdgeDevice(edgeDevice *aranyaapi.EdgeDevice, kube
 				{Type: corev1.NodePIDPressure, Status: corev1.ConditionUnknown},
 				{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionUnknown},
 			},
-			Addresses:       c.hostNodeAddresses,
-			DaemonEndpoints: corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{Port: kubeletPort}},
+			Addresses: c.hostNodeAddresses,
+			DaemonEndpoints: corev1.NodeDaemonEndpoints{
+				KubeletEndpoint: corev1.DaemonEndpoint{
+					Port: kubeletPort,
+				},
+			},
 		},
 	}
 }
