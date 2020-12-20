@@ -146,7 +146,7 @@ func (m *Manager) OnVirtualNodeDisconnected(vn *VirtualNode) {
 
 	err := vn.opt.ScheduleNodeSync()
 	if err != nil {
-		m.log.E("failed to sync node status for offline", log.Error(err))
+		m.log.E("failed to sync mirror node status for offline", log.Error(err))
 	}
 }
 
