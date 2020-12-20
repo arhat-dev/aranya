@@ -18,7 +18,7 @@ package virtualnode
 
 import (
 	"fmt"
-	"strconv"
+	"math/big"
 
 	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
@@ -177,9 +177,9 @@ func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg) {
 			MachineID:       sysInfo.GetMachineId(),
 			SystemUUID:      sysInfo.GetSystemUuid(),
 			BootID:          sysInfo.GetBootId(),
-			// TODO: handle runtime version from pod manager
+			// TODO: handle runtime version in pod manager
 			ContainerRuntimeVersion: "",
-			// TODO: how should we report kubelet and kube-proxy version?
+			// TODO: how could we report kubelet and kube-proxy version?
 			//       be the same with host node?
 			KubeletVersion:   "",
 			KubeProxyVersion: "",
@@ -209,55 +209,74 @@ func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg) {
 
 	for _, info := range msg.GetExtInfo() {
 		var (
-			target, oldTarget map[string]string
+			target, oldValues map[string]string
 			key               = info.TargetKey
 		)
 
 		switch info.Target {
 		case aranyagopb.NODE_EXT_INFO_TARGET_ANNOTATION:
-			target, oldTarget = annotations, oldAnnotations
+			target, oldValues = annotations, oldAnnotations
 		case aranyagopb.NODE_EXT_INFO_TARGET_LABEL:
-			target, oldTarget = labels, oldLabels
+			target, oldValues = labels, oldLabels
 		default:
 			// TODO: report unsupported
-			return
+			continue
 		}
+
+		oldVal := oldValues[key]
 
 		switch info.Operator {
 		case aranyagopb.NODE_EXT_INFO_OPERATOR_SET:
-			target[key] = info.Value
-		case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD,
-			aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
-			oldVal := oldTarget[key]
-
 			switch info.ValueType {
 			case aranyagopb.NODE_EXT_INFO_TYPE_STRING:
-				target[key] = oldTarget[key] + info.Value
-			case aranyagopb.NODE_EXT_INFO_TYPE_INTEGER:
-				oldIntVal, _ := strconv.ParseInt(oldVal, 0, 64)
-				val, _ := strconv.ParseInt(info.Value, 0, 64)
-
-				switch info.Operator {
-				case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
-					target[key] = strconv.FormatInt(oldIntVal+val, 10)
-				case aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
-					target[key] = strconv.FormatInt(oldIntVal-val, 10)
+				target[key] = info.Value
+			case aranyagopb.NODE_EXT_INFO_TYPE_NUMBER:
+				_, _, err := new(big.Float).Parse(info.Value, 0)
+				if err != nil {
+					// TODO: log error
+					continue
 				}
-			case aranyagopb.NODE_EXT_INFO_TYPE_FLOAT:
-				oldFloatVal, _ := strconv.ParseFloat(oldVal, 64)
-				val, _ := strconv.ParseFloat(info.Value, 64)
 
-				switch info.Operator {
-				case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
-					target[key] = strconv.FormatFloat(oldFloatVal+val, 'f', -1, 64)
-				case aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
-					target[key] = strconv.FormatFloat(oldFloatVal-val, 'f', -1, 64)
-				}
+				target[key] = info.Value
+			default:
+				// TODO: log unsupported
+				continue
 			}
+		case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
+			switch info.ValueType {
+			case aranyagopb.NODE_EXT_INFO_TYPE_STRING:
+				target[key] = oldValues[key] + info.Value
+			case aranyagopb.NODE_EXT_INFO_TYPE_NUMBER:
+				var err error
+				target[key], err = calculateNumber(oldVal, info.Value, aranyagopb.NODE_EXT_INFO_OPERATOR_ADD)
+				if err != nil {
+					// TODO: log error
+					continue
+				}
+			default:
+				// TODO: report unsupported
+				continue
+			}
+		case aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
+			switch info.ValueType {
+			case aranyagopb.NODE_EXT_INFO_TYPE_NUMBER:
+				var err error
+				target[key], err = calculateNumber(oldVal, info.Value, aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS)
+				if err != nil {
+					// TODO: log error
+					continue
+				}
+			default:
+				// TODO: report unsupported
+				continue
+			}
+		default:
+			// TODO: report unsupported
+			continue
 		}
 	}
-	vn.nodeStatusCache.UpdateExtInfo(labels, annotations)
 
+	vn.nodeStatusCache.UpdateExtInfo(labels, annotations)
 	vn.nodeStatusCache.UpdatePhase(corev1.NodeRunning)
 }
 
@@ -324,4 +343,30 @@ func translateDeviceCondition(prev []corev1.NodeCondition, cond *aranyagopb.Node
 	}
 
 	return result
+}
+
+func calculateNumber(oldVal, v string, op aranyagopb.NodeExtInfo_Operator) (string, error) {
+	newNum, _, err := new(big.Float).Parse(v, 0)
+	if err != nil {
+		return "", err
+	}
+
+	var oldNum *big.Float
+	if len(oldVal) == 0 {
+		oldNum = big.NewFloat(0)
+	} else {
+		oldNum, _, err = new(big.Float).Parse(oldVal, 0)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	switch op {
+	case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
+		return oldNum.Add(oldNum, newNum).Text('f', 0), nil
+	case aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
+		return oldNum.Add(oldNum, newNum.Neg(newNum)).Text('f', 0), nil
+	default:
+		return "", fmt.Errorf("unsupported operator for number %q", op.String())
+	}
 }
