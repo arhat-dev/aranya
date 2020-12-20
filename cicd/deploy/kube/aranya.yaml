@@ -911,6 +911,9 @@ data:
       node:
         cert:
           autoApprove: true
+          cipherSuites: []
+          maxTLSVersion: TLS13
+          minTLSVersion: TLS12
         lease:
           duration: 40s
           enabled: false

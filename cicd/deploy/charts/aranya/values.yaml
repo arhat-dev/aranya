@@ -186,6 +186,13 @@ config:
         # approve CertificateSigningRequest automatically in aranya when create kubelet
         # server certificates
         autoApprove: true
+        # tls versions: TLS10, TLS11, TLS12, TLS13
+        minTLSVersion: TLS12
+        maxTLSVersion: TLS13
+        cipherSuites: []
+        # - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
+        # - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        # - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
 
       lease:
         # use node lease
