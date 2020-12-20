@@ -17,7 +17,8 @@ limitations under the License.
 package virtualnode
 
 import (
-	"sync"
+	"runtime"
+	"sync/atomic"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -28,84 +29,86 @@ func newNodeCache() *NodeCache {
 	}
 }
 
-// NodeCache thread-safe cache store for node status
+// NodeCache is a thread-safe cache store for node status and ext info (extra labels and annotations)
 type NodeCache struct {
 	status *corev1.NodeStatus
 
 	extLabels, extAnnotations map[string]string
 
-	mu sync.RWMutex
+	_working uint32
+}
+
+func (n *NodeCache) doExclusive(f func()) {
+	for !atomic.CompareAndSwapUint32(&n._working, 0, 1) {
+		runtime.Gosched()
+	}
+
+	f()
+
+	atomic.StoreUint32(&n._working, 0)
 }
 
 func (n *NodeCache) UpdatePhase(p corev1.NodePhase) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	if p != "" {
-		n.status.Phase = p
+	if p == "" {
+		return
 	}
+
+	n.doExclusive(func() { n.status.Phase = p })
 }
 
 func (n *NodeCache) UpdateCapacity(c corev1.ResourceList) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	if len(c) > 0 {
-		n.status.Capacity = c
+	if len(c) == 0 {
+		return
 	}
+
+	n.doExclusive(func() { n.status.Capacity = c })
 }
 
 func (n *NodeCache) UpdateConditions(c []corev1.NodeCondition) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	if len(c) > 0 {
-		n.status.Conditions = c
+	if len(c) == 0 {
+		return
 	}
+
+	n.doExclusive(func() { n.status.Conditions = c })
 }
 
 func (n *NodeCache) UpdateSystemInfo(i *corev1.NodeSystemInfo) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	if i != nil {
-		n.status.NodeInfo = *i
+	if i == nil {
+		return
 	}
+
+	n.doExclusive(func() { n.status.NodeInfo = *i })
 }
 
 func (n *NodeCache) UpdateExtInfo(labels, annotations map[string]string) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	n.extLabels = labels
-	n.extAnnotations = annotations
+	n.doExclusive(func() {
+		n.extLabels = labels
+		n.extAnnotations = annotations
+	})
 }
 
 func (n *NodeCache) RetrieveExtInfo() (labels, annotations map[string]string) {
-	n.mu.RLock()
-	defer n.mu.RUnlock()
-
 	labels, annotations = make(map[string]string), make(map[string]string)
 
-	for k, v := range n.extLabels {
-		labels[k] = v
-	}
+	n.doExclusive(func() {
+		for k, v := range n.extLabels {
+			labels[k] = v
+		}
 
-	for k, v := range n.extAnnotations {
-		annotations[k] = v
-	}
+		for k, v := range n.extAnnotations {
+			annotations[k] = v
+		}
+	})
 
 	return
 }
 
 // Retrieve latest node status cache
 func (n *NodeCache) RetrieveStatus(s corev1.NodeStatus) corev1.NodeStatus {
-	n.mu.RLock()
-	defer n.mu.RUnlock()
+	var status *corev1.NodeStatus
+	n.doExclusive(func() { status = n.status.DeepCopy() })
 
-	status := n.status.DeepCopy()
 	result := s.DeepCopy()
-
 	result.Phase = status.Phase
 	result.Capacity = status.Capacity
 	result.Conditions = status.Conditions
