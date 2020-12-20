@@ -25,6 +25,11 @@ rules:
   # to fetch resouces referenced in edge device spec
   - secrets
   verbs:
+{{- if or .Values.config.virtualnode.network.enabled .Values.config.virtualnode.storage.enabled }}
+  # to manage device specific credentials (for network mesh and storage)
+  - create
+  - update
+{{- end }}
   - get
   - list
   - watch
