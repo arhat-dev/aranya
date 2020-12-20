@@ -169,7 +169,9 @@ func NewController(
 		return nil, fmt.Errorf("failed to create node controller: %w", err)
 	}
 
-	err = ctrl.nodeCertController.init(ctrl, config, kubeClient, preferredResources, thisPodNSInformerFactory)
+	err = ctrl.nodeCertController.init(
+		ctrl, &config.VirtualNode.Node, kubeClient, preferredResources, thisPodNSInformerFactory,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create node cert controller: %w", err)
 	}

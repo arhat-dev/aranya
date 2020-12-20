@@ -36,7 +36,10 @@ type VirtualnodeNodeConfig struct {
 	} `json:"timers" yaml:"timers"`
 
 	Cert struct {
-		AutoApprove bool `json:"autoApprove" yaml:"autoApprove"`
+		AutoApprove   bool     `json:"autoApprove" yaml:"autoApprove"`
+		MinTLSVersion string   `json:"minTLSVersion" yaml:"minTLSVersion"`
+		MaxTLSVersion string   `json:"maxTLSVersion" yaml:"maxTLSVersion"`
+		CipherSuites  []string `json:"cipherSuites" yaml:"cipherSuites"`
 	} `json:"cert" yaml:"cert"`
 
 	Lease struct {

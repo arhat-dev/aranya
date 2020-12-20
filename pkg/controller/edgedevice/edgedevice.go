@@ -330,7 +330,24 @@ func (c *Controller) instantiateEdgeDevice(name string) (err error) {
 	}
 
 	opts.KubeletServerListener = tls.NewListener(
-		httpListener, &tls.Config{Certificates: []tls.Certificate{*kubeletCert}},
+		httpListener,
+		// nolint:lll
+		&tls.Config{
+			// currently (until kubernetes v1.20.1) there is no client cert set in kube-apiserver side for node requests:
+			// https://github.com/kubernetes/kubernetes/blob/c4d752765b3bbac2237bf87cf0b1c2e307844666/cmd/kube-apiserver/app/server.go#L288
+			//
+			// so we should not expect any client auth here
+			// ClientCAs:  nil,
+			// ClientAuth: tls.RequireAndVerifyClientCert,
+
+			Certificates: []tls.Certificate{*kubeletCert},
+
+			MinVersion: c.certMinTLSVersion,
+			MaxVersion: c.certMaxTLSVersion,
+
+			CipherSuites:             c.certCipherSuites,
+			PreferServerCipherSuites: len(c.certCipherSuites) != 0,
+		},
 	)
 	defer func() {
 		if err != nil {

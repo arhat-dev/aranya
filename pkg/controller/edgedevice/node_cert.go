@@ -28,10 +28,13 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net"
+	"strings"
 
 	"arhat.dev/pkg/envhelper"
 	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
+	"arhat.dev/pkg/tlshelper"
+	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,19 +61,75 @@ type nodeCertController struct {
 
 	certSecretInformer kubecache.SharedIndexInformer
 
-	certAutoApprove bool
+	certAutoApprove   bool
+	certMinTLSVersion uint16
+	certMaxTLSVersion uint16
+	certCipherSuites  []uint16
+}
+
+func getTLSVersion(v string, def uint16) (uint16, error) {
+	if len(v) == 0 {
+		return def, nil
+	}
+
+	ret, ok := map[string]uint16{
+		"TLS10": tls.VersionTLS10,
+		"TLS11": tls.VersionTLS11,
+		"TLS12": tls.VersionTLS12,
+		"TLS13": tls.VersionTLS13,
+	}[strings.ToUpper(v)]
+	if !ok {
+		return 0, fmt.Errorf("unsupported tls version %q", v)
+	}
+
+	return ret, nil
+}
+
+func getCipherSuites(cs []string) (ret []uint16, err error) {
+	for _, s := range cs {
+		v, ok := tlshelper.CipherSuites[s]
+		if !ok {
+			err = multierr.Append(err, fmt.Errorf("unsupported cipher suite %q", s))
+			continue
+		}
+
+		ret = append(ret, v)
+	}
+
+	return
 }
 
 func (c *nodeCertController) init(
 	ctrl *Controller,
-	config *conf.Config,
+	config *conf.VirtualnodeNodeConfig,
 	kubeClient kubeclient.Interface,
 	preferredResources []*metav1.APIResourceList,
 	thisPodNSInformerFactory informers.SharedInformerFactory,
 ) error {
 	c.certCtx = ctrl.Context()
 	c.certLogger = ctrl.Log
-	c.certAutoApprove = config.VirtualNode.Node.Cert.AutoApprove
+	c.certAutoApprove = config.Cert.AutoApprove
+
+	var err error
+	c.certMinTLSVersion, err = getTLSVersion(config.Cert.MinTLSVersion, tls.VersionTLS12)
+	if err != nil {
+		return err
+	}
+
+	c.certMaxTLSVersion, err = getTLSVersion(config.Cert.MinTLSVersion, tls.VersionTLS13)
+	if err != nil {
+		return err
+	}
+
+	c.certCipherSuites, err = getCipherSuites(config.Cert.CipherSuites)
+	if err != nil {
+		return err
+	}
+
+	if len(c.certCipherSuites) == 0 {
+		c.certCipherSuites = nil
+	}
+
 	c.certSecretClient = kubeClient.CoreV1().Secrets(envhelper.ThisPodNS())
 	c.csrClient = kubehelper.CreateCertificateSigningRequestClient(preferredResources, kubeClient)
 
