@@ -160,10 +160,14 @@ start_e2e_tests() {
 
   # restart arhat pods to update node ext info
   # NOTE: make sure restart count equals constant arhatRestartCount in tests/node_test.go
-  for _ in $(seq 0 1 5); do
+  for _ in $(seq 1 1 5); do
     kubectl delete po --namespace remote --all --grace-period 0
+    # wait for pod deletion
     sleep 5
+
     wait_for_pods remote 'app.kubernetes.io/name=arhat'
+    # wait for connection
+    sleep 5
   done
 
   kubectl get certificatesigningrequests || true
