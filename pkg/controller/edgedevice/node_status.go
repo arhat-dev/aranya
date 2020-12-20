@@ -37,129 +37,133 @@ import (
 // nolint:gocyclo
 func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *reconcile.Result) {
 	var (
-		err            error
-		node           = newObj.(*corev1.Node).DeepCopy()
-		name           = node.Name
-		updateStatus   = false
-		updateMetadata = false
-		logger         = c.Log.WithFields(log.String("name", name))
-		now            = metav1.Now()
+		node   = newObj.(*corev1.Node).DeepCopy()
+		name   = node.Name
+		logger = c.Log.WithFields(log.String("name", name))
 	)
 
 	vn, ignore := c.doNodeResourcePreCheck(name)
 	if ignore {
-		logger.V("node status updated ignored")
+		logger.V("node status update ignored")
 		return
 	}
 
+	clone := node.DeepCopy()
+
+	actualStatus := vn.ActualNodeStatus(clone.Status)
+	requiredLabels, requiredAnnotations := vn.ExtInfo()
+
+	// check its labels and annotations
+	var (
+		arch   = actualStatus.NodeInfo.Architecture
+		os     = actualStatus.NodeInfo.OperatingSystem
+		goArch = convertToGOARCH(arch)
+
+		updateMetadata = false
+	)
+
+	for k, v := range map[string]string{
+		constant.LabelArch:     arch,
+		corev1.LabelArchStable: goArch,
+		kubeletapis.LabelArch:  goArch,
+		corev1.LabelOSStable:   os,
+		kubeletapis.LabelOS:    os,
+	} {
+		// MUST not override these labels in ext info
+		requiredLabels[k] = v
+	}
+
+	for k, v := range clone.Labels {
+		if requiredLabels[k] == v {
+			delete(requiredLabels, k)
+		}
+	}
+
+	for k, v := range clone.Annotations {
+		if requiredAnnotations[k] == v {
+			delete(requiredAnnotations, k)
+		}
+	}
+
+	if len(requiredLabels) != 0 {
+		if logger.Enabled(log.LevelVerbose) {
+			var labels []string
+			for k, v := range requiredLabels {
+				labels = append(labels, k+"="+v)
+			}
+			sort.Strings(labels)
+
+			logger.V("node labels need to be updated", log.Strings("labels", labels))
+		}
+
+		updateMetadata = true
+
+		if clone.Labels == nil {
+			clone.Labels = requiredLabels
+		} else {
+			for k, v := range requiredLabels {
+				clone.Labels[k] = v
+			}
+		}
+	}
+
+	if len(requiredAnnotations) != 0 {
+		if logger.Enabled(log.LevelVerbose) {
+			var annotations []string
+			for k, v := range requiredAnnotations {
+				annotations = append(annotations, k+"="+v)
+			}
+			sort.Strings(annotations)
+
+			logger.V("node annotations need to be updated", log.Strings("annotations", annotations))
+		}
+
+		updateMetadata = true
+
+		if clone.Annotations == nil {
+			clone.Annotations = requiredAnnotations
+		} else {
+			for k, v := range requiredAnnotations {
+				clone.Annotations[k] = v
+			}
+		}
+	}
+
+	if updateMetadata {
+		// need to update metadata first, update node status next round
+		logger.V("updating node metadata")
+		err := patchhelper.TwoWayMergePatch(node, clone, &corev1.Node{}, func(patchData []byte) error {
+			_, err2 := c.nodeClient.Patch(
+				c.Context(), name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{},
+			)
+			return err2
+		})
+		if err != nil {
+			logger.I("failed to update node metadata", log.Error(err))
+			return &reconcile.Result{Err: err}
+		}
+		logger.V("node metadata updated")
+
+		// should trigger update automatically since we are watching, just in case
+		return &reconcile.Result{
+			NextAction: queue.ActionUpdate,
+			ScheduleAfter: func() time.Duration {
+				if c.vnConfig.Node.Lease.Enabled {
+					return c.vnConfig.Node.Lease.UpdateInterval / 5
+				}
+
+				return c.vnConfig.Node.Timers.MirrorSyncInterval / 5
+			}(),
+		}
+	}
+
+	var (
+		now = metav1.Now()
+
+		updateStatus = false
+	)
 	// ensure node status up to date
 	if vn.Connected() {
-		clone := node.DeepCopy()
-
-		actualStatus := vn.ActualNodeStatus(clone.Status)
-		requiredLabels, requiredAnnotations := vn.ExtInfo()
-
-		// check its labels annotations
-		var (
-			arch   = actualStatus.NodeInfo.Architecture
-			os     = actualStatus.NodeInfo.OperatingSystem
-			goArch = convertToGOARCH(arch)
-		)
-
-		for k, v := range map[string]string{
-			constant.LabelArch:     arch,
-			corev1.LabelArchStable: goArch,
-			kubeletapis.LabelArch:  goArch,
-			corev1.LabelOSStable:   os,
-			kubeletapis.LabelOS:    os,
-		} {
-			// MUST not override these labels in ext info
-			requiredLabels[k] = v
-		}
-
-		for k, v := range clone.Labels {
-			if requiredLabels[k] == v {
-				delete(requiredLabels, k)
-			}
-		}
-
-		for k, v := range clone.Annotations {
-			if requiredAnnotations[k] == v {
-				delete(requiredAnnotations, k)
-			}
-		}
-
-		if len(requiredLabels) != 0 {
-			if logger.Enabled(log.LevelVerbose) {
-				var labels []string
-				for k, v := range requiredLabels {
-					labels = append(labels, k+"="+v)
-				}
-				sort.Strings(labels)
-
-				logger.V("node labels need to be updated", log.Strings("labels", labels))
-			}
-
-			updateMetadata = true
-
-			if clone.Labels == nil {
-				clone.Labels = requiredLabels
-			} else {
-				for k, v := range requiredLabels {
-					clone.Labels[k] = v
-				}
-			}
-		}
-
-		if len(requiredAnnotations) != 0 {
-			if logger.Enabled(log.LevelVerbose) {
-				var annotations []string
-				for k, v := range requiredAnnotations {
-					annotations = append(annotations, k+"="+v)
-				}
-				sort.Strings(annotations)
-
-				logger.V("node annotations need to be updated", log.Strings("annotations", annotations))
-			}
-
-			updateMetadata = true
-
-			if clone.Annotations == nil {
-				clone.Annotations = requiredAnnotations
-			} else {
-				for k, v := range requiredAnnotations {
-					clone.Annotations[k] = v
-				}
-			}
-		}
-
-		if updateMetadata {
-			// need to update metadata first, update node status next round
-			logger.V("updating node metadata")
-			err = patchhelper.TwoWayMergePatch(node, clone, &corev1.Node{}, func(patchData []byte) error {
-				_, err2 := c.nodeClient.Patch(
-					c.Context(), name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{})
-				return err2
-			})
-			if err != nil {
-				logger.I("failed to update node metadata", log.Error(err))
-				return &reconcile.Result{Err: err}
-			}
-			logger.V("node metadata updated")
-
-			// should trigger update automatically since we are watching, just in case
-			return &reconcile.Result{
-				NextAction: queue.ActionUpdate,
-				ScheduleAfter: func() time.Duration {
-					if c.vnConfig.Node.Lease.Enabled {
-						return c.vnConfig.Node.Lease.UpdateInterval / 5
-					}
-
-					return c.vnConfig.Node.Timers.MirrorSyncInterval / 5
-				}(),
-			}
-		}
-
 		actualStatus.Allocatable = getAllocatable(actualStatus.Capacity, c.getTenantPodsForNode(name))
 
 		if !checkNodeResourcesEqual(actualStatus.Capacity, clone.Status.Capacity) {
@@ -279,7 +283,7 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 	}
 
 	logger.V("updating node status")
-	_, err = c.nodeClient.UpdateStatus(c.Context(), node, metav1.UpdateOptions{})
+	_, err := c.nodeClient.UpdateStatus(c.Context(), node, metav1.UpdateOptions{})
 	if err != nil {
 		logger.I("failed to update node status", log.Error(err))
 		return &reconcile.Result{Err: err}
