@@ -163,13 +163,11 @@ func TestNodeSpec(t *testing.T) {
 		extInfoSetString:    "set-string",
 		extInfoAppendString: strings.Repeat("append-string", arhatRestartCount),
 
-		extInfoSet1:   "1",
-		extInfoAdd1:   strconv.FormatInt(arhatRestartCount, 10),
-		extInfoMinus1: strconv.FormatInt(-arhatRestartCount, 10),
+		extInfoSet1: "1",
+		extInfoAdd1: strconv.FormatInt(arhatRestartCount, 10),
 
-		extInfoSet1_5:   "1.5",
-		extInfoAdd1_5:   strconv.FormatFloat(1.5*arhatRestartCount, 'f', -1, 64),
-		extInfoMinus1_5: strconv.FormatFloat(-1.5*arhatRestartCount, 'f', -1, 64),
+		extInfoSet1_5: "1.5",
+		extInfoAdd1_5: strconv.FormatFloat(1.5*arhatRestartCount, 'f', -1, 64),
 	}
 
 	commonLabels := map[string]string{
@@ -181,7 +179,11 @@ func TestNodeSpec(t *testing.T) {
 		"kubernetes.io/os":        "linux",
 	}
 
-	commonAnnotations := map[string]string{}
+	commonAnnotations := map[string]string{
+		// cannot set negative number as labels value
+		extInfoMinus1:   strconv.FormatInt(-arhatRestartCount, 10),
+		extInfoMinus1_5: strconv.FormatFloat(-1.5*arhatRestartCount, 'f', -1, 64),
+	}
 
 	for k, v := range extInfoValues {
 		commonLabels[k] = v

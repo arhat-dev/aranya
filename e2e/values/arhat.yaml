@@ -106,11 +106,6 @@ config:
         operator: +=
         valueType: int
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-add-1']
-      - valueFrom:
-          text: "1"
-        operator: -=
-        valueType: int
-        applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-minus-1']
 
       - valueFrom:
           text: "1.5"
@@ -122,11 +117,6 @@ config:
         operator: +=
         valueType: float
         applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-add-1-5']
-      - valueFrom:
-          text: "1.5"
-        operator: -=
-        valueType: float
-        applyTo: metadata.labels['e2e.aranya.arhat.dev/ext-info-minus-1-5']
 
     pprof:
       enabled: true
