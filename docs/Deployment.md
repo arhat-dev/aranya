@@ -12,22 +12,14 @@
 
 __NOTE:__ currently not compatible with `k3s` due to its node reverse-proxy
 
-## Deploy arany for Evaluation (using generated default manifests)
+## Deploy aranya for Evaluation (using generated default manifests)
 
-__NOTE:__ This will deploy aranya to the `aranya` namespace only
+__NOTE:__ By this method, you can only deploy aranya to the `aranya` namespace
 
-1. Create `EdgeDevice` CRD definition used by aranya
-
-   ```bash
-   kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/deploy/charts/aranya/crds/aranya.arhat.dev_edgedevices.yaml
-   ```
-
-1. Deploy aranya to the `aranya` namespace
-
-   ```bash
-   kubectl create namespace aranya
-   kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/cicd/deploy/kube/aranya.yaml
-   ```
+```bash
+kubectl create namespace aranya
+kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/cicd/deploy/kube/aranya.yaml
+```
 
 ## Deploy aranya for Production (using helm v3)
 
