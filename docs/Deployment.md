@@ -18,7 +18,7 @@ __NOTE:__ By this method, you can only deploy aranya to the `aranya` namespace
 
 ```bash
 kubectl create namespace aranya
-kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/cicd/deploy/kube/aranya.yaml
+kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/deploy/kube/aranya.yaml
 ```
 
 ## Deploy aranya for Production (using helm v3)
