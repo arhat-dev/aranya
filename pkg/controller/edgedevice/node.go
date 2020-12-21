@@ -170,7 +170,7 @@ func (c *nodeController) init(
 		nodeLeaseRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.nodeLeaseInformer, reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:nl"),
 			BackoffStrategy: nil,
-			Workers:         1,
+			Workers:         0,
 			RequireCache:    true,
 			Handlers: reconcile.HandleFuncs{
 				OnAdded:    nextActionUpdate,
@@ -187,7 +187,7 @@ func (c *nodeController) init(
 		c.nodeLeaseReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:nl_req"),
 			BackoffStrategy: nil,
-			Workers:         1,
+			Workers:         0,
 			RequireCache:    true,
 			Handlers: reconcile.HandleFuncs{
 				OnAdded: ctrl.onNodeLeaseEnsureRequest,
@@ -213,7 +213,7 @@ func (c *nodeController) init(
 	nodeRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:node"),
 		BackoffStrategy: nil,
-		Workers:         1,
+		Workers:         0,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
 			OnAdded:    ctrl.onNodeAdd,
@@ -228,7 +228,7 @@ func (c *nodeController) init(
 	c.nodeReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:node:req"),
 		BackoffStrategy: nil,
-		Workers:         1,
+		Workers:         0,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
 			OnAdded: ctrl.onNodeEnsureRequested,
@@ -244,7 +244,7 @@ func (c *nodeController) init(
 		Logger: ctrl.Log.WithName("rec:node:status"),
 		// no backoff, always wait for 1s
 		BackoffStrategy: backoff.NewStrategy(time.Second, time.Second, 1, 0),
-		Workers:         1,
+		Workers:         0,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
 			OnUpdated: ctrl.onNodeStatusUpdated,
@@ -258,7 +258,7 @@ func (c *nodeController) init(
 	c.vnRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:vn"),
 		BackoffStrategy: backoff.NewStrategy(time.Second, time.Minute, 2, 1),
-		Workers:         config.Aranya.MaxVirtualnodeCreatingInParallel,
+		Workers:         0,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
 			OnAdded:    ctrl.onEdgeDeviceCreationRequested,
@@ -355,7 +355,6 @@ func (c *Controller) onNodeAdd(obj interface{}) *reconcile.Result {
 
 func (c *Controller) onNodeUpdated(oldObj, newObj interface{}) *reconcile.Result {
 	var (
-		err    error
 		node   = newObj.(*corev1.Node).DeepCopy()
 		name   = node.Name
 		logger = c.Log.WithFields(log.String("name", name))
@@ -378,7 +377,7 @@ func (c *Controller) onNodeUpdated(oldObj, newObj interface{}) *reconcile.Result
 		vn.SetPodCIDRs(convert.GetPodCIDRWithIPVersion(node.Spec.PodCIDR, node.Spec.PodCIDRs))
 	} else {
 		logger.D("updating outdated node")
-		err = c.ensureNodeObject(name, listener)
+		err := c.ensureNodeObject(name, listener)
 		if err != nil {
 			logger.I("failed to ensure node object")
 			return &reconcile.Result{Err: err}
@@ -395,7 +394,7 @@ func (c *Controller) onNodeUpdated(oldObj, newObj interface{}) *reconcile.Result
 	}
 
 	logger.D("evaluating node field hooks")
-	err = c.evalNodeFiledHooksAndUpdateNode(logger, node)
+	err := c.evalNodeFiledHooksAndUpdateNode(logger, node)
 	if err != nil {
 		logger.I("failed to eval and update node field hooks", log.Error(err))
 		return &reconcile.Result{Err: err}
@@ -442,14 +441,18 @@ func (c *Controller) onNodeDeleted(obj interface{}) *reconcile.Result {
 	return nil
 }
 
-func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, nodeObj *corev1.Node) error {
-	device, ok := c.getEdgeDeviceObject(nodeObj.Name)
+func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, node *corev1.Node) error {
+	device, ok := c.getEdgeDeviceObject(node.Name)
 	if !ok {
 		logger.I("no EdgeDevice for this node")
 		return nil
 	}
 
-	node := nodeObj.DeepCopy()
+	if len(device.Spec.Node.FieldHooks) == 0 {
+		logger.V("field hooks not set, skipping")
+		return nil
+	}
+
 	nodeJSONBytes, err := json.Marshal(node)
 	if err != nil {
 		return fmt.Errorf("failed to marshal node object: %w", err)
@@ -461,7 +464,9 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, nodeO
 		return fmt.Errorf("failed to unmarshal node object as map: %w", err)
 	}
 
-	nodeNeedUpdate := false
+	var (
+		updateNode *corev1.Node
+	)
 	for _, h := range device.Spec.Node.FieldHooks {
 		var query *gojq.Query
 		query, err = gojq.Parse(h.Query)
@@ -486,11 +491,11 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, nodeO
 		targetValue := h.Value
 		switch {
 		case targetValue != "":
-		// user already set value, do nothing
-		case targetValue == "" && h.ValueExpression != "":
+			// user already set value, do nothing
+		case h.ValueExpression != "":
 			targetValue, err = textquery.JQ(h.ValueExpression, result)
 			if err != nil {
-				logger.I("failed to eval value expression", log.String("exp", h.ValueExpression), log.Error(err))
+				logger.I("failed to eval value expression", log.String("expression", h.ValueExpression), log.Error(err))
 			}
 		}
 
@@ -501,15 +506,21 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, nodeO
 			key := strings.TrimSuffix(strings.TrimPrefix(fp, "metadata.labels['"), "']")
 
 			if node.Labels[key] != targetValue {
-				node.Labels[key] = targetValue
-				nodeNeedUpdate = true
+				if updateNode == nil {
+					updateNode = node.DeepCopy()
+				}
+
+				updateNode.Labels[key] = targetValue
 			}
 		case strings.HasPrefix(fp, "metadata.annotations['") && strings.HasSuffix(fp, "']"):
 			key := strings.TrimSuffix(strings.TrimPrefix(fp, "metadata.annotations['"), "']")
 
 			if node.Annotations[key] != targetValue {
-				node.Annotations[key] = targetValue
-				nodeNeedUpdate = true
+				if updateNode == nil {
+					updateNode = node.DeepCopy()
+				}
+
+				updateNode.Annotations[key] = targetValue
 			}
 		default:
 			logger.I("unsupported target field", log.String("targetField", fp))
@@ -517,23 +528,21 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, nodeO
 		}
 	}
 
-	if nodeNeedUpdate {
-		logger.D("updating node object metadata for field hooks")
-		err = patchhelper.TwoWayMergePatch(nodeObj.DeepCopy(), node, &corev1.Node{},
-			func(patchData []byte) error {
-				_, err2 := c.nodeClient.Patch(
-					c.Context(), node.Name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{})
-				if err2 != nil {
-					return err2
-				}
-				return nil
-			},
-		)
+	if updateNode == nil {
+		return nil
+	}
 
-		if err != nil {
-			logger.I("failed to update node object", log.Error(err))
-			return err
-		}
+	logger.D("updating node object metadata for field hooks")
+	err = patchhelper.TwoWayMergePatch(node, updateNode, &corev1.Node{}, func(patchData []byte) error {
+		_, err2 := c.nodeClient.Patch(
+			c.Context(), node.Name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{},
+		)
+		return err2
+	})
+
+	if err != nil {
+		logger.I("failed to update node object", log.Error(err))
+		return err
 	}
 
 	return nil

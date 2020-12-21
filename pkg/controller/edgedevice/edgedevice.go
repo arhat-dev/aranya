@@ -130,7 +130,7 @@ func (c *edgeDeviceController) init(
 	edgeDeviceRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.edgeDeviceInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:ed"),
 		BackoffStrategy: nil,
-		Workers:         1,
+		Workers:         0,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
 			OnAdded:    ctrl.onEdgeDeviceResAdded,

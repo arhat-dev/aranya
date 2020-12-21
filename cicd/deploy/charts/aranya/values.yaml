@@ -129,7 +129,6 @@ config:
         qps: 5
         burst: 10
 
-    maxVirtualnodeCreatingInParallel: 0
     managed:
       connectivityService:
         name: edgedevice-connectivity

@@ -32,8 +32,7 @@ type Config struct {
 type AppConfig struct {
 	kubehelper.ControllerConfig `json:",inline" yaml:",inline"`
 
-	MaxVirtualnodeCreatingInParallel int  `json:"maxVirtualnodeCreatingInParallel" yaml:"maxVirtualnodeCreatingInParallel"`
-	RunAsCloudProvider               bool `json:"runAsCloudProvider" yaml:"runAsCloudProvider"`
+	RunAsCloudProvider bool `json:"runAsCloudProvider" yaml:"runAsCloudProvider"`
 
 	Managed struct {
 		ConnectivityService struct {
@@ -56,9 +55,6 @@ type AppConfig struct {
 
 func FlagsForAranyaAppConfig(prefix string, config *AppConfig) *pflag.FlagSet {
 	flags := pflag.NewFlagSet("aranya.app", pflag.ExitOnError)
-
-	flags.IntVar(&config.MaxVirtualnodeCreatingInParallel, "maxVirtualnodeCreatingInParallel", 0,
-		"set how many virtualnode can be creating in parallel, values <= 0 means no limit")
 
 	flags.StringVar(&config.Managed.StorageService.Name, prefix+"managed.storageService.name",
 		"edgedevice-sftp", "set sftp service resource name managed by aranya (for remote csi storage feature)")

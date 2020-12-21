@@ -94,7 +94,7 @@ func (c *sysPodRoleController) init(
 	roleRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.vpRoleInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:role"),
 		BackoffStrategy: nil,
-		Workers:         1,
+		Workers:         0,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
 			OnAdded:    nextActionUpdate,
