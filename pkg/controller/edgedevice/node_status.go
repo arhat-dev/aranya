@@ -45,7 +45,7 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 	vn, ignore := c.doNodeResourcePreCheck(name)
 	if ignore {
 		logger.V("node status update ignored")
-		return
+		return nil
 	}
 
 	expectedStatus := vn.ActualNodeStatus(node.Status)
@@ -99,7 +99,7 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 			sort.Strings(labels)
 			sort.Strings(annotations)
 
-			logger.V("node metadata need to be updated",
+			logger.V("node metadata requires update",
 				log.Strings("labels", labels),
 				log.Strings("annotations", annotations),
 			)
@@ -135,18 +135,6 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 			return &reconcile.Result{Err: err}
 		}
 		logger.V("node metadata updated")
-
-		// should trigger update automatically since we are watching, just in case
-		return &reconcile.Result{
-			NextAction: queue.ActionUpdate,
-			ScheduleAfter: func() time.Duration {
-				if c.vnConfig.Node.Lease.Enabled {
-					return c.vnConfig.Node.Lease.UpdateInterval / 5
-				}
-
-				return c.vnConfig.Node.Timers.MirrorSyncInterval / 5
-			}(),
-		}
 	}
 
 	var (
@@ -160,25 +148,25 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 
 		if !checkNodeResourcesEqual(expectedStatus.Capacity, node.Status.Capacity) {
 			updateStatus = true
-			logger.V("node capacity needs to be updated")
+			logger.V("node capacity requires updated")
 			node.Status.Capacity = expectedStatus.Capacity
 		}
 
 		if !checkNodeResourcesEqual(expectedStatus.Allocatable, node.Status.Allocatable) {
 			updateStatus = true
-			logger.V("node allocatable needs to be updated")
+			logger.V("node allocatable requires updated")
 			node.Status.Allocatable = expectedStatus.Allocatable
 		}
 
 		if !checkNodeInfoEqual(expectedStatus.NodeInfo, node.Status.NodeInfo) {
 			updateStatus = true
-			logger.V("node system info needs to be updated")
+			logger.V("node system info requires updated")
 			node.Status.NodeInfo = expectedStatus.NodeInfo
 		}
 
 		if node.Status.Phase != corev1.NodeRunning {
 			updateStatus = true
-			logger.V("node phase need to be updated")
+			logger.V("node phase requires update")
 			node.Status.Phase = corev1.NodeRunning
 		}
 
@@ -215,7 +203,7 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 				node.Status.Conditions[i].Message = expectedCond.Message
 				node.Status.Conditions[i].Reason = expectedCond.Reason
 
-				logger.V("node condition need to be updated",
+				logger.V("node condition requires update",
 					log.Any("old", currentCond),
 					log.Any("new", node.Status.Conditions[i]),
 				)
@@ -236,14 +224,10 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 
 		if !c.vnConfig.Node.Lease.Enabled {
 			if heartBeatRemain < (c.vnConfig.Node.Timers.MirrorSyncInterval / 5) {
-				logger.V("node conditions need to be updated for heart beat")
+				logger.V("node conditions requires update for heart beat")
 				updateStatus = true
 			} else {
 				after := heartBeatRemain * 4 / 5
-				if after < time.Second {
-					after = time.Second
-				}
-
 				logger.V("node conditions will be updated", log.Duration("after", after))
 				// ensure update action for heart beat
 				ret = &reconcile.Result{NextAction: queue.ActionUpdate, ScheduleAfter: after}
@@ -295,8 +279,7 @@ func checkNodeResourcesEqual(a, b corev1.ResourceList) bool {
 	case !a.Cpu().Equal(*b.Cpu()):
 	case !a.Pods().Equal(*b.Pods()):
 	case !a.Memory().Equal(*b.Memory()):
-	case !a.Storage().Equal(*b.Storage()):
-	case !a.StorageEphemeral().Equal(*b.Storage()):
+	case !a.StorageEphemeral().Equal(*b.StorageEphemeral()):
 	default:
 		return true
 	}
@@ -340,6 +323,7 @@ func getAllocatable(capacity corev1.ResourceList, pods []*corev1.Pod) corev1.Res
 			if ctr.Resources.Limits.Memory().Value() != 0 {
 				memUsed = ctr.Resources.Limits.Memory().Value()
 			}
+
 			storageUsed := ctr.Resources.Requests.StorageEphemeral().Value()
 			if ctr.Resources.Limits.StorageEphemeral().Value() != 0 {
 				storageUsed = ctr.Resources.Limits.StorageEphemeral().Value()

@@ -185,7 +185,7 @@ func (c *nodeController) init(
 		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, nodeLeaseRec.ReconcileUntil)
 
 		c.nodeLeaseReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
-			Logger:          ctrl.Log.WithName("rec:nl_req"),
+			Logger:          ctrl.Log.WithName("rec:nl:req"),
 			BackoffStrategy: nil,
 			Workers:         0,
 			RequireCache:    true,
