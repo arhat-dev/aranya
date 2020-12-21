@@ -17,6 +17,7 @@ limitations under the License.
 package edgedevice
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -58,6 +59,8 @@ import (
 )
 
 type nodeController struct {
+	nodeCtx context.Context
+
 	vnRec        *reconcile.Core
 	virtualNodes *virtualnode.Manager
 	vnConfig     *conf.VirtualnodeConfig
@@ -81,6 +84,7 @@ func (c *nodeController) init(
 	nodeInformerTyped informerscorev1.NodeInformer,
 	preferredResources []*metav1.APIResourceList,
 ) error {
+	c.nodeCtx = ctrl.Context()
 	_, kubeConfigForVirtualNode, err := config.VirtualNode.KubeClient.NewKubeClient(nil, true)
 	if err != nil {
 		return fmt.Errorf("failed to get kubeconfig for virtualnode: %w", err)
@@ -818,4 +822,23 @@ func (c *Controller) doNodeResourcePreCheck(name string) (_ *virtualnode.Virtual
 	}
 
 	return vn, false
+}
+
+func (c *nodeController) getNodeObject(name string) (*corev1.Node, bool, error) {
+	obj, found, err := c.nodeInformer.GetIndexer().GetByKey(name)
+	if err != nil || !found {
+		node, err2 := c.nodeClient.Get(c.nodeCtx, name, metav1.GetOptions{})
+		if err2 != nil {
+			return nil, false, err2
+		}
+
+		return node, true, nil
+	}
+
+	node, ok := obj.(*corev1.Node)
+	if !ok {
+		return nil, false, err
+	}
+
+	return node, true, nil
 }

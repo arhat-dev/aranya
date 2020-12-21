@@ -262,7 +262,7 @@ func (c *Controller) onEdgeDeviceResDeleted(obj interface{}) *reconcile.Result {
 //   - Ensure kubelet serving certificate valid (secret object contains valid certificate for this node)
 //   - Create connectivity manager
 //   - Create virtualnode with all options prepared
-//   - Ensure NodeVerbs object
+//   - Ensure Node object
 //	 - Start virtualnode
 // nolint:gocyclo
 func (c *Controller) instantiateEdgeDevice(name string) (err error) {
@@ -685,17 +685,23 @@ func (c *Controller) prepareConnectivityOptions(
 	return
 }
 
-// nolint:unparam
 func (c *Controller) prepareNodeOptions(
 	edgeDevice *aranyaapi.EdgeDevice,
 	vnConfig *conf.VirtualnodeConfig,
 ) (_ *virtualnode.Options, err error) {
-	node, ok := c.getNodeObject(edgeDevice.Name)
-	if !ok {
-		return nil, fmt.Errorf("node object not found")
+	// this node may not exist
+	node, ok, err := c.getNodeObject(edgeDevice.Name)
+	if err != nil && !kubeerrors.IsNotFound(err) {
+		return nil, fmt.Errorf("failed to check node object: %w", err)
 	}
 
-	nodeMD := node.ObjectMeta.DeepCopy()
+	var nodeMD *metav1.ObjectMeta
+	if ok {
+		nodeMD = node.ObjectMeta.DeepCopy()
+	} else {
+		nodeMD = &metav1.ObjectMeta{}
+	}
+
 	opts := &virtualnode.Options{
 		ForceSyncInterval:      vnConfig.Node.Timers.ForceSyncInterval,
 		MirrorNodeSyncInterval: vnConfig.Node.Timers.MirrorSyncInterval,
@@ -716,7 +722,7 @@ func (c *Controller) preparePodOptions(
 	opts := &pod.Options{
 		Config: &vnConfig.Pod,
 		GetNode: func() *corev1.Node {
-			node, ok := c.getNodeObject(edgeDevice.Name)
+			node, ok, _ := c.getNodeObject(edgeDevice.Name)
 			if !ok {
 				return nil
 			}
