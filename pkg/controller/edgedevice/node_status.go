@@ -29,9 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
-
-	"arhat.dev/aranya/pkg/constant"
 )
 
 // nolint:gocyclo
@@ -50,36 +47,11 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 
 	expectedStatus := vn.ActualNodeStatus(node.Status)
 	extLabels, extAnnotations := vn.ExtInfo()
-
-	// check its labels and annotations
-	var (
-		arch   = expectedStatus.NodeInfo.Architecture
-		os     = expectedStatus.NodeInfo.OperatingSystem
-		goArch = convertToGOARCH(arch)
+	extLabels, extAnnotations = getNodeLabelsAndAnnotationsToSet(
+		node.Labels, node.Annotations,
+		&expectedStatus.NodeInfo,
+		extLabels, extAnnotations,
 	)
-
-	for k, v := range map[string]string{
-		constant.LabelArch:     arch,
-		corev1.LabelArchStable: goArch,
-		kubeletapis.LabelArch:  goArch,
-		corev1.LabelOSStable:   os,
-		kubeletapis.LabelOS:    os,
-	} {
-		// MUST not override these labels in ext info
-		extLabels[k] = v
-	}
-
-	for k, v := range node.Labels {
-		if extLabels[k] == v {
-			delete(extLabels, k)
-		}
-	}
-
-	for k, v := range node.Annotations {
-		if extAnnotations[k] == v {
-			delete(extAnnotations, k)
-		}
-	}
 
 	if len(extLabels) != 0 || len(extAnnotations) != 0 {
 		if logger.Enabled(log.LevelVerbose) {

@@ -220,7 +220,7 @@ func (c *nodeController) init(
 		Workers:         0,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
-			OnAdded:    ctrl.onNodeAdd,
+			OnAdded:    nextActionUpdate,
 			OnUpdated:  ctrl.onNodeUpdated,
 			OnDeleting: ctrl.onNodeDeleting,
 			OnDeleted:  ctrl.onNodeDeleted,
@@ -340,23 +340,6 @@ func (c *Controller) onNodeEnsureRequested(obj interface{}) *reconcile.Result {
 	return nil
 }
 
-func (c *Controller) onNodeAdd(obj interface{}) *reconcile.Result {
-	var (
-		err    error
-		node   = obj.(*corev1.Node).DeepCopy()
-		name   = node.Name
-		logger = c.Log.WithFields(log.String("name", name))
-	)
-
-	logger.D("evaluating node field hooks")
-	err = c.evalNodeFiledHooksAndUpdateNode(logger, node)
-	if err != nil {
-		return &reconcile.Result{Err: err}
-	}
-
-	return &reconcile.Result{NextAction: queue.ActionUpdate}
-}
-
 func (c *Controller) onNodeUpdated(oldObj, newObj interface{}) *reconcile.Result {
 	var (
 		node   = newObj.(*corev1.Node).DeepCopy()
@@ -398,7 +381,7 @@ func (c *Controller) onNodeUpdated(oldObj, newObj interface{}) *reconcile.Result
 	}
 
 	logger.D("evaluating node field hooks")
-	err := c.evalNodeFiledHooksAndUpdateNode(logger, node)
+	err := c.evalNodeFiledHooksAndUpdateNode(logger, node, vn)
 	if err != nil {
 		logger.I("failed to eval and update node field hooks", log.Error(err))
 		return &reconcile.Result{Err: err}
@@ -423,7 +406,7 @@ func (c *Controller) onNodeDeleted(obj interface{}) *reconcile.Result {
 		logger = c.Log.WithFields(log.String("name", name))
 	)
 
-	// TODO: NodeVerbs could be removed from cache by changing the label, which wont trigger onNodeDeleting
+	// TODO: Node could be removed from cache by changing the label, which wont trigger onNodeDeleting
 	vn, ignore := c.doNodeResourcePreCheck(name)
 	if ignore {
 		return nil
@@ -445,7 +428,11 @@ func (c *Controller) onNodeDeleted(obj interface{}) *reconcile.Result {
 	return nil
 }
 
-func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, node *corev1.Node) error {
+func (c *Controller) evalNodeFiledHooksAndUpdateNode(
+	logger log.Interface,
+	node *corev1.Node,
+	vn *virtualnode.VirtualNode,
+) error {
 	device, ok := c.getEdgeDeviceObject(node.Name)
 	if !ok {
 		logger.I("no EdgeDevice for this node")
@@ -457,7 +444,46 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, node 
 		return nil
 	}
 
-	nodeJSONBytes, err := json.Marshal(node)
+	var (
+		updateNode *corev1.Node
+
+		extLabels, extAnnotations = vn.ExtInfo()
+	)
+
+	// get labels & annotations not applied
+	setLabels, setAnnotations := getNodeLabelsAndAnnotationsToSet(
+		node.Labels, node.Annotations,
+		&node.Status.NodeInfo,
+		extLabels, extAnnotations,
+	)
+
+	if len(setLabels) != 0 || len(setAnnotations) != 0 {
+		updateNode = node.DeepCopy()
+
+		if updateNode.Labels == nil {
+			updateNode.Labels = setLabels
+		} else {
+			for k, v := range setLabels {
+				updateNode.Labels[k] = v
+			}
+		}
+
+		if updateNode.Annotations == nil {
+			updateNode.Annotations = setAnnotations
+		} else {
+			for k, v := range setAnnotations {
+				node.Annotations[k] = v
+			}
+		}
+	}
+
+	toMarshal := node
+	if updateNode != nil {
+		// labels/annotations not up to date, but we should eval with the latest info
+		toMarshal = updateNode
+	}
+
+	nodeJSONBytes, err := json.Marshal(toMarshal)
 	if err != nil {
 		return fmt.Errorf("failed to marshal node object: %w", err)
 	}
@@ -468,9 +494,6 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(logger log.Interface, node 
 		return fmt.Errorf("failed to unmarshal node object as map: %w", err)
 	}
 
-	var (
-		updateNode *corev1.Node
-	)
 	for _, h := range device.Spec.Node.FieldHooks {
 		var query *gojq.Query
 		query, err = gojq.Parse(h.Query)

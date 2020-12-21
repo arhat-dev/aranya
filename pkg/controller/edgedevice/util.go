@@ -23,12 +23,51 @@ import (
 
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 )
+
+func getNodeLabelsAndAnnotationsToSet(
+	nodeLabels, nodeAnnotations map[string]string,
+	nodeSystemInfo *corev1.NodeSystemInfo,
+	extLabels, extAnnotations map[string]string,
+) (setLabels, setAnnotations map[string]string) {
+	var (
+		arch   = nodeSystemInfo.Architecture
+		os     = nodeSystemInfo.OperatingSystem
+		goArch = convertToGOARCH(arch)
+	)
+
+	for k, v := range map[string]string{
+		constant.LabelArch:     arch,
+		corev1.LabelArchStable: goArch,
+		kubeletapis.LabelArch:  goArch,
+		corev1.LabelOSStable:   os,
+		kubeletapis.LabelOS:    os,
+	} {
+		// MUST not override these labels in ext info
+		extLabels[k] = v
+	}
+
+	for k, v := range nodeLabels {
+		if extLabels[k] == v {
+			delete(extLabels, k)
+		}
+	}
+
+	for k, v := range nodeAnnotations {
+		if extAnnotations[k] == v {
+			delete(extAnnotations, k)
+		}
+	}
+
+	return extLabels, extAnnotations
+}
 
 func (c *Controller) getEdgeDeviceObject(name string) (*aranyaapi.EdgeDevice, bool) {
 	obj, found, err := c.edgeDeviceInformer.GetStore().GetByKey(constant.SysNS() + "/" + name)
