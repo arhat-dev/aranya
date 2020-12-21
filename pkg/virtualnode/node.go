@@ -71,6 +71,9 @@ type CreationOptions struct {
 type Options struct {
 	ForceSyncInterval      time.Duration
 	MirrorNodeSyncInterval time.Duration
+
+	NodeLabels      map[string]string
+	NodeAnnotations map[string]string
 }
 
 type muxWrapper struct {
@@ -179,7 +182,7 @@ func CreateVirtualNode(ctx context.Context, cancel context.CancelFunc, opt *Crea
 		storageManager:    nil, // initialized later
 		metricsManager:    nil, // initialized later
 		peripheralManager: peripheralManager,
-		nodeStatusCache:   newNodeCache(),
+		nodeStatusCache:   newNodeCache(opt.NodeOptions.NodeLabels, opt.NodeOptions.NodeAnnotations),
 
 		SchedulePodJob: podManager.SchedulePodJob,
 

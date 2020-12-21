@@ -690,10 +690,18 @@ func (c *Controller) prepareNodeOptions(
 	edgeDevice *aranyaapi.EdgeDevice,
 	vnConfig *conf.VirtualnodeConfig,
 ) (_ *virtualnode.Options, err error) {
-	_ = edgeDevice
+	node, ok := c.getNodeObject(edgeDevice.Name)
+	if !ok {
+		return nil, fmt.Errorf("node object not found")
+	}
+
+	nodeMD := node.ObjectMeta.DeepCopy()
 	opts := &virtualnode.Options{
 		ForceSyncInterval:      vnConfig.Node.Timers.ForceSyncInterval,
 		MirrorNodeSyncInterval: vnConfig.Node.Timers.MirrorSyncInterval,
+
+		NodeLabels:      nodeMD.Labels,
+		NodeAnnotations: nodeMD.Annotations,
 	}
 
 	return opts, nil

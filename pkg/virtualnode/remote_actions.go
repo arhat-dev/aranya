@@ -18,7 +18,6 @@ package virtualnode
 
 import (
 	"fmt"
-	"math/big"
 
 	"arhat.dev/aranya-proto/aranyagopb"
 	"arhat.dev/pkg/log"
@@ -195,55 +194,11 @@ func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg) {
 		vn.nodeStatusCache.UpdateCapacity(translateDeviceResourcesCapacity(capacity, vn.maxPods))
 	}
 
-	labels := make(map[string]string)
-	annotations := make(map[string]string)
-	oldLabels, oldAnnotations := vn.nodeStatusCache.RetrieveExtInfo()
-
-	if oldLabels == nil {
-		oldLabels = make(map[string]string)
+	err := vn.nodeStatusCache.UpdateExtInfo(msg.GetExtInfo())
+	if err != nil {
+		vn.log.I("failed to update node ext info", log.Error(err))
 	}
 
-	if oldAnnotations == nil {
-		oldAnnotations = make(map[string]string)
-	}
-
-	for _, info := range msg.GetExtInfo() {
-		var target, oldValues map[string]string
-		switch info.Target {
-		case aranyagopb.NODE_EXT_INFO_TARGET_ANNOTATION:
-			target, oldValues = annotations, oldAnnotations
-		case aranyagopb.NODE_EXT_INFO_TARGET_LABEL:
-			target, oldValues = labels, oldLabels
-		default:
-			// TODO: report unsupported
-			continue
-		}
-
-		oldVal := oldValues[info.TargetKey]
-
-		switch info.ValueType {
-		case aranyagopb.NODE_EXT_INFO_TYPE_STRING:
-			switch info.Operator {
-			case aranyagopb.NODE_EXT_INFO_OPERATOR_SET:
-				target[info.TargetKey] = info.Value
-			case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
-				target[info.TargetKey] = oldVal + info.Value
-			default:
-				// TODO: log unsupported
-			}
-		case aranyagopb.NODE_EXT_INFO_TYPE_NUMBER:
-			resolvedVal, err := calculateNumber(oldVal, info.Value, info.Operator)
-			if err != nil {
-				// TODO: log error
-				continue
-			}
-			target[info.TargetKey] = resolvedVal
-		default:
-			// TODO: log unsupported
-		}
-	}
-
-	vn.nodeStatusCache.UpdateExtInfo(labels, annotations)
 	vn.nodeStatusCache.UpdatePhase(corev1.NodeRunning)
 }
 
@@ -310,32 +265,4 @@ func translateDeviceCondition(prev []corev1.NodeCondition, cond *aranyagopb.Node
 	}
 
 	return result
-}
-
-func calculateNumber(oldVal, v string, op aranyagopb.NodeExtInfo_Operator) (string, error) {
-	newNum, _, err := new(big.Float).Parse(v, 0)
-	if err != nil {
-		return "", err
-	}
-
-	var oldNum *big.Float
-	if len(oldVal) == 0 {
-		oldNum = big.NewFloat(0)
-	} else {
-		oldNum, _, err = new(big.Float).Parse(oldVal, 0)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	switch op {
-	case aranyagopb.NODE_EXT_INFO_OPERATOR_SET:
-		return newNum.Text('f', -1), nil
-	case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
-		return oldNum.Add(oldNum, newNum).Text('f', -1), nil
-	case aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
-		return oldNum.Add(oldNum, newNum.Neg(newNum)).Text('f', -1), nil
-	default:
-		return "", fmt.Errorf("unsupported operator for number %q", op.String())
-	}
 }

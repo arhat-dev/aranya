@@ -17,14 +17,28 @@ limitations under the License.
 package virtualnode
 
 import (
+	"fmt"
+	"math/big"
 	"runtime"
 	"sync/atomic"
 
+	"arhat.dev/aranya-proto/aranyagopb"
 	corev1 "k8s.io/api/core/v1"
 )
 
-func newNodeCache() *NodeCache {
+func newNodeCache(nodeLabels, nodeAnnotations map[string]string) *NodeCache {
+	if nodeLabels == nil {
+		nodeLabels = make(map[string]string)
+	}
+
+	if nodeAnnotations == nil {
+		nodeAnnotations = make(map[string]string)
+	}
+
 	return &NodeCache{
+		nodeLabels:      nodeLabels,
+		nodeAnnotations: nodeAnnotations,
+
 		status: new(corev1.NodeStatus),
 	}
 }
@@ -32,6 +46,8 @@ func newNodeCache() *NodeCache {
 // NodeCache is a thread-safe cache store for node status and ext info (extra labels and annotations)
 type NodeCache struct {
 	status *corev1.NodeStatus
+
+	nodeLabels, nodeAnnotations map[string]string
 
 	extLabels, extAnnotations map[string]string
 
@@ -80,23 +96,97 @@ func (n *NodeCache) UpdateSystemInfo(i *corev1.NodeSystemInfo) {
 	n.doExclusive(func() { n.status.NodeInfo = *i })
 }
 
-func (n *NodeCache) UpdateExtInfo(labels, annotations map[string]string) {
-	n.doExclusive(func() {
-		n.extLabels = labels
-		n.extAnnotations = annotations
-	})
-}
+func (n *NodeCache) UpdateExtInfo(extInfo []*aranyagopb.NodeExtInfo) error {
+	nodeLabels := make(map[string]string)
+	nodeAnnotations := make(map[string]string)
 
-func (n *NodeCache) RetrieveExtInfo() (labels, annotations map[string]string) {
-	labels, annotations = make(map[string]string), make(map[string]string)
+	oldExtLabels := make(map[string]string)
+	oldExtAnnotations := make(map[string]string)
 
-	n.doExclusive(func() {
+	// apply MUST be atomic
+	apply := func() error {
+		for k, v := range n.nodeLabels {
+			nodeLabels[k] = v
+		}
+
+		for k, v := range n.nodeAnnotations {
+			nodeAnnotations[k] = v
+		}
+
 		for k, v := range n.extLabels {
-			labels[k] = v
+			oldExtLabels[k] = v
 		}
 
 		for k, v := range n.extAnnotations {
-			annotations[k] = v
+			oldExtAnnotations[k] = v
+		}
+
+		extLabels := make(map[string]string)
+		extAnnotations := make(map[string]string)
+
+		for _, info := range extInfo {
+			var (
+				target, oldExtValues, nodeValues map[string]string
+			)
+			switch info.Target {
+			case aranyagopb.NODE_EXT_INFO_TARGET_ANNOTATION:
+				target, oldExtValues, nodeValues = extAnnotations, oldExtAnnotations, nodeAnnotations
+			case aranyagopb.NODE_EXT_INFO_TARGET_LABEL:
+				target, oldExtValues, nodeValues = extLabels, oldExtLabels, nodeLabels
+			default:
+				return fmt.Errorf("invalid ext info target %q", info.Target.String())
+			}
+
+			oldVal, ok := oldExtValues[info.TargetKey]
+			if !ok {
+				oldVal = nodeValues[info.TargetKey]
+			}
+
+			switch info.ValueType {
+			case aranyagopb.NODE_EXT_INFO_TYPE_STRING:
+				switch info.Operator {
+				case aranyagopb.NODE_EXT_INFO_OPERATOR_SET:
+					target[info.TargetKey] = info.Value
+				case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
+					target[info.TargetKey] = oldVal + info.Value
+				default:
+					return fmt.Errorf("invalid operator for string ext info %q", info.Operator.String())
+				}
+			case aranyagopb.NODE_EXT_INFO_TYPE_NUMBER:
+				resolvedVal, err := n.calculateNumber(oldVal, info.Value, info.Operator)
+				if err != nil {
+					return fmt.Errorf("failed to calculate number of : %w", err)
+				}
+				target[info.TargetKey] = resolvedVal
+			default:
+				return fmt.Errorf("unsupported ext info value type %q", info.ValueType.String())
+			}
+		}
+
+		n.extLabels = extLabels
+		n.extAnnotations = extAnnotations
+
+		return nil
+	}
+
+	var err error
+	n.doExclusive(func() {
+		err = apply()
+	})
+
+	return err
+}
+
+func (n *NodeCache) RetrieveExtInfo() (extLabels, extAnnotations map[string]string) {
+	extLabels, extAnnotations = make(map[string]string), make(map[string]string)
+
+	n.doExclusive(func() {
+		for k, v := range n.extLabels {
+			extLabels[k] = v
+		}
+
+		for k, v := range n.extAnnotations {
+			extAnnotations[k] = v
 		}
 	})
 
@@ -115,4 +205,32 @@ func (n *NodeCache) RetrieveStatus(s corev1.NodeStatus) corev1.NodeStatus {
 	result.NodeInfo = status.NodeInfo
 
 	return *result
+}
+
+func (n *NodeCache) calculateNumber(oldVal, v string, op aranyagopb.NodeExtInfo_Operator) (string, error) {
+	newNum, _, err := new(big.Float).Parse(v, 0)
+	if err != nil {
+		return "", err
+	}
+
+	var oldNum *big.Float
+	if len(oldVal) == 0 {
+		oldNum = big.NewFloat(0)
+	} else {
+		oldNum, _, err = new(big.Float).Parse(oldVal, 0)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	switch op {
+	case aranyagopb.NODE_EXT_INFO_OPERATOR_SET:
+		return newNum.Text('f', -1), nil
+	case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
+		return oldNum.Add(oldNum, newNum).Text('f', -1), nil
+	case aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
+		return oldNum.Add(oldNum, newNum.Neg(newNum)).Text('f', -1), nil
+	default:
+		return "", fmt.Errorf("unsupported operator for number %q", op.String())
+	}
 }

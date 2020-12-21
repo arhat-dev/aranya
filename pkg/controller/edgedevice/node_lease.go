@@ -126,7 +126,7 @@ func (c *Controller) onNodeLeaseUpdated(oldObj, newObj interface{}) *reconcile.R
 		return nil
 	}
 
-	// find node since the lease object requires node as owner
+	// find node object since the lease object requires node as owner
 	node, found := c.getNodeObject(name)
 	if !found {
 		return nil
