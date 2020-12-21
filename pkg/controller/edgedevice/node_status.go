@@ -148,19 +148,19 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 
 		if !checkNodeResourcesEqual(expectedStatus.Capacity, node.Status.Capacity) {
 			updateStatus = true
-			logger.V("node capacity requires updated")
+			logger.V("node capacity requires update")
 			node.Status.Capacity = expectedStatus.Capacity
 		}
 
 		if !checkNodeResourcesEqual(expectedStatus.Allocatable, node.Status.Allocatable) {
 			updateStatus = true
-			logger.V("node allocatable requires updated")
+			logger.V("node allocatable requires update")
 			node.Status.Allocatable = expectedStatus.Allocatable
 		}
 
 		if !checkNodeInfoEqual(expectedStatus.NodeInfo, node.Status.NodeInfo) {
 			updateStatus = true
-			logger.V("node system info requires updated")
+			logger.V("node system info requires update")
 			node.Status.NodeInfo = expectedStatus.NodeInfo
 		}
 
