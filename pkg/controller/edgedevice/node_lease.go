@@ -94,7 +94,7 @@ func (c *Controller) onNodeLeaseEnsureRequest(obj interface{}) *reconcile.Result
 		logger = c.Log.WithFields(log.String("name", name))
 	)
 
-	node, ok := c.getNodeObject(name)
+	node, ok, _ := c.getNodeObject(name)
 	if !ok {
 		_, shouldEnsure := c.getEdgeDeviceObject(name)
 		if !shouldEnsure {
@@ -127,7 +127,7 @@ func (c *Controller) onNodeLeaseUpdated(oldObj, newObj interface{}) *reconcile.R
 	}
 
 	// find node object since the lease object requires node as owner
-	node, found := c.getNodeObject(name)
+	node, found, _ := c.getNodeObject(name)
 	if !found {
 		return nil
 	}
@@ -179,7 +179,7 @@ func (c *Controller) onNodeLeaseDeleted(obj interface{}) *reconcile.Result {
 	}
 
 	// find node since the lease object requires node as owner
-	node, found := c.getNodeObject(name)
+	node, found, _ := c.getNodeObject(name)
 	if !found {
 		return nil
 	}
@@ -287,4 +287,23 @@ func (c *Controller) newLeaseForNode(nodeMeta metav1.ObjectMeta) *coordinationv1
 			LeaseDurationSeconds: &leaseSeconds,
 		},
 	}
+}
+
+func (c *Controller) getNodeLeaseObject(name string) (*coordinationv1.Lease, bool) {
+	obj, found, err := c.nodeLeaseInformer.GetIndexer().GetByKey(corev1.NamespaceNodeLease + "/" + name)
+	if err != nil || !found {
+		lease, err := c.nodeLeaseClient.Get(c.Context(), name, metav1.GetOptions{})
+		if err != nil {
+			return nil, false
+		}
+
+		return lease, true
+	}
+
+	lease, ok := obj.(*coordinationv1.Lease)
+	if !ok {
+		return nil, false
+	}
+
+	return lease, true
 }

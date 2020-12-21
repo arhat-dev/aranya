@@ -23,8 +23,6 @@ import (
 
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
-	coordinationv1 "k8s.io/api/coordination/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -32,48 +30,15 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func (c *Controller) getNodeObject(name string) (*corev1.Node, bool) {
-	obj, found, err := c.nodeInformer.GetIndexer().GetByKey(name)
-	if err != nil || !found {
-		node, err := c.nodeClient.Get(c.Context(), name, metav1.GetOptions{})
-		if err != nil {
-			return nil, false
-		}
-
-		return node, true
-	}
-
-	node, ok := obj.(*corev1.Node)
-	if !ok {
-		return nil, false
-	}
-
-	return node, true
-}
-
-func (c *Controller) getNodeLeaseObject(name string) (*coordinationv1.Lease, bool) {
-	obj, found, err := c.nodeLeaseInformer.GetIndexer().GetByKey(corev1.NamespaceNodeLease + "/" + name)
-	if err != nil || !found {
-		lease, err := c.nodeLeaseClient.Get(c.Context(), name, metav1.GetOptions{})
-		if err != nil {
-			return nil, false
-		}
-
-		return lease, true
-	}
-
-	lease, ok := obj.(*coordinationv1.Lease)
-	if !ok {
-		return nil, false
-	}
-
-	return lease, true
-}
-
 func (c *Controller) getEdgeDeviceObject(name string) (*aranyaapi.EdgeDevice, bool) {
 	obj, found, err := c.edgeDeviceInformer.GetStore().GetByKey(constant.SysNS() + "/" + name)
 	if err != nil || !found {
-		return nil, false
+		ed, err := c.edgeDeviceClient.Get(c.Context(), name, metav1.GetOptions{})
+		if err != nil {
+			return nil, false
+		}
+
+		return ed, true
 	}
 
 	ed, ok := obj.(*aranyaapi.EdgeDevice)
