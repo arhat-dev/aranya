@@ -123,7 +123,7 @@ func (c *meshController) init(
 		reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:abbot:ep"),
 			BackoffStrategy: nil,
-			Workers:         1,
+			Workers:         0,
 			RequireCache:    true,
 			Handlers: reconcile.HandleFuncs{
 				OnAdded:   nextActionUpdate,
@@ -159,7 +159,7 @@ func (c *meshController) init(
 		reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:net:svc"),
 			BackoffStrategy: nil,
-			Workers:         1,
+			Workers:         0,
 			RequireCache:    true,
 			Handlers: reconcile.HandleFuncs{
 				OnAdded:   nextActionUpdate,
@@ -193,7 +193,7 @@ func (c *meshController) init(
 		reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:net:ep"),
 			BackoffStrategy: nil,
-			Workers:         1,
+			Workers:         0,
 			RequireCache:    true,
 			Handlers: reconcile.HandleFuncs{
 				OnAdded:   nextActionUpdate,

@@ -104,7 +104,7 @@ func (c *tenantPodController) init(
 	podRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.tenantPodInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:pod"),
 		BackoffStrategy: nil,
-		Workers:         1,
+		Workers:         0,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
 			OnAdded:    ctrl.onTenantPodAdded,

@@ -94,7 +94,7 @@ func (c *storageServiceController) init(
 	c.storageSvcRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.storageSvcInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:storage:svc"),
 		BackoffStrategy: nil,
-		Workers:         1,
+		Workers:         0,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
 			OnAdded:    nextActionUpdate,
@@ -112,7 +112,7 @@ func (c *storageServiceController) init(
 	c.storageEpRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.storageEpInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:storage:ep"),
 		BackoffStrategy: nil,
-		Workers:         1,
+		Workers:         0,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
 			OnAdded:    nextActionUpdate,

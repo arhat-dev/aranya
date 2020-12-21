@@ -77,7 +77,7 @@ func (c *sysPodController) init(
 	virtualPodRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.sysPodInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:vp"),
 		BackoffStrategy: nil,
-		Workers:         1,
+		Workers:         0,
 		RequireCache:    true,
 		Handlers: reconcile.HandleFuncs{
 			OnAdded:    ctrl.onSysPodAdded,

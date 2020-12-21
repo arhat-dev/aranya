@@ -66,7 +66,7 @@ func NewManager(
 	mgr.netRec = reconcile.NewCore(mgr.Context(), reconcile.Options{
 		Logger:          mgr.Log,
 		BackoffStrategy: nil,
-		Workers:         1,
+		Workers:         0,
 		RequireCache:    false,
 		Handlers: reconcile.HandleFuncs{
 			OnAdded:    nil,

@@ -849,7 +849,6 @@ data:
         storageService:
           name: edgedevice-sftp
         virtualPodRoles: {}
-      maxVirtualnodeCreatingInParallel: 0
       metrics:
         enabled: false
         endpoint: :0
