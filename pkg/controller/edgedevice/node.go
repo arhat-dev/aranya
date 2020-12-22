@@ -472,7 +472,7 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(
 			updateNode.Annotations = setAnnotations
 		} else {
 			for k, v := range setAnnotations {
-				node.Annotations[k] = v
+				updateNode.Annotations[k] = v
 			}
 		}
 	}
@@ -495,10 +495,9 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(
 	}
 
 	for _, h := range device.Spec.Node.FieldHooks {
-		var query *gojq.Query
-		query, err = gojq.Parse(h.Query)
-		if err != nil {
-			logger.I("bad field query", log.String("query", h.Query), log.Error(err))
+		query, err2 := gojq.Parse(h.Query)
+		if err2 != nil {
+			logger.I("bad filed hook query", log.String("query", h.Query), log.Error(err2))
 			continue
 		}
 
@@ -509,7 +508,7 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(
 		}
 
 		if !found {
-			// nothing found, which means query failed
+			// nothing found, which means query failed, do not triger value update
 			continue
 		}
 

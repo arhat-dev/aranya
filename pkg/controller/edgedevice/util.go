@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
@@ -51,15 +52,24 @@ func getNodeLabelsAndAnnotationsToSet(
 		kubeletapis.LabelOS:    os,
 	} {
 		// MUST not override these labels in ext info
-		extLabels[k] = v
+		if _, override := extLabels[k]; override {
+			extLabels[k] = v
+		}
+
+		// MUST set these labels if not present
+		if existingVal, ok := nodeLabels[k]; !ok || v != existingVal {
+			extLabels[k] = v
+		}
 	}
 
+	// remove labels already set
 	for k, v := range nodeLabels {
 		if extLabels[k] == v {
 			delete(extLabels, k)
 		}
 	}
 
+	// remove annotations already set
 	for k, v := range nodeAnnotations {
 		if extAnnotations[k] == v {
 			delete(extAnnotations, k)
@@ -67,6 +77,21 @@ func getNodeLabelsAndAnnotationsToSet(
 	}
 
 	return extLabels, extAnnotations
+}
+
+func convertToGOARCH(arch string) string {
+	switch {
+	case arch == "x86":
+		return "386"
+	case strings.HasPrefix(arch, "armv"):
+		// armv5/armv6/armv7 -> arm
+		return "arm"
+	case strings.HasPrefix(arch, "mips"):
+		// mipshf/mips64hf -> mips/mips64 (runtime.GOARCH)
+		return strings.TrimSuffix(arch, "hf")
+	}
+
+	return arch
 }
 
 func (c *Controller) getEdgeDeviceObject(name string) (*aranyaapi.EdgeDevice, bool) {
