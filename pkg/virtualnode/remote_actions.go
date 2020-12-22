@@ -186,14 +186,24 @@ func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg) {
 	}
 
 	if conditions := msg.GetConditions(); conditions != nil {
-		prevConditions := vn.nodeStatusCache.RetrieveStatus(corev1.NodeStatus{}).Conditions
-		vn.nodeStatusCache.UpdateConditions(translateDeviceCondition(prevConditions, conditions))
+		vn.nodeStatusCache.UpdateConditions(
+			translateNodeConditions(
+				vn.nodeStatusCache.RetrieveStatus(corev1.NodeStatus{}).Conditions,
+				conditions,
+			),
+		)
 	}
 
 	if capacity := msg.GetCapacity(); capacity != nil {
-		vn.nodeStatusCache.UpdateCapacity(translateDeviceResourcesCapacity(capacity, vn.maxPods))
+		vn.nodeStatusCache.UpdateCapacity(
+			translateNodeResourcesCapacity(
+				capacity,
+				vn.maxPods,
+			),
+		)
 	}
 
+	vn.log.V("updating node ext info", log.Any("ext_info", msg.GetExtInfo()))
 	err := vn.nodeStatusCache.UpdateExtInfo(msg.GetExtInfo())
 	if err != nil {
 		vn.log.I("failed to update node ext info", log.Error(err))
@@ -202,7 +212,7 @@ func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg) {
 	vn.nodeStatusCache.UpdatePhase(corev1.NodeRunning)
 }
 
-func translateDeviceResourcesCapacity(res *aranyagopb.NodeResources, maxPods int64) corev1.ResourceList {
+func translateNodeResourcesCapacity(res *aranyagopb.NodeResources, maxPods int64) corev1.ResourceList {
 	return corev1.ResourceList{
 		corev1.ResourceCPU:              *resource.NewQuantity(int64(res.GetCpuCount()), resource.DecimalSI),
 		corev1.ResourceMemory:           *resource.NewQuantity(int64(res.GetMemoryBytes()), resource.BinarySI),
@@ -211,7 +221,7 @@ func translateDeviceResourcesCapacity(res *aranyagopb.NodeResources, maxPods int
 	}
 }
 
-func translateDeviceCondition(prev []corev1.NodeCondition, cond *aranyagopb.NodeConditions) []corev1.NodeCondition {
+func translateNodeConditions(prev []corev1.NodeCondition, cond *aranyagopb.NodeConditions) []corev1.NodeCondition {
 	translate := func(condition aranyagopb.NodeCondition) corev1.ConditionStatus {
 		switch condition {
 		case aranyagopb.NODE_CONDITION_HEALTHY:

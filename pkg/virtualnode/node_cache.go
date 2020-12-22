@@ -65,7 +65,7 @@ func (n *NodeCache) doExclusive(f func()) {
 }
 
 func (n *NodeCache) UpdatePhase(p corev1.NodePhase) {
-	if p == "" {
+	if len(p) == 0 {
 		return
 	}
 
