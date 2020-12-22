@@ -97,58 +97,36 @@ func (n *NodeCache) UpdateSystemInfo(i *corev1.NodeSystemInfo) {
 }
 
 func (n *NodeCache) UpdateExtInfo(extInfo []*aranyagopb.NodeExtInfo) error {
-	nodeLabels := make(map[string]string)
-	nodeAnnotations := make(map[string]string)
-
-	oldExtLabels := make(map[string]string)
-	oldExtAnnotations := make(map[string]string)
-
 	// apply MUST be atomic
 	apply := func() error {
-		for k, v := range n.nodeLabels {
-			nodeLabels[k] = v
-		}
-
-		for k, v := range n.nodeAnnotations {
-			nodeAnnotations[k] = v
-		}
-
-		for k, v := range n.extLabels {
-			oldExtLabels[k] = v
-		}
-
-		for k, v := range n.extAnnotations {
-			oldExtAnnotations[k] = v
-		}
-
 		extLabels := make(map[string]string)
 		extAnnotations := make(map[string]string)
 
 		for _, info := range extInfo {
 			var (
-				target, oldExtValues, nodeValues map[string]string
+				target, oldExtValues, nodeValues *map[string]string
 			)
 			switch info.Target {
 			case aranyagopb.NODE_EXT_INFO_TARGET_ANNOTATION:
-				target, oldExtValues, nodeValues = extAnnotations, oldExtAnnotations, nodeAnnotations
+				target, oldExtValues, nodeValues = &extAnnotations, &n.extAnnotations, &n.nodeAnnotations
 			case aranyagopb.NODE_EXT_INFO_TARGET_LABEL:
-				target, oldExtValues, nodeValues = extLabels, oldExtLabels, nodeLabels
+				target, oldExtValues, nodeValues = &extLabels, &n.extLabels, &n.nodeLabels
 			default:
 				return fmt.Errorf("invalid ext info target %q", info.Target.String())
 			}
 
-			oldVal, ok := oldExtValues[info.TargetKey]
+			oldVal, ok := (*oldExtValues)[info.TargetKey]
 			if !ok {
-				oldVal = nodeValues[info.TargetKey]
+				oldVal = (*nodeValues)[info.TargetKey]
 			}
 
 			switch info.ValueType {
 			case aranyagopb.NODE_EXT_INFO_TYPE_STRING:
 				switch info.Operator {
 				case aranyagopb.NODE_EXT_INFO_OPERATOR_SET:
-					target[info.TargetKey] = info.Value
+					(*target)[info.TargetKey] = info.Value
 				case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
-					target[info.TargetKey] = oldVal + info.Value
+					(*target)[info.TargetKey] = oldVal + info.Value
 				default:
 					return fmt.Errorf("invalid operator for string ext info %q", info.Operator.String())
 				}
@@ -157,7 +135,7 @@ func (n *NodeCache) UpdateExtInfo(extInfo []*aranyagopb.NodeExtInfo) error {
 				if err != nil {
 					return fmt.Errorf("failed to calculate number of : %w", err)
 				}
-				target[info.TargetKey] = resolvedVal
+				(*target)[info.TargetKey] = resolvedVal
 			default:
 				return fmt.Errorf("unsupported ext info value type %q", info.ValueType.String())
 			}
