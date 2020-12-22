@@ -18,7 +18,6 @@ package edgedevice
 
 import (
 	"sort"
-	"strings"
 	"time"
 
 	"arhat.dev/pkg/log"
@@ -45,26 +44,34 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 		return nil
 	}
 
+	if node.Labels == nil {
+		node.Labels = make(map[string]string)
+	}
+
+	if node.Annotations == nil {
+		node.Annotations = make(map[string]string)
+	}
+
 	expectedStatus := vn.ActualNodeStatus(node.Status)
-	extLabels, extAnnotations := vn.ExtInfo()
-	extLabels, extAnnotations = getNodeLabelsAndAnnotationsToSet(
+	_extLabels, _extAnnotations := vn.ExtInfo()
+	setLabels, setAnnotations := getNodeLabelsAndAnnotationsToSet(
 		node.Labels, node.Annotations,
 		&expectedStatus.NodeInfo,
-		extLabels, extAnnotations,
+		_extLabels, _extAnnotations,
 	)
 
-	if len(extLabels) != 0 || len(extAnnotations) != 0 {
+	if len(setLabels) != 0 || len(setAnnotations) != 0 {
 		if logger.Enabled(log.LevelVerbose) {
 			var (
 				labels      []string
 				annotations []string
 			)
 
-			for k, v := range extLabels {
+			for k, v := range setLabels {
 				labels = append(labels, k+"="+v)
 			}
 
-			for k, v := range extAnnotations {
+			for k, v := range setAnnotations {
 				annotations = append(annotations, k+"="+v)
 			}
 
@@ -79,17 +86,17 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 
 		updateNode := node.DeepCopy()
 		if updateNode.Labels == nil {
-			updateNode.Labels = extLabels
+			updateNode.Labels = setLabels
 		} else {
-			for k, v := range extLabels {
+			for k, v := range setLabels {
 				updateNode.Labels[k] = v
 			}
 		}
 
 		if updateNode.Annotations == nil {
-			updateNode.Annotations = extAnnotations
+			updateNode.Annotations = setAnnotations
 		} else {
-			for k, v := range extAnnotations {
+			for k, v := range setAnnotations {
 				updateNode.Annotations[k] = v
 			}
 		}
@@ -107,6 +114,8 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 			return &reconcile.Result{Err: err}
 		}
 		logger.V("node metadata updated")
+
+		node = updateNode
 	}
 
 	var (
@@ -114,7 +123,6 @@ func (c *Controller) onNodeStatusUpdated(oldObj, newObj interface{}) (ret *recon
 
 		updateStatus = false
 	)
-	// ensure node status up to date
 	if vn.Connected() {
 		expectedStatus.Allocatable = getAllocatable(expectedStatus.Capacity, c.getTenantPodsForNode(name))
 
@@ -329,21 +337,6 @@ func getAllocatable(capacity corev1.ResourceList, pods []*corev1.Pod) corev1.Res
 		corev1.ResourceEphemeralStorage: *resource.NewQuantity(storageAvail, resource.DecimalSI),
 		corev1.ResourcePods:             *resource.NewQuantity(podAvail, resource.DecimalSI),
 	}
-}
-
-func convertToGOARCH(arch string) string {
-	switch {
-	case arch == "x86":
-		return "386"
-	case strings.HasPrefix(arch, "armv"):
-		// armv5/armv6/armv7 -> arm
-		return "arm"
-	case strings.HasPrefix(arch, "mips"):
-		// mipshf/mips64hf -> mips/mips64 (runtime.GOARCH)
-		return strings.TrimSuffix(arch, "hf")
-	}
-
-	return arch
 }
 
 func newNodeNotReadyCondition(t metav1.Time) corev1.NodeCondition {
