@@ -49,7 +49,7 @@ func (vn *VirtualNode) SyncDeviceNodeStatus(action aranyagopb.NodeInfoGetCmd_Kin
 			return true
 		}
 
-		vn.updateNodeCache(ns)
+		vn.updateNodeCache(ns, action)
 		return false
 	})
 
@@ -110,7 +110,11 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 
 		logger.V("received node status")
 
-		vn.updateNodeCache(ns)
+		action := aranyagopb.NODE_INFO_DYN
+		if len(ns.ExtInfo) != 0 {
+			action = aranyagopb.NODE_INFO_ALL
+		}
+		vn.updateNodeCache(ns, action)
 
 		err := vn.opt.ScheduleNodeSync()
 		if err != nil {
@@ -166,7 +170,7 @@ func (vn *VirtualNode) handleGlobalMsg(msg *aranyagopb.Msg) {
 	}
 }
 
-func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg) {
+func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg, action aranyagopb.NodeInfoGetCmd_Kind) {
 	if sysInfo := msg.GetSystemInfo(); sysInfo != nil {
 		vn.nodeStatusCache.UpdateSystemInfo(&corev1.NodeSystemInfo{
 			OperatingSystem: sysInfo.GetOs(),
@@ -203,10 +207,13 @@ func (vn *VirtualNode) updateNodeCache(msg *aranyagopb.NodeStatusMsg) {
 		)
 	}
 
-	vn.log.V("updating node ext info", log.Any("ext_info", msg.GetExtInfo()))
-	err := vn.nodeStatusCache.UpdateExtInfo(msg.GetExtInfo())
-	if err != nil {
-		vn.log.I("failed to update node ext info", log.Error(err))
+	if action == aranyagopb.NODE_INFO_ALL {
+		// only update node ext info for full update
+		vn.log.V("updating node ext info", log.Any("ext_info", msg.GetExtInfo()))
+		err := vn.nodeStatusCache.UpdateExtInfo(msg.GetExtInfo())
+		if err != nil {
+			vn.log.I("failed to update node ext info", log.Error(err))
+		}
 	}
 
 	vn.nodeStatusCache.UpdatePhase(corev1.NodeRunning)
