@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+set -ex
 
 wait_for_pods() {
   namespace="${1}"
@@ -63,6 +63,11 @@ log_and_cleanup() {
   log_pods_prev full 'app.kubernetes.io/name=aranya' "${result_dir}/aranya-full.prev.log"
   log_pods_prev tenant 'app.kubernetes.io/component=abbot' "${result_dir}/abbot-tenant.prev.log"
   log_pods_prev remote 'app.kubernetes.io/name=arhat' "${result_dir}/arhat-remote.prev.log"
+
+  kube_components="etcd kube-apiserver kube-scheduler kube-controller-manager"
+  for comp in ${kube_components}; do
+    log_pods_prev kube-system "tier=control-plane,component=${comp}" "${result_dir}/${comp}.prev.log"
+  done
 
   kubectl cluster-info dump --all-namespaces --output-directory="${result_dir}/cluster-dump" || true
 
@@ -165,6 +170,11 @@ start_e2e_tests() {
     kubectl delete po --namespace remote --all --grace-period 0
     # wait for pod deletion
     sleep 5
+
+    # we may crash kube-controller-manager with our managed nodes, and we should
+    # detect that error, so DO NOT wait for kube-controller-manager
+    #   wait_for_pods kube-system 'tier=control-plane,component=kube-controller-manager'
+    # but its hard to tell whether the error was caused by us (kind cluster error?)
 
     wait_for_pods remote 'app.kubernetes.io/name=arhat'
     # wait for connection
