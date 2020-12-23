@@ -22,8 +22,8 @@ func NewCache() *Cache {
 	return &Cache{
 		frozenOldCacheKeys: make(map[interface{}]struct{}),
 
-		oldCache: make(map[interface{}]interface{}),
 		cache:    make(map[interface{}]interface{}),
+		oldCache: make(map[interface{}]interface{}),
 
 		mu: new(sync.RWMutex),
 	}
@@ -31,12 +31,14 @@ func NewCache() *Cache {
 
 type Cache struct {
 	frozenOldCacheKeys map[interface{}]struct{}
-	oldCache           map[interface{}]interface{}
-	cache              map[interface{}]interface{}
+
+	cache    map[interface{}]interface{}
+	oldCache map[interface{}]interface{}
 
 	mu *sync.RWMutex
 }
 
+// Freeze object with key in old cache
 func (r *Cache) Freeze(key interface{}, freeze bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -64,7 +66,7 @@ func (r *Cache) Update(key interface{}, old, latest interface{}) {
 	if latest != nil {
 		r.cache[key] = latest
 
-		// fill old cache if not initialized
+		// fill old cache if not initialized regardless whether it is frozen
 		if _, ok := r.oldCache[key]; !ok {
 			r.oldCache[key] = latest
 		}
@@ -75,6 +77,7 @@ func (r *Cache) Delete(key interface{}) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	delete(r.frozenOldCacheKeys, key)
 	delete(r.cache, key)
 	delete(r.oldCache, key)
 }

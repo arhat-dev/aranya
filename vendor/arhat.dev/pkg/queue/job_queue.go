@@ -27,9 +27,9 @@ import (
 
 // Errors for JobQueue
 var (
-	ErrJobDuplicated = errors.New("job duplicated")
-	ErrJobConflict   = errors.New("job conflicted")
-	ErrJobCounteract = errors.New("job counteracted")
+	ErrJobDuplicated = errors.New("job duplicat")
+	ErrJobConflict   = errors.New("job conflict")
+	ErrJobCounteract = errors.New("job counteract")
 	ErrJobInvalid    = errors.New("job invalid")
 )
 

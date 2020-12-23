@@ -66,11 +66,11 @@ func (o Options) ResolveNil() *Options {
 	}
 
 	if result.OnBackoffStart == nil {
-		result.OnBackoffStart = backoffStartCallbackNoOp
+		result.OnBackoffStart = backoffStartCallbackNop
 	}
 
 	if result.OnBackoffReset == nil {
-		result.OnBackoffReset = backoffResetCallbackNoOp
+		result.OnBackoffReset = backoffResetCallbackNop
 	}
 
 	return result
@@ -84,24 +84,19 @@ type Result struct {
 
 type (
 	SingleObjectHandleFunc  func(obj interface{}) *Result
-	CompareObjectHandleFunc func(old, new interface{}) *Result
+	CompareObjectHandleFunc func(oldObj, newObj interface{}) *Result
 )
 
-func singleObjectAlwaysSuccess(_ interface{}) *Result {
-	return nil
-}
-
-func compareObjectAlwaysSuccess(_, _ interface{}) *Result {
-	return nil
-}
+func singleObjectAlwaysSuccess(_ interface{}) *Result     { return nil }
+func compareObjectAlwaysSuccess(_, _ interface{}) *Result { return nil }
 
 type (
 	BackoffStartCallback func(key interface{}, err error)
 	BackoffResetCallback func(key interface{})
 )
 
-func backoffStartCallbackNoOp(key interface{}, err error) {}
-func backoffResetCallbackNoOp(key interface{})            {}
+func backoffStartCallbackNop(key interface{}, err error) {}
+func backoffResetCallbackNop(key interface{})            {}
 
 type HandleFuncs struct {
 	OnAdded    SingleObjectHandleFunc

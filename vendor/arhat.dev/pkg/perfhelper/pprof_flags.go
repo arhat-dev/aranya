@@ -28,6 +28,7 @@ func FlagsForPProfConfig(prefix string, c *PProfConfig) *pflag.FlagSet {
 	fs.StringVar(&c.Listen, prefix+"listen", "", "set pprof http server listen address")
 	fs.StringVar(&c.HTTPPath, prefix+"httpPath", "/debug/pprof", "set pprof server http path")
 
+	fs.BoolVar(&c.ApplyProfileConfig, prefix+"applyProfileConfig", false, "apply go/runtime profile config")
 	fs.IntVar(&c.CPUProfileFrequencyHz, prefix+"cpuProfileFrequencyHz", 100, "set go/runtime cpu profile frequency")
 	fs.IntVar(&c.MutexProfileFraction, prefix+"mutexProfileFraction", 100, "set go/runtime mutex profile fraction")
 	fs.IntVar(&c.BlockProfileFraction, prefix+"blockProfileFraction", 100, "set go/runtime block profile fraction")

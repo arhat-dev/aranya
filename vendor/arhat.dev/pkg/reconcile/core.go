@@ -36,6 +36,7 @@ func NewCore(ctx context.Context, resolvedOpts *Options) *Core {
 
 		Cache: NewCache(),
 
+		workers:      resolvedOpts.Workers,
 		requireCache: resolvedOpts.RequireCache,
 		scheduleQ:    queue.NewTimeoutQueue(),
 		backoff:      resolvedOpts.BackoffStrategy,
@@ -44,6 +45,8 @@ func NewCore(ctx context.Context, resolvedOpts *Options) *Core {
 
 		onBackoffStart: resolvedOpts.OnBackoffStart,
 		onBackoffReset: resolvedOpts.OnBackoffReset,
+
+		workingOn: new(sync.Map),
 	}
 }
 
@@ -55,6 +58,7 @@ type Core struct {
 
 	*Cache
 
+	workers      int
 	requireCache bool
 	scheduleQ    *queue.TimeoutQueue
 	backoff      *backoff.Strategy
@@ -63,8 +67,11 @@ type Core struct {
 
 	onBackoffStart BackoffStartCallback
 	onBackoffReset BackoffResetCallback
+
+	workingOn *sync.Map
 }
 
+// Start handling of delayed jobs
 func (c *Core) Start() error {
 	c.scheduleQ.Start(c.ctx.Done())
 
@@ -82,7 +89,14 @@ func (c *Core) Start() error {
 	return nil
 }
 
-func (c *Core) ReconcileUntil(stop <-chan struct{}) {
+// Reconcile jobs until stop released
+func (c *Core) Reconcile(stop <-chan struct{}) {
+	select {
+	case <-c.ctx.Done():
+		return
+	default:
+	}
+
 	wg := new(sync.WaitGroup)
 
 	c.jobQ.Resume()
@@ -92,6 +106,22 @@ func (c *Core) ReconcileUntil(stop <-chan struct{}) {
 		// wait for job pause
 		wg.Wait()
 	}()
+
+	var jobCh chan queue.Job
+	if c.workers > 0 {
+		jobCh = make(chan queue.Job, c.workers)
+
+		wg.Add(c.workers)
+		for i := 0; i < c.workers; i++ {
+			go func() {
+				defer wg.Done()
+
+				for job := range jobCh {
+					c.handleJob(job)
+				}
+			}()
+		}
+	}
 
 	wg.Add(1)
 	go func() {
@@ -103,7 +133,32 @@ func (c *Core) ReconcileUntil(stop <-chan struct{}) {
 				return
 			}
 
-			c.handleJob(job)
+			// has worker limit
+			if jobCh != nil {
+				// job should not be dropped out of no reason, and we will Pause the job queue
+				// on stop/ctx exit and no job can be acquired after that, so we MUST guarantee
+				// the delivery of this job
+				jobCh <- job
+
+				select {
+				case <-stop:
+					close(jobCh)
+					return
+				case <-c.ctx.Done():
+					close(jobCh)
+					return
+				default:
+					continue
+				}
+			}
+
+			// no worker limit
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				c.handleJob(job)
+			}()
 		}
 	}()
 
@@ -116,19 +171,16 @@ func (c *Core) ReconcileUntil(stop <-chan struct{}) {
 }
 
 func (c *Core) Schedule(job queue.Job, delay time.Duration) error {
-	// make sure all on going jobs are unique
-	_ = c.CancelSchedule(job)
-
 	if delay == 0 {
 		err := c.jobQ.Offer(job)
 		if err != nil && !errors.Is(err, queue.ErrJobDuplicated) {
 			return err
 		}
-	} else {
-		return c.scheduleQ.OfferWithDelay(job, nil, delay)
+
+		return nil
 	}
 
-	return nil
+	return c.scheduleQ.OfferWithDelay(job, nil, delay)
 }
 
 func (c *Core) CancelSchedule(job queue.Job) bool {
@@ -139,6 +191,14 @@ func (c *Core) CancelSchedule(job queue.Job) bool {
 }
 
 func (c *Core) handleJob(job queue.Job) {
+	_, working := c.workingOn.LoadOrStore(job, nil)
+	if working {
+		// ensure not working on the same job concurrently
+		return
+	}
+
+	defer c.workingOn.Delete(job)
+
 	var (
 		result *Result
 		logger = c.log.WithFields(log.Any("job", job.String()))

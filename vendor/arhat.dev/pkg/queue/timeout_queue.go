@@ -43,7 +43,7 @@ func NewTimeoutQueue() *TimeoutQueue {
 
 	return &TimeoutQueue{
 		stop:    nil,
-		started: 0,
+		running: 0,
 
 		mu:             new(sync.RWMutex),
 		hasExpiredData: make(chan struct{}),
@@ -73,10 +73,10 @@ type TimeoutData struct {
 // access them in sequence with channel
 type TimeoutQueue struct {
 	stop    <-chan struct{}
-	started uint32
+	running uint32
 
-	expireSignaled uint32
-	// protected by expireSignaled
+	expireNotified uint32
+	// protected by expireNotified
 	hasExpiredData chan struct{}
 	expiredData    []*TimeoutData
 
@@ -94,25 +94,33 @@ type TimeoutQueue struct {
 	timeoutCh chan *TimeoutData
 }
 
-// Start to accept timeout data set
+// Start routine to generate timeout data
 func (q *TimeoutQueue) Start(stop <-chan struct{}) {
-	if atomic.CompareAndSwapUint32(&q.started, 0, 1) {
-		q.stop = stop
-	} else {
+	if !atomic.CompareAndSwapUint32(&q.running, 0, 1) {
+		// already running and not stopped
 		return
 	}
 
+	q.mu.Lock()
+	q.stop = stop
+	q.mu.Unlock()
+
+	wg := new(sync.WaitGroup)
+
 	// handle delivery of expired data
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
 		for {
 			select {
-			case <-q.stop:
+			case <-stop:
 				return
 			case <-q.hasExpiredData:
 				for _, d := range q.expiredData {
 					data := d
 					select {
-					case <-q.stop:
+					case <-stop:
 						return
 					case q.timeoutCh <- data:
 					}
@@ -120,16 +128,19 @@ func (q *TimeoutQueue) Start(stop <-chan struct{}) {
 
 				q.expiredData = nil
 				q.hasExpiredData = make(chan struct{})
-				atomic.StoreUint32(&q.expireSignaled, 0)
+				atomic.StoreUint32(&q.expireNotified, 0)
 			}
 		}
 	}()
 
 	// handle timer reset
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
 		for {
 			select {
-			case <-q.stop:
+			case <-stop:
 				if !q.timer.Stop() {
 					<-q.timer.C
 				}
@@ -154,6 +165,12 @@ func (q *TimeoutQueue) Start(stop <-chan struct{}) {
 			}
 		}
 	}()
+
+	go func() {
+		wg.Wait()
+
+		atomic.StoreUint32(&q.running, 0)
+	}()
 }
 
 // Len is used internally for timeout data sort
@@ -174,6 +191,7 @@ func (q *TimeoutQueue) Swap(i, j int) {
 	q.data[i], q.data[j] = q.data[j], q.data[i]
 }
 
+// sort timeout data and find expired
 func (q *TimeoutQueue) sort() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -210,7 +228,7 @@ func (q *TimeoutQueue) sort() {
 		case <-q.stop:
 			return
 		default:
-			for atomic.LoadUint32(&q.expireSignaled) == 1 {
+			for atomic.LoadUint32(&q.expireNotified) == 1 {
 				// wait for last expired data sent
 				runtime.Gosched()
 			}
@@ -228,7 +246,7 @@ func (q *TimeoutQueue) sort() {
 			q.index[d.Key] = i
 		}
 
-		atomic.StoreUint32(&q.expireSignaled, 1)
+		atomic.StoreUint32(&q.expireNotified, 1)
 		close(q.hasExpiredData)
 	}
 }
@@ -237,7 +255,7 @@ func (q *TimeoutQueue) sort() {
 // would like to call Remove to delete the timeout object, `key` must be unique
 // in this queue
 func (q *TimeoutQueue) OfferWithTime(key, val interface{}, at time.Time) error {
-	if atomic.LoadUint32(&q.started) == 0 {
+	if atomic.LoadUint32(&q.running) == 0 {
 		return ErrNotStarted
 	}
 

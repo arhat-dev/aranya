@@ -25,12 +25,12 @@ import (
 	"runtime"
 )
 
-func (c *PProfConfig) CreateHTTPHandlersIfEnabled(applyProfileConfig bool) map[string]http.Handler {
+func (c *PProfConfig) CreateHTTPHandlersIfEnabled() map[string]http.Handler {
 	if !c.Enabled {
 		return nil
 	}
 
-	if applyProfileConfig {
+	if c.ApplyProfileConfig {
 		runtime.SetCPUProfileRate(c.CPUProfileFrequencyHz)
 		runtime.SetMutexProfileFraction(c.MutexProfileFraction)
 		runtime.SetBlockProfileRate(c.BlockProfileFraction)

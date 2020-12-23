@@ -22,14 +22,16 @@ import (
 	"arhat.dev/pkg/tlshelper"
 )
 
+// nolint:maligned
 type PProfConfig struct {
 	Enabled  bool   `json:"enabled" yaml:"enabled"`
 	Listen   string `json:"listen" yaml:"listen"`
 	HTTPPath string `json:"httpPath" yaml:"httpPath"`
 
-	CPUProfileFrequencyHz int `json:"cpuProfileFrequencyHz" yaml:"cpuProfileFrequencyHz"`
-	MutexProfileFraction  int `json:"mutexProfileFraction" yaml:"mutexProfileFraction"`
-	BlockProfileFraction  int `json:"blockProfileFraction" yaml:"blockProfileFraction"`
+	ApplyProfileConfig    bool `json:"applyProfileConfig" yaml:"applyProfileConfig"`
+	CPUProfileFrequencyHz int  `json:"cpuProfileFrequencyHz" yaml:"cpuProfileFrequencyHz"`
+	MutexProfileFraction  int  `json:"mutexProfileFraction" yaml:"mutexProfileFraction"`
+	BlockProfileFraction  int  `json:"blockProfileFraction" yaml:"blockProfileFraction"`
 
 	TLS tlshelper.TLSConfig `json:"tls" yaml:"tls"`
 }

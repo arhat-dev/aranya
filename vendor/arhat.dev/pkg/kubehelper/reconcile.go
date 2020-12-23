@@ -136,6 +136,7 @@ func (r *KubeInformerReconciler) getInformerDeleteEventFunc() func(interface{}) 
 	}
 }
 
+// GetKey of the kubernetes api object, can panic on delete event
 func (r *KubeInformerReconciler) GetKey(obj interface{}) string {
 	key, err := kubecache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
