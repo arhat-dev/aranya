@@ -301,7 +301,7 @@ type Controller struct {
 	informerFactoryStart []func(<-chan struct{})
 	listActions          []func() error
 	recStart             []func() error
-	recReconcileUntil    []func(<-chan struct{})
+	recReconcile         []func(<-chan struct{})
 
 	edgeDeviceController
 	connectivityServiceController
@@ -365,10 +365,10 @@ func (c *Controller) Start() error {
 
 // Reconcile resouces objects
 func (c *Controller) Reconcile(wg *sync.WaitGroup, stop <-chan struct{}) {
-	wg.Add(len(c.recReconcileUntil))
+	wg.Add(len(c.recReconcile))
 
-	for i := range c.recReconcileUntil {
-		startReconcile := c.recReconcileUntil[i]
+	for i := range c.recReconcile {
+		startReconcile := c.recReconcile[i]
 		go func() {
 			defer wg.Done()
 

@@ -102,7 +102,7 @@ func (c *nodeClusterRoleController) init(
 		},
 	})
 	ctrl.recStart = append(ctrl.recStart, crRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, crRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, crRec.Reconcile)
 
 	c.crReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:cr_req"),
@@ -116,7 +116,7 @@ func (c *nodeClusterRoleController) init(
 		OnBackoffReset: nil,
 	}.ResolveNil())
 	ctrl.recStart = append(ctrl.recStart, c.crReqRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.crReqRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.crReqRec.Reconcile)
 
 	return nil
 }

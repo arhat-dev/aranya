@@ -107,7 +107,7 @@ func (c *storageServiceController) init(
 	})
 
 	ctrl.recStart = append(ctrl.recStart, c.storageSvcRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.storageSvcRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.storageSvcRec.Reconcile)
 
 	c.storageEpRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.storageEpInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:storage:ep"),
@@ -125,7 +125,7 @@ func (c *storageServiceController) init(
 	})
 
 	ctrl.recStart = append(ctrl.recStart, c.storageEpRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.storageEpRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.storageEpRec.Reconcile)
 
 	return nil
 }

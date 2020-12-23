@@ -54,7 +54,7 @@ type AppConfig struct {
 }
 
 func FlagsForAranyaAppConfig(prefix string, config *AppConfig) *pflag.FlagSet {
-	flags := pflag.NewFlagSet("aranya.app", pflag.ExitOnError)
+	flags := pflag.NewFlagSet("aranya", pflag.ExitOnError)
 
 	flags.StringVar(&config.Managed.StorageService.Name, prefix+"managed.storageService.name",
 		"edgedevice-sftp", "set sftp service resource name managed by aranya (for remote csi storage feature)")

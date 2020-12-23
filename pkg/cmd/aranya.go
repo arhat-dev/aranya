@@ -79,8 +79,6 @@ func NewAranyaCmd() *cobra.Command {
 	flags.AddFlagSet(conf.FlagsForAranyaAppConfig("", &config.Aranya))
 	flags.AddFlagSet(conf.FlagsForVirtualnode("", &config.VirtualNode))
 
-	aranyaCmd.AddCommand(newCheckCmd(&appCtx))
-
 	return aranyaCmd
 }
 
@@ -222,7 +220,7 @@ func setupTelemetry(
 		return fmt.Errorf("failed to create metrics provider: %w", err)
 	}
 
-	pprofHandlers := pprofConfig.CreateHTTPHandlersIfEnabled(true)
+	pprofHandlers := pprofConfig.CreateHTTPHandlersIfEnabled()
 
 	// reuse listen address if pprof and metrics using the same address
 	reuse := false

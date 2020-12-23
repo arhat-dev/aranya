@@ -106,7 +106,7 @@ func (c *sysPodRoleController) init(
 		OnBackoffReset: nil,
 	})
 	ctrl.recStart = append(ctrl.recStart, roleRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, roleRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, roleRec.Reconcile)
 
 	c.vpRoleReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:role_req"),
@@ -120,7 +120,7 @@ func (c *sysPodRoleController) init(
 		OnBackoffReset: nil,
 	}.ResolveNil())
 	ctrl.recStart = append(ctrl.recStart, c.vpRoleReqRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.vpRoleReqRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.vpRoleReqRec.Reconcile)
 
 	return nil
 }

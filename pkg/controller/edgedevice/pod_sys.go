@@ -90,7 +90,7 @@ func (c *sysPodController) init(
 	})
 
 	ctrl.recStart = append(ctrl.recStart, virtualPodRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, virtualPodRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, virtualPodRec.Reconcile)
 
 	c.vpReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:vp_req"),
@@ -105,7 +105,7 @@ func (c *sysPodController) init(
 	}.ResolveNil())
 
 	ctrl.recStart = append(ctrl.recStart, c.vpReqRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.vpReqRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.vpReqRec.Reconcile)
 
 	return nil
 }

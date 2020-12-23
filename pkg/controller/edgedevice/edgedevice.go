@@ -141,7 +141,7 @@ func (c *edgeDeviceController) init(
 	})
 
 	ctrl.recStart = append(ctrl.recStart, edgeDeviceRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, edgeDeviceRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, edgeDeviceRec.Reconcile)
 
 	return nil
 }

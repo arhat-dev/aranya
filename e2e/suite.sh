@@ -72,7 +72,8 @@ log_and_cleanup() {
     # kill aranya process to get coverage profile
     aranya_pid="$(kubectl exec --namespace "${ns}" "${leader_pod}" -- pidof aranya)"
     kubectl exec --namespace "${ns}" "${leader_pod}" -- bash -c "kill -s SIGINT ${aranya_pid}"
-    sleep 60
+    # wait for test profile write
+    sleep 20
     # copy aranya test profiles
     kubectl cp "${ns}/${leader_pod}:/profile" "${result_dir}/profile-aranya-${ns}" || true
   done

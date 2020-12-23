@@ -100,7 +100,7 @@ func (c *connectivityServiceController) init(
 		},
 	})
 	ctrl.recStart = append(ctrl.recStart, serviceRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, serviceRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, serviceRec.Reconcile)
 
 	c.connSvcReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:svc_req"),
@@ -114,7 +114,7 @@ func (c *connectivityServiceController) init(
 		OnBackoffReset: nil,
 	}.ResolveNil())
 	ctrl.recStart = append(ctrl.recStart, c.connSvcReqRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.connSvcReqRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.connSvcReqRec.Reconcile)
 
 	return nil
 }

@@ -116,7 +116,7 @@ func (c *tenantPodController) init(
 		OnBackoffReset: nil,
 	})
 	ctrl.recStart = append(ctrl.recStart, podRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, podRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, podRec.Reconcile)
 
 	return nil
 }

@@ -247,7 +247,7 @@ func (m *Manager) Start() error {
 		}
 
 		m.Log.D("reconciling resource pods")
-		go m.resPodRec.ReconcileUntil(m.Context().Done())
+		go m.resPodRec.Reconcile(m.Context().Done())
 
 		for !m.Closing() {
 			select {
@@ -266,7 +266,7 @@ func (m *Manager) Start() error {
 			m.Log.D("reconciling device pods")
 
 			// reconcile until lost device connection
-			m.devPodRec.ReconcileUntil(m.ConnectivityManager.Disconnected())
+			m.devPodRec.Reconcile(m.ConnectivityManager.Disconnected())
 		}
 
 		return nil

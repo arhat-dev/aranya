@@ -135,7 +135,7 @@ func (c *meshController) init(
 	)
 
 	ctrl.recStart = append(ctrl.recStart, c.abbotEpRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.abbotEpRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.abbotEpRec.Reconcile)
 
 	// monitor managed network service
 	filterNetSvcName := fields.OneTermEqualSelector("metadata.name", c.netSvcName).String()
@@ -170,7 +170,7 @@ func (c *meshController) init(
 		},
 	)
 	ctrl.recStart = append(ctrl.recStart, c.netSvcRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.netSvcRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.netSvcRec.Reconcile)
 
 	// monitor managed network service endpoints
 	c.netEpInformer = informerscorev1.New(tenantInformerFactory, constant.TenantNS(),
@@ -204,7 +204,7 @@ func (c *meshController) init(
 		},
 	)
 	ctrl.recStart = append(ctrl.recStart, c.netEpRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.netEpRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.netEpRec.Reconcile)
 
 	// handle EdgeDevice add/delete
 	ctrl.netReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
@@ -224,7 +224,7 @@ func (c *meshController) init(
 	}.ResolveNil())
 
 	ctrl.recStart = append(ctrl.recStart, ctrl.netReqRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, ctrl.netReqRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, ctrl.netReqRec.Reconcile)
 
 	return nil
 }

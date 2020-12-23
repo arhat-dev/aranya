@@ -186,7 +186,7 @@ func (c *nodeController) init(
 			OnBackoffReset: nil,
 		})
 		ctrl.recStart = append(ctrl.recStart, nodeLeaseRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, nodeLeaseRec.ReconcileUntil)
+		ctrl.recReconcile = append(ctrl.recReconcile, nodeLeaseRec.Reconcile)
 
 		c.nodeLeaseReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:nl:req"),
@@ -200,7 +200,7 @@ func (c *nodeController) init(
 			OnBackoffReset: nil,
 		}.ResolveNil())
 		ctrl.recStart = append(ctrl.recStart, c.nodeLeaseReqRec.Start)
-		ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.nodeLeaseReqRec.ReconcileUntil)
+		ctrl.recReconcile = append(ctrl.recReconcile, c.nodeLeaseReqRec.Reconcile)
 	} else {
 		getLeaseFunc = func(name string) *coordinationv1.Lease {
 			return nil
@@ -227,7 +227,7 @@ func (c *nodeController) init(
 		},
 	})
 	ctrl.recStart = append(ctrl.recStart, nodeRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, nodeRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, nodeRec.Reconcile)
 
 	c.nodeReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:node:req"),
@@ -241,7 +241,7 @@ func (c *nodeController) init(
 		OnBackoffReset: nil,
 	}.ResolveNil())
 	ctrl.recStart = append(ctrl.recStart, c.nodeReqRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.nodeReqRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.nodeReqRec.Reconcile)
 
 	// start a standalone node status reconciler in addition to node reconciler to make it clear for node
 	c.nodeStatusRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
@@ -257,7 +257,7 @@ func (c *nodeController) init(
 		OnBackoffReset: nil,
 	})
 	ctrl.recStart = append(ctrl.recStart, c.nodeStatusRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.nodeStatusRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.nodeStatusRec.Reconcile)
 
 	c.vnRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:vn"),
@@ -272,7 +272,7 @@ func (c *nodeController) init(
 		},
 	}.ResolveNil())
 	ctrl.recStart = append(ctrl.recStart, c.vnRec.Start)
-	ctrl.recReconcileUntil = append(ctrl.recReconcileUntil, c.vnRec.ReconcileUntil)
+	ctrl.recReconcile = append(ctrl.recReconcile, c.vnRec.Reconcile)
 
 	return nil
 }

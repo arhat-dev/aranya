@@ -104,7 +104,7 @@ func (c *podController) reconcile(wg *sync.WaitGroup, stop <-chan struct{}) {
 	go func() {
 		defer wg.Done()
 
-		c.podRec.ReconcileUntil(stop)
+		c.podRec.Reconcile(stop)
 	}()
 }
 
