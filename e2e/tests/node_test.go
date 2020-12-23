@@ -43,7 +43,7 @@ const (
 
 // node ext info related
 const (
-	arhatRestartCount = 5
+	arhatStartCount = 5
 
 	extInfoSetString    = "e2e.aranya.arhat.dev/ext-info-set-string"
 	extInfoAppendString = "e2e.aranya.arhat.dev/ext-info-append-string"
@@ -161,13 +161,15 @@ func TestNodeSpec(t *testing.T) {
 
 	extInfoValues := map[string]string{
 		extInfoSetString:    "set-string",
-		extInfoAppendString: strings.Repeat("str", arhatRestartCount),
+		extInfoAppendString: strings.Repeat("str", arhatStartCount),
 
 		extInfoSet1: "1",
-		extInfoAdd1: strconv.FormatInt(arhatRestartCount, 10),
+		extInfoAdd1: strconv.FormatInt(arhatStartCount, 10),
 
 		extInfoSet1_5: "1.5",
-		extInfoAdd1_5: strconv.FormatFloat(1.5*arhatRestartCount, 'f', -1, 64),
+		extInfoAdd1_5: strconv.FormatFloat(1.5*arhatStartCount, 'f', -1, 64),
+
+		// we can not set negative numbers as value to labels
 	}
 
 	commonLabels := map[string]string{
@@ -181,8 +183,8 @@ func TestNodeSpec(t *testing.T) {
 
 	commonAnnotations := map[string]string{
 		// cannot set negative number as labels value
-		extInfoMinus1:   strconv.FormatInt(-arhatRestartCount, 10),
-		extInfoMinus1_5: strconv.FormatFloat(-1.5*arhatRestartCount, 'f', -1, 64),
+		extInfoMinus1:   strconv.FormatInt(-arhatStartCount, 10),
+		extInfoMinus1_5: strconv.FormatFloat(-1.5*arhatStartCount, 'f', -1, 64),
 	}
 
 	for k, v := range extInfoValues {
@@ -222,7 +224,7 @@ func TestNodeSpec(t *testing.T) {
 			annotations: map[string]string{
 				testAnnotation1: "1",
 
-				// labels['e2e.aranya.arhat.dev/ext-info-add-1'] == arhatRestartCount
+				// labels['e2e.aranya.arhat.dev/ext-info-add-1'] == arhatStartCount
 				fieldHookExpressionValue: "true",
 				// from .spec.providerID
 				fieldHookReferenceValue: "aranya://" + edgeDeviceNamespaceDefault + "/" + edgeDeviceNameAlice,
@@ -306,10 +308,10 @@ func TestNodeSpec(t *testing.T) {
 			annotations: map[string]string{
 				testAnnotation2: "2",
 
-				// labels['e2e.aranya.arhat.dev/ext-info-minus-1'] == -arhatRestartCount
+				// labels['e2e.aranya.arhat.dev/ext-info-minus-1'] == -arhatStartCount
 				fieldHookExpressionValue: "true",
 				// labels['e2e.aranya.arhat.dev/ext-info-minus-1-5']
-				fieldHookReferenceValue: extInfoValues[extInfoMinus1_5],
+				fieldHookReferenceValue: commonAnnotations[extInfoMinus1_5],
 				fieldHookSetValue:       "set-annotation-value",
 			},
 			spec: corev1.NodeSpec{

@@ -99,7 +99,7 @@ spec:
     fieldHooks:
     - query: .metadata.annotations."e2e.aranya.arhat.dev/annotation-1"
       targetFieldPath: metadata.labels['e2e.aranya.arhat.dev/field-hook-expression-value']
-      valueExpression: . == 1
+      valueExpression: . | tonumber | . == 1
     - query: .metadata.labels."kubernetes.io/role"
       targetFieldPath: metadata.labels['e2e.aranya.arhat.dev/field-hook-reference-value']
       valueExpression: "."
@@ -109,7 +109,7 @@ spec:
 
     - query: .metadata.annotations
       targetFieldPath: metadata.annotations['e2e.aranya.arhat.dev/field-hook-expression-value']
-      valueExpression: ."e2e.aranya.arhat.dev/ext-info-minus-1" == -5
+      valueExpression: ."e2e.aranya.arhat.dev/ext-info-minus-1" | tonumber | . == -5
     - query: .spec.providerID
       targetFieldPath: metadata.annotations['e2e.aranya.arhat.dev/field-hook-reference-value']
       valueExpression: "."

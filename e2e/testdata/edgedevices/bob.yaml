@@ -10,7 +10,7 @@ spec:
     fieldHooks:
     - query: .metadata.annotations."e2e.aranya.arhat.dev/annotation-2"
       targetFieldPath: metadata.labels['e2e.aranya.arhat.dev/field-hook-expression-value']
-      valueExpression: . == 2
+      valueExpression: . | tonumber | . == 2
     - query: .metadata.labels
       targetFieldPath: metadata.labels['e2e.aranya.arhat.dev/field-hook-reference-value']
       valueExpression: ."e2e.aranya.arhat.dev/ext-info-add-1"
@@ -20,10 +20,10 @@ spec:
 
     - query: .metadata.annotations
       targetFieldPath: metadata.annotations['e2e.aranya.arhat.dev/field-hook-expression-value']
-      valueExpression: ."e2e.aranya.arhat.dev/ext-info-add-1" == 5
-    - query: .metadata.labels
+      valueExpression: ."e2e.aranya.arhat.dev/ext-info-add-1" | tonumber | . == 5
+    - query: .metadata.annotations
       targetFieldPath: metadata.annotations['e2e.aranya.arhat.dev/field-hook-reference-value']
-      valueExpression: ."kubernetes.io/role"
+      valueExpression: ."e2e.aranya.arhat.dev/ext-info-minus-1-5"
     - query: "."
       targetFieldPath: metadata.annotations['e2e.aranya.arhat.dev/field-hook-set-value']
       value: set-annotation-value
