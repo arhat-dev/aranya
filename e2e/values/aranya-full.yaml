@@ -155,7 +155,7 @@ config:
         autoApprove: true
 
       lease:
-        enabled: false
+        enabled: true
         duration: 40s
         updateInterval: 10s
 

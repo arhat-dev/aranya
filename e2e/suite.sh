@@ -170,9 +170,7 @@ start_e2e_tests() {
     sleep 5
   done
 
-  kubectl get certificatesigningrequests || true
   kubectl get nodes -o wide || true
-  kubectl get pods --all-namespaces -o wide || true
 
   go test -mod=vendor -v ./e2e/tests/...
 }
