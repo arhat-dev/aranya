@@ -191,22 +191,20 @@ func (c *Core) CancelSchedule(job queue.Job) bool {
 }
 
 func (c *Core) handleJob(job queue.Job) {
+	if job.Action == queue.ActionInvalid {
+		return
+	}
+
 	_, working := c.workingOn.LoadOrStore(job, nil)
 	if working {
 		// ensure not working on the same job concurrently
 		return
 	}
 
-	defer c.workingOn.Delete(job)
-
 	var (
 		result *Result
 		logger = c.log.WithFields(log.Any("job", job.String()))
 	)
-
-	if job.Action == queue.ActionInvalid {
-		return
-	}
 
 	previous, current := c.Get(job.Key)
 
@@ -238,15 +236,18 @@ func (c *Core) handleJob(job queue.Job) {
 			}
 		}
 	default:
+		c.workingOn.Delete(job)
 		logger.V("unknown action")
 		return
 	}
 
 	if result == nil {
+		c.workingOn.Delete(job)
 		return
 	}
 
 handleResult:
+	c.workingOn.Delete(job)
 	nA := result.NextAction
 	delay := result.ScheduleAfter
 	if result.Err != nil {

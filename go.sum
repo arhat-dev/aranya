@@ -5,8 +5,8 @@ arhat.dev/aranya-proto v0.3.2/go.mod h1:mEX3WnwrKm+M/gQgbBkfrRZ1nu1ME0vaXPk14UZP
 arhat.dev/aranya-proto v0.3.4 h1:tfgL2etEcfasL+bCPWicPs0ZVA6ciEmOW2EcYJLMBR0=
 arhat.dev/aranya-proto v0.3.4/go.mod h1:mEX3WnwrKm+M/gQgbBkfrRZ1nu1ME0vaXPk14UZPXmk=
 arhat.dev/pkg v0.5.2/go.mod h1:ybuHVZ+40dZGBn7/vQrJCJBYfdH1cWSJvHWInES6AaQ=
-arhat.dev/pkg v0.5.5-0.20201223201149-1004b0be8337 h1:bHsS381Rf6+RA10L+uUE0Jw+FihjeU6kbpQRKMJV2Sk=
-arhat.dev/pkg v0.5.5-0.20201223201149-1004b0be8337/go.mod h1:ybuHVZ+40dZGBn7/vQrJCJBYfdH1cWSJvHWInES6AaQ=
+arhat.dev/pkg v0.5.5-0.20201224091009-224276c9438a h1:GZRHwua16JWiajIw9RIISbHh5M5eetZCEQUbBPGgKJw=
+arhat.dev/pkg v0.5.5-0.20201224091009-224276c9438a/go.mod h1:ybuHVZ+40dZGBn7/vQrJCJBYfdH1cWSJvHWInES6AaQ=
 bitbucket.org/bertimus9/systemstat v0.0.0-20180207000608-0eeff89b0690/go.mod h1:Ulb78X89vxKYgdL24HMTiXYHlyHEvruOj1ZPlqeNEZM=
 cloud.google.com/go v0.63.0 h1:A+DfAZQ/eWca7gvu42CS6FNSDX4R8cghF+XfWLn4R6g=
 cloud.google.com/go v0.63.0/go.mod h1:GmezbQc7T2snqkEXWfZ0sy0VfkB/ivI2DdtJL2DEmlg=
