@@ -97,8 +97,9 @@ func (n *NodeCache) UpdateSystemInfo(i *corev1.NodeSystemInfo) {
 }
 
 func (n *NodeCache) UpdateExtInfo(extInfo []*aranyagopb.NodeExtInfo) error {
-	// apply MUST be atomic
-	apply := func() error {
+	var err error
+	n.doExclusive(func() {
+		// apply MUST be atomic
 		extLabels := make(map[string]string)
 		extAnnotations := make(map[string]string)
 
@@ -113,7 +114,8 @@ func (n *NodeCache) UpdateExtInfo(extInfo []*aranyagopb.NodeExtInfo) error {
 			case aranyagopb.NODE_EXT_INFO_TARGET_LABEL:
 				target, oldExtValues, nodeValues = extLabels, n.extLabels, n.nodeLabels
 			default:
-				return fmt.Errorf("invalid ext info target %q", info.Target.String())
+				err = fmt.Errorf("invalid ext info target %q", info.Target.String())
+				return
 			}
 
 			oldVal, ok := oldExtValues[info.TargetKey]
@@ -129,28 +131,24 @@ func (n *NodeCache) UpdateExtInfo(extInfo []*aranyagopb.NodeExtInfo) error {
 				case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
 					target[info.TargetKey] = oldVal + info.Value
 				default:
-					return fmt.Errorf("invalid operator for string ext info %q", info.Operator.String())
+					err = fmt.Errorf("invalid operator for string ext info %q", info.Operator.String())
+					return
 				}
 			case aranyagopb.NODE_EXT_INFO_TYPE_NUMBER:
-				resolvedVal, err := n.calculateNumber(oldVal, info.Value, info.Operator)
-				if err != nil {
-					return fmt.Errorf("failed to calculate number of : %w", err)
+				resolvedVal, err2 := n.calculateNumber(oldVal, info.Value, info.Operator)
+				if err2 != nil {
+					err = fmt.Errorf("failed to calculate number of : %w", err2)
+					return
 				}
 				target[info.TargetKey] = resolvedVal
 			default:
-				return fmt.Errorf("unsupported ext info value type %q", info.ValueType.String())
+				err = fmt.Errorf("unsupported ext info value type %q", info.ValueType.String())
+				return
 			}
 		}
 
 		n.extLabels = extLabels
 		n.extAnnotations = extAnnotations
-
-		return nil
-	}
-
-	var err error
-	n.doExclusive(func() {
-		err = apply()
 	})
 
 	return err
@@ -208,7 +206,7 @@ func (n *NodeCache) calculateNumber(oldVal, v string, op aranyagopb.NodeExtInfo_
 	case aranyagopb.NODE_EXT_INFO_OPERATOR_ADD:
 		return big.NewFloat(0).Add(oldNum, newNum).Text('f', -1), nil
 	case aranyagopb.NODE_EXT_INFO_OPERATOR_MINUS:
-		return big.NewFloat(0).Add(oldNum, newNum.Neg(newNum)).Text('f', -1), nil
+		return big.NewFloat(0).Add(oldNum, big.NewFloat(0).Neg(newNum)).Text('f', -1), nil
 	default:
 		return "", fmt.Errorf("unsupported operator for number %q", op.String())
 	}
