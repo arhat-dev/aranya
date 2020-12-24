@@ -55,8 +55,8 @@ spec:
   pod:
     timers:
       forceSyncInterval: 5s
-    ipv4CIDR: 10.0.10.0/24
-    ipv6CIDR: ::1/128
+    # ipv4CIDR: 10.0.10.0/24
+    # ipv6CIDR: ::1/128
     dns:
       servers:
       - "1.1.1.1"
