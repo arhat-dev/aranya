@@ -24,17 +24,17 @@ import (
 	"arhat.dev/pkg/patchhelper"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
-	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/kubernetes/pkg/apis/coordination"
 
 	"arhat.dev/aranya/pkg/constant"
 )
 
 func (c *Controller) checkNodeLeaseUpToDate(
-	lease *coordinationv1.Lease,
+	lease *coordination.Lease,
 	nodeMeta metav1.ObjectMeta,
 ) (ownerOk, generalOk bool) {
 	_, ignore := c.doNodeResourcePreCheck(lease.Name)
@@ -116,7 +116,7 @@ func (c *Controller) onNodeLeaseEnsureRequest(obj interface{}) *reconcile.Result
 
 func (c *Controller) onNodeLeaseUpdated(oldObj, newObj interface{}) *reconcile.Result {
 	var (
-		lease  = newObj.(*coordinationv1.Lease)
+		lease  = newObj.(*coordination.Lease)
 		name   = lease.Name
 		logger = c.Log.WithFields(log.String("name", name))
 	)
@@ -150,7 +150,7 @@ func (c *Controller) onNodeLeaseUpdated(oldObj, newObj interface{}) *reconcile.R
 
 func (c *Controller) onNodeLeaseDeleting(obj interface{}) *reconcile.Result {
 	var (
-		lease  = obj.(*coordinationv1.Lease)
+		lease  = obj.(*coordination.Lease)
 		name   = lease.Name
 		logger = c.Log.WithFields(log.String("name", name))
 	)
@@ -168,7 +168,7 @@ func (c *Controller) onNodeLeaseDeleting(obj interface{}) *reconcile.Result {
 
 func (c *Controller) onNodeLeaseDeleted(obj interface{}) *reconcile.Result {
 	var (
-		lease  = obj.(*coordinationv1.Lease)
+		lease  = obj.(*coordination.Lease)
 		name   = lease.Name
 		logger = c.Log.WithFields(log.String("name", name))
 	)
@@ -227,7 +227,7 @@ func (c *Controller) ensureNodeLease(nodeMeta metav1.ObjectMeta) error {
 		clone.Spec = lease.Spec
 
 		if ownerOk {
-			err = patchhelper.TwoWayMergePatch(oldLease, clone, &coordinationv1.Lease{}, func(patchData []byte) error {
+			err = patchhelper.TwoWayMergePatch(oldLease, clone, &coordination.Lease{}, func(patchData []byte) error {
 				_, err2 := c.nodeLeaseClient.Patch(
 					c.Context(), name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{})
 				return err2
@@ -263,11 +263,11 @@ func (c *Controller) ensureNodeLease(nodeMeta metav1.ObjectMeta) error {
 	return nil
 }
 
-func (c *Controller) newLeaseForNode(nodeMeta metav1.ObjectMeta) *coordinationv1.Lease {
+func (c *Controller) newLeaseForNode(nodeMeta metav1.ObjectMeta) *coordination.Lease {
 	identity := nodeMeta.Name
 	leaseSeconds := int32(c.vnConfig.Node.Lease.Duration.Seconds())
-
-	return &coordinationv1.Lease{
+	now := metav1.NowMicro()
+	return &coordination.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nodeMeta.Name,
 			Namespace: corev1.NamespaceNodeLease,
@@ -282,17 +282,19 @@ func (c *Controller) newLeaseForNode(nodeMeta metav1.ObjectMeta) *coordinationv1
 				UID:        nodeMeta.UID,
 			}},
 		},
-		Spec: coordinationv1.LeaseSpec{
+		Spec: coordination.LeaseSpec{
 			HolderIdentity:       &identity,
 			LeaseDurationSeconds: &leaseSeconds,
+			AcquireTime:          &now,
+			RenewTime:            &now,
 		},
 	}
 }
 
-func (c *Controller) getNodeLeaseObject(name string) (*coordinationv1.Lease, bool) {
+func (c *nodeController) getNodeLeaseObject(name string) (*coordination.Lease, bool) {
 	obj, found, err := c.nodeLeaseInformer.GetIndexer().GetByKey(corev1.NamespaceNodeLease + "/" + name)
 	if err != nil || !found {
-		lease, err := c.nodeLeaseClient.Get(c.Context(), name, metav1.GetOptions{})
+		lease, err := c.nodeLeaseClient.Get(c.nodeCtx, name, metav1.GetOptions{})
 		if err != nil {
 			return nil, false
 		}
@@ -300,7 +302,7 @@ func (c *Controller) getNodeLeaseObject(name string) (*coordinationv1.Lease, boo
 		return lease, true
 	}
 
-	lease, ok := obj.(*coordinationv1.Lease)
+	lease, ok := obj.(*coordination.Lease)
 	if !ok {
 		return nil, false
 	}
