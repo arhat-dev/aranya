@@ -24,11 +24,16 @@ import (
 	"arhat.dev/pkg/patchhelper"
 	"arhat.dev/pkg/queue"
 	"arhat.dev/pkg/reconcile"
+	codapiv1 "k8s.io/api/coordination/v1"
+	codapiv1b1 "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/apis/coordination"
+	codv1 "k8s.io/kubernetes/pkg/apis/coordination/v1"
+	codv1b1 "k8s.io/kubernetes/pkg/apis/coordination/v1beta1"
 
 	"arhat.dev/aranya/pkg/constant"
 )
@@ -115,8 +120,12 @@ func (c *Controller) onNodeLeaseEnsureRequest(obj interface{}) *reconcile.Result
 }
 
 func (c *Controller) onNodeLeaseUpdated(oldObj, newObj interface{}) *reconcile.Result {
+	lease, ok := normalizeLeaseObject(newObj)
+	if !ok {
+		panic(fmt.Errorf("unexpected invalid lease object: %v", newObj))
+	}
+
 	var (
-		lease  = newObj.(*coordination.Lease)
 		name   = lease.Name
 		logger = c.Log.WithFields(log.String("name", name))
 	)
@@ -149,8 +158,12 @@ func (c *Controller) onNodeLeaseUpdated(oldObj, newObj interface{}) *reconcile.R
 }
 
 func (c *Controller) onNodeLeaseDeleting(obj interface{}) *reconcile.Result {
+	lease, ok := normalizeLeaseObject(obj)
+	if !ok {
+		panic(fmt.Errorf("unexpected invalid lease object: %v", obj))
+	}
+
 	var (
-		lease  = obj.(*coordination.Lease)
 		name   = lease.Name
 		logger = c.Log.WithFields(log.String("name", name))
 	)
@@ -167,8 +180,12 @@ func (c *Controller) onNodeLeaseDeleting(obj interface{}) *reconcile.Result {
 }
 
 func (c *Controller) onNodeLeaseDeleted(obj interface{}) *reconcile.Result {
+	lease, ok := normalizeLeaseObject(obj)
+	if !ok {
+		panic(fmt.Errorf("unexpected invalid lease object: %v", obj))
+	}
+
 	var (
-		lease  = obj.(*coordination.Lease)
 		name   = lease.Name
 		logger = c.Log.WithFields(log.String("name", name))
 	)
@@ -302,10 +319,28 @@ func (c *nodeController) getNodeLeaseObject(name string) (*coordination.Lease, b
 		return lease, true
 	}
 
-	lease, ok := obj.(*coordination.Lease)
-	if !ok {
+	return normalizeLeaseObject(obj)
+}
+
+func normalizeLeaseObject(any interface{}) (*coordination.Lease, bool) {
+	result := new(coordination.Lease)
+
+	switch t := any.(type) {
+	case *codapiv1.Lease:
+		err := codv1.Convert_v1_Lease_To_coordination_Lease(t, result, conversion.Scope(nil))
+		if err != nil {
+			return nil, false
+		}
+	case *codapiv1b1.Lease:
+		err := codv1b1.Convert_v1beta1_Lease_To_coordination_Lease(t, result, conversion.Scope(nil))
+		if err != nil {
+			return nil, false
+		}
+	case *coordination.Lease:
+		return t, true
+	default:
 		return nil, false
 	}
 
-	return lease, true
+	return result, true
 }
