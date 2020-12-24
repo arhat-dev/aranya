@@ -33,7 +33,6 @@ import (
 	"arhat.dev/pkg/reconcile"
 	"arhat.dev/pkg/textquery"
 	"github.com/itchyny/gojq"
-	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,13 +41,13 @@ import (
 	"k8s.io/client-go/informers"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
 	kubeclient "k8s.io/client-go/kubernetes"
-	clientcodv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	listerscodv1 "k8s.io/client-go/listers/coordination/v1"
 	listerscodv1b1 "k8s.io/client-go/listers/coordination/v1beta1"
 	listerscorev1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	kubecache "k8s.io/client-go/tools/cache"
+	"k8s.io/kubernetes/pkg/apis/coordination"
 	utilnode "k8s.io/kubernetes/pkg/util/node"
 
 	aranyaapi "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
@@ -73,7 +72,7 @@ type nodeController struct {
 	nodeReqRec    *reconcile.Core
 
 	nodeLeaseInformer kubecache.SharedIndexInformer
-	nodeLeaseClient   clientcodv1.LeaseInterface
+	nodeLeaseClient   *kubehelper.LeaseClient
 	nodeLeaseReqRec   *reconcile.Core
 }
 
@@ -104,10 +103,10 @@ func (c *nodeController) init(
 
 	c.vnKubeconfig = kubeConfigForVirtualNode
 	c.nodeClient = kubeClient.CoreV1().Nodes()
-	c.nodeLeaseClient = kubeClient.CoordinationV1().Leases(corev1.NamespaceNodeLease)
+	c.nodeLeaseClient = kubehelper.CreateLeaseClient(preferredResources, kubeClient, corev1.NamespaceNodeLease)
 	c.vnConfig = &config.VirtualNode
 
-	var getLeaseFunc func(name string) *coordinationv1.Lease
+	var getLeaseFunc func(name string) *coordination.Lease
 	if config.VirtualNode.Node.Lease.Enabled {
 		// informer and sync
 		nodeLeaseInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClient, 0,
@@ -123,10 +122,8 @@ func (c *nodeController) init(
 		)
 
 		ctrl.informerFactoryStart = append(ctrl.informerFactoryStart, nodeLeaseInformerFactory.Start)
-
-		leaseClient := kubehelper.CreateLeaseClient(preferredResources, kubeClient, corev1.NamespaceNodeLease)
 		switch {
-		case leaseClient.V1Client != nil:
+		case c.nodeLeaseClient.V1Client != nil:
 			c.nodeLeaseInformer = nodeLeaseInformerFactory.Coordination().V1().Leases().Informer()
 			ctrl.listActions = append(ctrl.listActions, func() error {
 				_, err2 := listerscodv1.NewLeaseLister(c.nodeLeaseInformer.GetIndexer()).List(labels.Everything())
@@ -136,7 +133,7 @@ func (c *nodeController) init(
 
 				return nil
 			})
-		case leaseClient.V1b1Client != nil:
+		case c.nodeLeaseClient.V1b1Client != nil:
 			c.nodeLeaseInformer = nodeLeaseInformerFactory.Coordination().V1beta1().Leases().Informer()
 			ctrl.listActions = append(ctrl.listActions, func() error {
 				_, err2 := listerscodv1b1.NewLeaseLister(c.nodeLeaseInformer.GetIndexer()).List(labels.Everything())
@@ -152,18 +149,8 @@ func (c *nodeController) init(
 
 		ctrl.cacheSyncWaitFuncs = append(ctrl.cacheSyncWaitFuncs, c.nodeLeaseInformer.HasSynced)
 
-		getLeaseFunc = func(name string) *coordinationv1.Lease {
-			obj, ok, err2 := c.nodeLeaseInformer.GetIndexer().GetByKey(corev1.NamespaceNodeLease + "/" + name)
-			if err2 != nil {
-				// ignore this error
-				return nil
-			}
-
-			if !ok {
-				return nil
-			}
-
-			lease, ok := obj.(*coordinationv1.Lease)
+		getLeaseFunc = func(name string) *coordination.Lease {
+			lease, ok := c.getNodeLeaseObject(name)
 			if !ok {
 				return nil
 			}
@@ -171,7 +158,7 @@ func (c *nodeController) init(
 			return lease
 		}
 
-		nodeLeaseRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.nodeLeaseInformer, reconcile.Options{
+		nodeLeaseRec := kubehelper.NewKubeInformerReconciler(c.nodeCtx, c.nodeLeaseInformer, reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:nl"),
 			BackoffStrategy: nil,
 			Workers:         0,
@@ -188,7 +175,7 @@ func (c *nodeController) init(
 		ctrl.recStart = append(ctrl.recStart, nodeLeaseRec.Start)
 		ctrl.recReconcile = append(ctrl.recReconcile, nodeLeaseRec.Reconcile)
 
-		c.nodeLeaseReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+		c.nodeLeaseReqRec = reconcile.NewCore(c.nodeCtx, reconcile.Options{
 			Logger:          ctrl.Log.WithName("rec:nl:req"),
 			BackoffStrategy: nil,
 			Workers:         0,
@@ -202,19 +189,19 @@ func (c *nodeController) init(
 		ctrl.recStart = append(ctrl.recStart, c.nodeLeaseReqRec.Start)
 		ctrl.recReconcile = append(ctrl.recReconcile, c.nodeLeaseReqRec.Reconcile)
 	} else {
-		getLeaseFunc = func(name string) *coordinationv1.Lease {
+		getLeaseFunc = func(name string) *coordination.Lease {
 			return nil
 		}
 	}
 
 	c.virtualNodes = virtualnode.NewVirtualNodeManager(
-		ctrl.Context(),
+		c.nodeCtx,
 		&config.VirtualNode,
 		getLeaseFunc,
 		c.nodeLeaseClient,
 	)
 
-	nodeRec := kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
+	nodeRec := kubehelper.NewKubeInformerReconciler(c.nodeCtx, c.nodeInformer, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:node"),
 		BackoffStrategy: nil,
 		Workers:         0,
@@ -229,7 +216,7 @@ func (c *nodeController) init(
 	ctrl.recStart = append(ctrl.recStart, nodeRec.Start)
 	ctrl.recReconcile = append(ctrl.recReconcile, nodeRec.Reconcile)
 
-	c.nodeReqRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+	c.nodeReqRec = reconcile.NewCore(c.nodeCtx, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:node:req"),
 		BackoffStrategy: nil,
 		Workers:         0,
@@ -244,7 +231,7 @@ func (c *nodeController) init(
 	ctrl.recReconcile = append(ctrl.recReconcile, c.nodeReqRec.Reconcile)
 
 	// start a standalone node status reconciler in addition to node reconciler to make it clear for node
-	c.nodeStatusRec = kubehelper.NewKubeInformerReconciler(ctrl.Context(), c.nodeInformer, reconcile.Options{
+	c.nodeStatusRec = kubehelper.NewKubeInformerReconciler(c.nodeCtx, c.nodeInformer, reconcile.Options{
 		Logger: ctrl.Log.WithName("rec:node:status"),
 		// no backoff, always wait for 1s
 		BackoffStrategy: backoff.NewStrategy(time.Second, time.Second, 1, 0),
@@ -259,7 +246,7 @@ func (c *nodeController) init(
 	ctrl.recStart = append(ctrl.recStart, c.nodeStatusRec.Start)
 	ctrl.recReconcile = append(ctrl.recReconcile, c.nodeStatusRec.Reconcile)
 
-	c.vnRec = reconcile.NewCore(ctrl.Context(), reconcile.Options{
+	c.vnRec = reconcile.NewCore(c.nodeCtx, reconcile.Options{
 		Logger:          ctrl.Log.WithName("rec:vn"),
 		BackoffStrategy: backoff.NewStrategy(time.Second, time.Minute, 2, 1),
 		Workers:         0,
@@ -392,7 +379,7 @@ func (c *Controller) onNodeUpdated(oldObj, newObj interface{}) *reconcile.Result
 
 func (c *Controller) onNodeDeleting(obj interface{}) *reconcile.Result {
 	// TODO: add finalizer
-	err := c.nodeClient.Delete(c.Context(), obj.(*corev1.Node).Name, *deleteAtOnce)
+	err := c.nodeClient.Delete(c.nodeCtx, obj.(*corev1.Node).Name, *deleteAtOnce)
 	if err != nil && !kubeerrors.IsNotFound(err) {
 		return &reconcile.Result{Err: err}
 	}
@@ -561,7 +548,7 @@ func (c *Controller) evalNodeFiledHooksAndUpdateNode(
 	logger.D("updating node object metadata for field hooks")
 	err = patchhelper.TwoWayMergePatch(node, updateNode, &corev1.Node{}, func(patchData []byte) error {
 		_, err2 := c.nodeClient.Patch(
-			c.Context(), node.Name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{},
+			c.nodeCtx, node.Name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{},
 		)
 		return err2
 	})
@@ -592,7 +579,7 @@ func (c *Controller) ensureNodeObject(name string, kubeletListener net.Listener)
 
 	node := c.newNodeForEdgeDevice(edgeDeviceObj, kubeletPort)
 
-	oldNode, err := c.nodeClient.Get(c.Context(), name, metav1.GetOptions{})
+	oldNode, err := c.nodeClient.Get(c.nodeCtx, name, metav1.GetOptions{})
 	if err == nil {
 		c.Log.I("found old node, patch to update")
 		err = func() error {
@@ -654,14 +641,17 @@ func (c *Controller) ensureNodeObject(name string, kubeletListener net.Listener)
 
 			err = patchhelper.TwoWayMergePatch(oldNode, clone, &corev1.Node{}, func(patchData []byte) error {
 				oldNode, err = c.nodeClient.Patch(
-					c.Context(), name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{})
+					c.nodeCtx, name,
+					types.StrategicMergePatchType,
+					patchData, metav1.PatchOptions{},
+				)
 				return err
 			})
 			if err != nil {
 				return fmt.Errorf("failed to patch node spec: %w", err)
 			}
 
-			oldNode, err = c.nodeClient.Get(c.Context(), name, metav1.GetOptions{})
+			oldNode, err = c.nodeClient.Get(c.nodeCtx, name, metav1.GetOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to get patched node: %w", err)
 			}
@@ -694,7 +684,7 @@ func (c *Controller) ensureNodeObject(name string, kubeletListener net.Listener)
 
 			if c.vnConfig.Node.RecreateIfPatchFailed {
 				c.Log.I("deleting node after patch failed to recreate")
-				err = c.nodeClient.Delete(c.Context(), name, *deleteAtOnce)
+				err = c.nodeClient.Delete(c.nodeCtx, name, *deleteAtOnce)
 				if err != nil && !kubeerrors.IsNotFound(err) {
 					return fmt.Errorf("failed to delete old node: %w", err)
 				}
@@ -712,7 +702,7 @@ func (c *Controller) ensureNodeObject(name string, kubeletListener net.Listener)
 	}
 
 	if create {
-		node, err = c.nodeClient.Create(c.Context(), node, metav1.CreateOptions{})
+		node, err = c.nodeClient.Create(c.nodeCtx, node, metav1.CreateOptions{})
 		if err != nil {
 			return err
 		}

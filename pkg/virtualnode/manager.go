@@ -23,13 +23,13 @@ import (
 	"time"
 
 	"arhat.dev/aranya-proto/aranyagopb"
+	"arhat.dev/pkg/kubehelper"
 	"arhat.dev/pkg/log"
 	"arhat.dev/pkg/queue"
-	coordinationv1 "k8s.io/api/coordination/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	clientcodv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
+	"k8s.io/kubernetes/pkg/apis/coordination"
 
 	"arhat.dev/aranya/pkg/conf"
 	"arhat.dev/aranya/pkg/constant"
@@ -38,8 +38,8 @@ import (
 func NewVirtualNodeManager(
 	ctx context.Context,
 	config *conf.VirtualnodeConfig,
-	getLease func(name string) *coordinationv1.Lease,
-	leaseClient clientcodv1.LeaseInterface,
+	getLease func(name string) *coordination.Lease,
+	leaseClient *kubehelper.LeaseClient,
 ) *Manager {
 	nodeUpdateInterval := config.Node.Timers.MirrorSyncInterval
 	if nodeUpdateInterval < time.Second {
@@ -86,8 +86,8 @@ type Manager struct {
 	mirrorUpdateQ  *queue.TimeoutQueue
 	leaseUpdateQ   *queue.TimeoutQueue
 
-	getLeaseFromCache func(name string) *coordinationv1.Lease
-	leaseClient       clientcodv1.LeaseInterface
+	getLeaseFromCache func(name string) *coordination.Lease
+	leaseClient       *kubehelper.LeaseClient
 	leaseEnabled      bool
 
 	mu *sync.RWMutex
@@ -490,10 +490,12 @@ func (m *Manager) consumeLeaseUpdate() {
 
 func (m *Manager) updateLeaseWithRetry(name string) error {
 	var (
-		err           error
-		lease         *coordinationv1.Lease
-		retrieveLease bool
+		err   error
+		lease *coordination.Lease
+
+		requireLatestLease bool
 	)
+
 	for i := 0; i < 5; i++ {
 		func() {
 			defer func() {
@@ -503,7 +505,7 @@ func (m *Manager) updateLeaseWithRetry(name string) error {
 			}()
 
 			lease = m.getLeaseFromCache(name)
-			if lease == nil || retrieveLease {
+			if lease == nil || requireLatestLease {
 				lease, err = m.leaseClient.Get(m.ctx, name, metav1.GetOptions{})
 				if err != nil {
 					return
@@ -512,13 +514,14 @@ func (m *Manager) updateLeaseWithRetry(name string) error {
 
 			lease = lease.DeepCopy()
 
-			lease.Spec.RenewTime = &metav1.MicroTime{Time: time.Now()}
+			now := metav1.NowMicro()
+			lease.Spec.RenewTime = &now
 			_, err = m.leaseClient.Update(m.ctx, lease, metav1.UpdateOptions{})
 			if err != nil {
 				if kubeerrors.IsConflict(err) {
-					retrieveLease = true
+					requireLatestLease = true
 				} else {
-					retrieveLease = false
+					requireLatestLease = false
 				}
 			}
 		}()
