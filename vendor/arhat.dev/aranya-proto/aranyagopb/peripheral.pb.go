@@ -3133,10 +3133,7 @@ func (m *TLSConfig) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {
@@ -3360,7 +3357,7 @@ func (m *Connectivity) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthPeripheral
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -3413,10 +3410,7 @@ func (m *Connectivity) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {
@@ -3608,7 +3602,7 @@ func (m *PeripheralOperation) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthPeripheral
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -3625,10 +3619,7 @@ func (m *PeripheralOperation) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {
@@ -3858,7 +3849,7 @@ func (m *PeripheralMetric) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthPeripheral
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -4017,7 +4008,7 @@ func (m *PeripheralMetric) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthPeripheral
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -4034,10 +4025,7 @@ func (m *PeripheralMetric) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {
@@ -4242,10 +4230,7 @@ func (m *PeripheralEnsureCmd) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {
@@ -4327,10 +4312,7 @@ func (m *PeripheralListCmd) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {
@@ -4412,10 +4394,7 @@ func (m *PeripheralDeleteCmd) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {
@@ -4563,10 +4542,7 @@ func (m *PeripheralOperateCmd) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {
@@ -4648,10 +4624,7 @@ func (m *PeripheralMetricsCollectCmd) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {
@@ -4803,10 +4776,7 @@ func (m *PeripheralStatusMsg) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {
@@ -4890,10 +4860,7 @@ func (m *PeripheralStatusListMsg) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {
@@ -4975,10 +4942,7 @@ func (m *PeripheralOperationResultMsg) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPeripheral
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPeripheral
 			}
 			if (iNdEx + skippy) > l {

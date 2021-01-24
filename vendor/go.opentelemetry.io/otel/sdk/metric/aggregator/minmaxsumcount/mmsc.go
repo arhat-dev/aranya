@@ -38,7 +38,7 @@ type (
 		sum   number.Number
 		min   number.Number
 		max   number.Number
-		count int64
+		count uint64
 	}
 )
 
@@ -46,8 +46,7 @@ var _ export.Aggregator = &Aggregator{}
 var _ aggregation.MinMaxSumCount = &Aggregator{}
 
 // New returns a new aggregator for computing the min, max, sum, and
-// count.  It does not compute quantile information other than Min and
-// Max.
+// count.
 //
 // This type uses a mutex for Update() and SynchronizedMove() concurrency.
 func New(cnt int, desc *metric.Descriptor) []Aggregator {
@@ -78,7 +77,7 @@ func (c *Aggregator) Sum() (number.Number, error) {
 }
 
 // Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (int64, error) {
+func (c *Aggregator) Count() (uint64, error) {
 	return c.count, nil
 }
 
@@ -106,15 +105,15 @@ func (c *Aggregator) Max() (number.Number, error) {
 // the empty set.
 func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
-	if o == nil {
+
+	if oa != nil && o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
-
-	// TODO: It is incorrect to use an Aggregator of different
-	// kind. Should we test that o.kind == c.kind?  (The same question
-	// occurs for several of the other aggregators in ../*.)
 	c.lock.Lock()
-	o.state, c.state = c.state, emptyState(c.kind)
+	if o != nil {
+		o.state = c.state
+	}
+	c.state = emptyState(c.kind)
 	c.lock.Unlock()
 
 	return nil

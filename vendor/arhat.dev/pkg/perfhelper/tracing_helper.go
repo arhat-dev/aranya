@@ -29,6 +29,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	otexporterotlp "go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	otexporterjaeger "go.opentelemetry.io/otel/exporters/trace/jaeger"
 	otexporterzipkin "go.opentelemetry.io/otel/exporters/trace/zipkin"
 	otsdkresource "go.opentelemetry.io/otel/sdk/resource"
@@ -54,17 +55,17 @@ func (c *TracingConfig) CreateIfEnabled(setGlobal bool, client *http.Client) (ot
 
 	switch c.Format {
 	case "otlp":
-		opts := []otexporterotlp.ExporterOption{
-			otexporterotlp.WithAddress(c.Endpoint),
+		opts := []otlpgrpc.Option{
+			otlpgrpc.WithEndpoint(c.Endpoint),
 		}
 
 		if tlsConfig != nil {
-			opts = append(opts, otexporterotlp.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
+			opts = append(opts, otlpgrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 		} else {
-			opts = append(opts, otexporterotlp.WithInsecure())
+			opts = append(opts, otlpgrpc.WithInsecure())
 		}
 
-		exporter, err2 := otexporterotlp.NewExporter(opts...)
+		exporter, err2 := otexporterotlp.NewExporter(context.Background(), otlpgrpc.NewDriver(opts...))
 		if err2 != nil {
 			return nil, fmt.Errorf("failed to create otlp exporter: %w", err2)
 		}

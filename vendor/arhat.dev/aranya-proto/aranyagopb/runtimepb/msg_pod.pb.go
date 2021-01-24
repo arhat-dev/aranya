@@ -1146,10 +1146,7 @@ func (m *ContainerStatus) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthMsgPod
 			}
 			if (iNdEx + skippy) > l {
@@ -1377,7 +1374,7 @@ func (m *PodStatusMsg) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthMsgPod
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -1394,10 +1391,7 @@ func (m *PodStatusMsg) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthMsgPod
 			}
 			if (iNdEx + skippy) > l {
@@ -1481,10 +1475,7 @@ func (m *PodStatusListMsg) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthMsgPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthMsgPod
 			}
 			if (iNdEx + skippy) > l {

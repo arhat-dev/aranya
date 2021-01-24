@@ -20,6 +20,7 @@ limitations under the License.
 package perfhelper
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -28,10 +29,10 @@ import (
 	"go.opentelemetry.io/otel"
 	otprom "go.opentelemetry.io/otel/exporters/metric/prometheus"
 	otexporterotlp "go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	otsdkmetricspull "go.opentelemetry.io/otel/sdk/metric/controller/pull"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"google.golang.org/grpc/credentials"
 )
@@ -54,36 +55,40 @@ func (c *MetricsConfig) CreateIfEnabled(setGlobal bool) (otelmetric.MeterProvide
 			return nil, nil, fmt.Errorf("failed to create tls config: %w", err)
 		}
 
-		opts := []otexporterotlp.ExporterOption{
-			otexporterotlp.WithAddress(c.Endpoint),
+		opts := []otlpgrpc.Option{
+			otlpgrpc.WithEndpoint(c.Endpoint),
 		}
 
 		if tlsConfig != nil {
-			opts = append(opts, otexporterotlp.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
+			opts = append(opts, otlpgrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 		} else {
-			opts = append(opts, otexporterotlp.WithInsecure())
+			opts = append(opts, otlpgrpc.WithInsecure())
 		}
 
 		var exporter *otexporterotlp.Exporter
-		exporter, err = otexporterotlp.NewExporter(opts...)
+		exporter, err = otexporterotlp.NewExporter(context.Background(), otlpgrpc.NewDriver(opts...))
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create otlp exporter: %w", err)
 		}
 
-		pusher := push.New(
-			basic.New(simple.NewWithExactDistribution(), exporter),
-			exporter,
-			push.WithPeriod(5*time.Second),
+		ctrl := controller.New(
+			processor.New(simple.NewWithExactDistribution(), exporter),
+			controller.WithPusher(exporter),
+			controller.WithCollectPeriod(5*time.Second),
 		)
-		pusher.Start()
 
-		metricsProvider = pusher.MeterProvider()
+		err = ctrl.Start(context.Background())
+		if err != nil {
+			return nil, nil, err
+		}
+
+		metricsProvider = ctrl.MeterProvider()
 	case "prometheus":
 		promCfg := otprom.Config{Registry: prom.NewRegistry()}
 
 		var exporter *otprom.Exporter
 		exporter, err := otprom.NewExportPipeline(promCfg,
-			otsdkmetricspull.WithCachePeriod(5*time.Second),
+			controller.WithCollectPeriod(5*time.Second),
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to install global metrics collector")

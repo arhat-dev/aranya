@@ -4163,10 +4163,7 @@ func (m *CNICapArgs) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -4318,10 +4315,7 @@ func (m *CNICapArgs_PortMap) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -4447,10 +4441,7 @@ func (m *CNICapArgs_Bandwidth) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -4628,10 +4619,7 @@ func (m *CNICapArgs_IPRange) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -4777,10 +4765,7 @@ func (m *CNICapArgs_DNSConfig) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -4862,10 +4847,7 @@ func (m *CNICapArgs_IPAddresses) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -4947,10 +4929,7 @@ func (m *CNICapArgs_MacAddress) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -5032,10 +5011,7 @@ func (m *CNICapArgs_InfinibandGUID) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -5117,10 +5093,7 @@ func (m *CNICapArgs_DeviceID) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -5365,7 +5338,7 @@ func (m *ContainerNetworkEnsureRequest) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthContainer
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -5382,10 +5355,7 @@ func (m *ContainerNetworkEnsureRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -5486,10 +5456,7 @@ func (m *ContainerNetworkRestoreRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -5590,10 +5557,7 @@ func (m *ContainerNetworkDeleteRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -5707,10 +5671,7 @@ func (m *ContainerNetworkConfigEnsureRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -5760,10 +5721,7 @@ func (m *ContainerNetworkConfigQueryRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -5864,10 +5822,7 @@ func (m *ContainerNetworkQueryRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -5981,10 +5936,7 @@ func (m *ContainerNetworkConfigResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -6087,10 +6039,7 @@ func (m *ContainerNetworkStatusResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {
@@ -6252,7 +6201,7 @@ func (m *ContainerNetworkStatusListResponse) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthContainer
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -6269,10 +6218,7 @@ func (m *ContainerNetworkStatusListResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthContainer
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthContainer
 			}
 			if (iNdEx + skippy) > l {

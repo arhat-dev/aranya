@@ -1270,10 +1270,7 @@ func (m *HostNetworkInterface) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHost
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHost
 			}
 			if (iNdEx + skippy) > l {
@@ -1389,10 +1386,7 @@ func (m *HostNetworkConfigEnsureRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHost
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHost
 			}
 			if (iNdEx + skippy) > l {
@@ -1474,10 +1468,7 @@ func (m *HostNetworkConfigQueryRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHost
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHost
 			}
 			if (iNdEx + skippy) > l {
@@ -1561,10 +1552,7 @@ func (m *HostNetworkConfigResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHost
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHost
 			}
 			if (iNdEx + skippy) > l {

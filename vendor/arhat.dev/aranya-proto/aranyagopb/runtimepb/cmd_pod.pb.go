@@ -5087,7 +5087,7 @@ func (m *NamedData) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthCmdPod
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -5104,10 +5104,7 @@ func (m *NamedData) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -5285,10 +5282,7 @@ func (m *SELinuxOptions) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -5575,10 +5569,7 @@ func (m *ContainerSecuritySpec) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -5815,10 +5806,7 @@ func (m *ContainerMountSpec) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -5932,10 +5920,7 @@ func (m *KeyValuePair) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -6090,10 +6075,7 @@ func (m *ContainerAction) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -6175,10 +6157,7 @@ func (m *ContainerAction_Exec) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -6326,10 +6305,7 @@ func (m *ContainerAction_HTTP) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -6411,10 +6387,7 @@ func (m *ContainerAction_Socket) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -6595,10 +6568,7 @@ func (m *ContainerProbeSpec) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -6978,7 +6948,7 @@ func (m *ContainerSpec) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthCmdPod
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -7107,7 +7077,7 @@ func (m *ContainerSpec) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthCmdPod
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -7268,10 +7238,7 @@ func (m *ContainerSpec) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -7431,7 +7398,7 @@ func (m *PodVolumeSpec) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthCmdPod
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -7560,7 +7527,7 @@ func (m *PodVolumeSpec) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthCmdPod
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -7577,10 +7544,7 @@ func (m *PodVolumeSpec) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -7740,7 +7704,7 @@ func (m *PodSecuritySpec) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthCmdPod
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -7757,10 +7721,7 @@ func (m *PodSecuritySpec) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -8016,7 +7977,7 @@ func (m *PodNetworkSpec) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthCmdPod
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -8067,10 +8028,7 @@ func (m *PodNetworkSpec) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -8619,7 +8577,7 @@ func (m *PodEnsureCmd) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthCmdPod
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -8636,10 +8594,7 @@ func (m *PodEnsureCmd) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -8884,7 +8839,7 @@ func (m *PodDeleteCmd) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthCmdPod
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -8901,10 +8856,7 @@ func (m *PodDeleteCmd) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {
@@ -9006,10 +8958,7 @@ func (m *PodListCmd) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdPod
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdPod
 			}
 			if (iNdEx + skippy) > l {

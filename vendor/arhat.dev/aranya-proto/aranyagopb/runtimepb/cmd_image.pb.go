@@ -1301,10 +1301,7 @@ func (m *ImageAuthConfig) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdImage
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdImage
 			}
 			if (iNdEx + skippy) > l {
@@ -1409,10 +1406,7 @@ func (m *ImagePullSpec) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdImage
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdImage
 			}
 			if (iNdEx + skippy) > l {
@@ -1494,10 +1488,7 @@ func (m *ImageListCmd) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdImage
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdImage
 			}
 			if (iNdEx + skippy) > l {
@@ -1659,7 +1650,7 @@ func (m *ImageEnsureCmd) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthCmdImage
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -1676,10 +1667,7 @@ func (m *ImageEnsureCmd) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdImage
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdImage
 			}
 			if (iNdEx + skippy) > l {
@@ -1761,10 +1749,7 @@ func (m *ImageDeleteCmd) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdImage
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthCmdImage
 			}
 			if (iNdEx + skippy) > l {

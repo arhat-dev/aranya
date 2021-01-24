@@ -15,7 +15,7 @@
 RUN_LINTER := docker run -t --rm -v "$(shell pwd):$(shell pwd)" -w "$(shell pwd)"
 
 lint.file:
-	${RUN_LINTER} mstruebing/editorconfig-checker:2.2.0 ec -config .ecrc
+	${RUN_LINTER} mstruebing/editorconfig-checker:2.3.1 ec -config .ecrc
 
 lint.shell:
 	${RUN_LINTER} koalaman/shellcheck-alpine:stable \
@@ -26,7 +26,7 @@ lint.shell:
 			| xargs -I'{}' shellcheck -S warning -e SC1090 -e SC1091 {} ;"
 
 lint.go:
-	${RUN_LINTER} golangci/golangci-lint:v1.33.0 golangci-lint run --fix
+	${RUN_LINTER} golangci/golangci-lint:v1.35.2 golangci-lint run --fix
 
 lint.yaml:
 	${RUN_LINTER} arhatdev/yamllint:latest yamllint -c .yaml-lint.yml .
