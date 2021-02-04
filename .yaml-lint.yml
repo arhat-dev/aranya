@@ -10,7 +10,6 @@ ignore: |
   private/
   build/
   e2e/testdata/
-  e2e/kind/*.manifests.yaml
 
 rules:
   braces:
