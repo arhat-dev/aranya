@@ -15,7 +15,7 @@
 RUN_LINTER := docker run -t --rm -v "$(shell pwd):$(shell pwd)" -w "$(shell pwd)"
 
 lint.file:
-	${RUN_LINTER} mstruebing/editorconfig-checker:2.3.1 ec -config .ecrc
+	${RUN_LINTER} mstruebing/editorconfig-checker:2.3.3 ec -config .ecrc
 
 lint.shell:
 	${RUN_LINTER} koalaman/shellcheck-alpine:stable \
